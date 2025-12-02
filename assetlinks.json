@@ -1,0 +1,11 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.rrfx.app",
+    "sha256_cert_fingerprints": [
+      "5F:43:50:85:1E:D2:0C:12:5A:6B:8E:50:BA:6B:B9:5D:D1:30:57:D5:6B:A6:85:CD:58:C4:29:99:A3:9D:42:DA",
+      "2C:B8:6F:E4:FC:EF:B5:03:9C:0D:BF:7B:75:44:B7:76:7C:D9:BE:BB:0F:A4:22:7D:21:B9:5E:4D:3A:65:C9:FC"
+    ]
+  }
+}]

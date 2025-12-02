@@ -1,0 +1,470 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:icons_plus/icons_plus.dart';
+import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
+import 'package:rrfx/src/components/appbars/default.dart';
+import 'package:rrfx/src/components/bottomsheets/material_bottom_sheets.dart';
+import 'package:rrfx/src/components/colors/default.dart';
+import 'package:rrfx/src/components/textfields/void_textfield.dart';
+import 'package:rrfx/src/views/accounts/registration_online/controllers/progress_account_controller.dart';
+import 'package:rrfx/src/views/accounts/registration_online/controllers/statement_controller.dart';
+import 'package:rrfx/src/views/accounts/registration_online/repository/regol_repository.dart';
+import 'package:rrfx/src/views/accounts/registration_online/views/step_17.dart';
+import 'package:rrfx/src/views/accounts/registration_online/views/step_3.dart';
+import '../controllers/product_controller.dart';
+
+class ProductView extends StatefulWidget {
+  const ProductView({super.key});
+
+  @override
+  State<ProductView> createState() => _ProductViewState();
+}
+
+class _ProductViewState extends State<ProductView> {
+  RxBool selectedCDDType = false.obs;
+  RxInt selectedCDDTypeIndex = 1.obs;
+  RegolRepository regolRepository = Get.put(RegolRepository());
+  StatementController statementController = Get.put(StatementController());
+  TextEditingController cddTipeController = TextEditingController();
+  final progressController = Get.put(ProgressAccountController());
+  final controller = Get.put(ProductController());
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(Duration.zero, () async {
+      progressController.fetchProgressAccount().then((result){
+        final data = progressController.progressData.value;
+        final cddList = data?.data?.cddTipe ?? [];
+        if (cddList.isEmpty) {
+          return CustomScaffoldMessanger.showAppSnackBar(context, message: "CDD Type tidak dapat ditemukan", type: SnackBarType.info);
+        }
+        selectedCDDType(true);
+        cddTipeController.text = "Standard";
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    cddTipeController.dispose();
+    super.dispose();
+  }
+
+  // Widget untuk Form Dropdown di sisi Kiri (atau atas di portrait)
+  Widget _buildDropdowns(BuildContext context, Size size, bool isLandscape, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: isLandscape ? MainAxisSize.max : MainAxisSize.min, // Biar menyesuaikan di landscape
+      children: [
+        Obx(() {
+          final data = progressController.progressData.value;
+          if (progressController.isLoading.value) {
+            return const Center(child: CircularProgressIndicator(color: CustomColor.secondaryColor));
+          }
+          final cddList = data?.data?.cddTipe ?? [];
+          if (cddList.isEmpty) {
+            return const Text("CDD Type belum tersedia");
+          }
+          return VoidTextField(
+            readOnly: true,
+            requiredField: true,
+            controller: cddTipeController,
+            fieldName: "CDD Type",
+            hintText: "Pilih CDD Type",
+            labelText: "CDD Type",
+            onPressed: () {
+              CustomMaterialBottomSheets.defaultBottomSheet(
+                context,
+                size: size,
+                title: "Pilih Tipe CDD",
+                isScrolledController: false,
+                children: List.generate(cddList.length, (index) {
+                  final item = cddList[index];
+                  if (item.isEmpty) return const SizedBox.shrink();
+                  final value = item.values.first;
+                  return ListTile(
+                    leading: Icon(Icons.check_circle, color: (cddTipeController.text == value) ? CustomColor.secondaryColor : Colors.grey, size: 22),
+                    title: Text(value.isNotEmpty ? value : "Tidak diketahui"),
+                    onTap: () {
+                      setState(() {
+                        cddTipeController.text = value;
+                        Get.back();
+                      });
+                    },
+                  );
+                }),
+              );
+            },
+          );
+        }),
+        // Dropdown Rate
+        const Text("Rate"),
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: isDark ? Colors.white54 : Colors.black54, width: 0.3),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: controller.selectedRate.value.isEmpty ? null : controller.selectedRate.value,
+              hint: const Text("Pilih Rate"),
+              isExpanded: true,
+              items: controller.availableRates.map((rate) => DropdownMenuItem(value: rate, child: Text(rate))).toList(),
+              onChanged: (value) {
+                controller.selectedRate.value = value ?? '';
+                controller.selectedProduct.value = null;
+              },
+            ),
+          ),
+        ),
+        // Tambahkan spacer jika landscape untuk mengisi ruang
+        if (isLandscape) const Spacer(),
+      ],
+    );
+  }
+
+  // Widget untuk Daftar Produk dan Tombol di sisi Kanan (atau bawah di portrait)
+  Widget _buildProductListAndButton(BuildContext context, bool isDark) {
+    final grouped = controller.filteredGroupedProducts;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Daftar Produk
+        Expanded(
+          child: grouped.isEmpty
+            ? const Center(child: Text("Tidak ada produk untuk rate ini"))
+            : ListView(
+                children: grouped.entries.map((entry) {
+                  final type = entry.key;
+                  final products = entry.value;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text(
+                          type.toUpperCase(),
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleLarge
+                              ?.copyWith(
+                                color: CustomColor.secondaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                      ),
+                      ...products.map((product) {
+                        final isSelected = controller.selectedProduct.value == product;
+                        return Obx(() => controller.isLoading.value ? const SizedBox() : GestureDetector(
+                              onTap: () {
+                                controller.selectedProduct.value = product;
+                                controller.komisiSelected.value = product.komisi;
+                                print("Selected Komisi: ${controller.komisiSelected.value}");
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? CustomColor.secondaryColor.withOpacity(0.15) : (isDark ? Colors.grey[900] : Colors.white),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all( color: isSelected ? CustomColor.secondaryColor : Colors.transparent, width: 0.3),
+                                  boxShadow: [
+                                    if (!isDark)
+                                      BoxShadow(
+                                        color: Colors.black12,
+                                        blurRadius: 6,
+                                        offset: const Offset(2, 3),
+                                      ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment
+                                              .spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            product.name,
+                                            style: TextStyle(
+                                              fontWeight:
+                                                  FontWeight.bold,
+                                              fontSize: 16,
+                                              color: isSelected
+                                                  ? CustomColor
+                                                      .secondaryColor
+                                                  : (isDark
+                                                      ? Colors.white
+                                                      : Colors.black),
+                                            ),
+                                            overflow:
+                                                TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        if (isSelected)
+                                          const Icon(
+                                            Icons.check_circle,
+                                            color:
+                                                CustomColor.secondaryColor,
+                                            size: 22,
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    _infoRow("Rate", product.rate, MingCute.exchange_dollar_line),
+                                    _infoRow("Currency", product.currency, Bootstrap.currency_exchange),
+                                    _infoRow("Komisi", product.komisi, Clarity.dollar_bill_line),
+                                    _infoRow("Leverage", product.leverage, MingCute.trending_up_line),
+                                    _infoRow("Free Swap", product.freeswap, MingCute.space_line),
+                                    _infoRow("Spread", product.spread, MingCute.wave_line),
+                                    _infoRow("Min Deposit", product.minimumDeposit, MingCute.currency_dollar_2_line),
+                                    _infoRow("Min Trade", product.minimumTrade, MingCute.coin_line),
+                                  ],
+                                ),
+                              ),
+                            ));
+                      }),
+                    ],
+                  );
+                }).toList(),
+              ),
+        ),
+        // Tombol Submit
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Obx(
+            () => ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: CustomColor.secondaryColor,
+                minimumSize: const Size.fromHeight(50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: regolRepository.isLoading.value ? null : () async {
+                final selected = controller.selectedProduct.value;
+                if (selected == null) {
+                  AppSnackbar.error("Silakan pilih produk terlebih dahulu!");
+                  return;
+                }
+                final selectedCDD = (cddTipeController.text == "Standard") ? "1" : "2";
+                final alreadyHave = progressController.progressData.value?.data?.alreadyHaveAccount;
+                Future<void> handleStep({
+                  required int skipRegol,
+                  required Widget nextStep,
+                }) async {
+                  final success = await regolRepository.step2(
+                    accountType: selected.suffix,
+                    cddType: selectedCDD,
+                    skipRegol: skipRegol,
+                  );
+
+                  if (!success) {
+                    return AppSnackbar.error("Gagal submit produk. ${regolRepository.responseMessage.value}");
+                  }
+                  Get.to(() => nextStep);
+                }
+                
+                if (alreadyHave == null || alreadyHave == false) {
+                  await handleStep(skipRegol: 0, nextStep: const Step3());
+                } else {
+                  await _showChangeDataDialog(
+                    context,
+                    regolRepository: regolRepository,
+                    selectedSuffix: selected.suffix,
+                    selectedCDD: selectedCDD,
+                    onChangeData: () => handleStep(skipRegol: 0, nextStep: const Step3()),
+                    onContinue: () => handleStep(skipRegol: 1, nextStep: const Step17()),
+                  );
+                }
+              },
+              child: Text(
+                regolRepository.isLoading.value ? "Memproses..." : "Submit Produk",
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    // Cek orientasi
+    final isLandscape = size.width > size.height;
+
+    return Scaffold(
+      appBar: CustomAppBar.defaultAppBar(
+        title: "Pilih Produk",
+        autoImplyLeading: true
+      ),
+      body: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(child: CircularProgressIndicator(color: CustomColor.secondaryColor));
+        }
+
+        return Padding(
+          padding: const EdgeInsets.all(12),
+          child: isLandscape
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Flexible(
+                    flex: 2, // Menggunakan flex 2
+                    child: _buildDropdowns(context, size, isLandscape, isDark),
+                  ),
+                  const VerticalDivider(width: 24, thickness: 1), // Pemisah visual
+                  Flexible(
+                    flex: 3, // Menggunakan flex 3 (lebih besar)
+                    child: _buildProductListAndButton(context, isDark),
+                  ),
+                ],
+              )
+            : Column( // Tampilan default (Portrait)
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDropdowns(context, size, isLandscape, isDark),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: _buildProductListAndButton(context, isDark),
+                  ),
+                ],
+              ),
+        );
+      }),
+    );
+  }
+
+  Widget _infoRow(String label, String value, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: CustomColor.secondaryColor),
+          const SizedBox(width: 10),
+          Expanded(
+            flex: 3,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 4,
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(fontSize: 14),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showChangeDataDialog(
+    BuildContext context, {
+    required RegolRepository regolRepository,
+    required String selectedSuffix,
+    required String selectedCDD,
+    required VoidCallback onChangeData,
+    required VoidCallback onContinue,
+  }) async {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Theme.of(context).cardColor,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.info_outline,
+                  color: CustomColor.secondaryColor, size: 50),
+              const SizedBox(height: 16),
+              Text(
+                "Apakah Anda perlu melakukan perubahan data sebelum melanjutkan?",
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Get.back();
+                        onChangeData();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: CustomColor.secondaryColor,
+                        side: BorderSide(color: CustomColor.secondaryColor),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        "Perlu Ubah Data",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Get.back();
+                        onContinue();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: CustomColor.secondaryColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        "Langsung Lanjut",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.black
+                              : Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+  }
+}
