@@ -32,9 +32,13 @@ Future<void> showMarketBottomSheet(BuildContext context) async {
             Container(
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: TabBar(
-                labelColor: Get.theme.colorScheme.primary,
+                labelColor: CustomColor.secondaryColor,
                 unselectedLabelColor: Get.theme.textTheme.bodyMedium!.color!.withOpacity(0.6),
-                indicatorColor: Get.theme.colorScheme.primary,
+                indicatorColor: CustomColor.secondaryColor,
+                indicatorSize: TabBarIndicatorSize.tab,
+                labelStyle: Get.theme.textTheme.bodyMedium!.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
                 dividerColor: Get.theme.dividerColor.withOpacity(0.2),
                 tabs: [
                   Tab(text: "Favorit"),
@@ -96,9 +100,9 @@ Future<void> showMarketBottomSheetForAccountInfo(BuildContext context, {String? 
             Container(
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: TabBar(
-                labelColor: Get.theme.colorScheme.primary,
+                labelColor: CustomColor.secondaryColor,
                 unselectedLabelColor: Get.theme.textTheme.bodyMedium!.color!.withOpacity(0.6),
-                indicatorColor: Get.theme.colorScheme.primary,
+                indicatorColor: CustomColor.secondaryColor,
                 dividerColor: Get.theme.dividerColor.withOpacity(0.2),
                 tabs: [
                   Tab(text: "Favorit"),

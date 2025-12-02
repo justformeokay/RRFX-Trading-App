@@ -8,7 +8,6 @@ import 'package:rrfx/src/controllers/network_controller.dart';
 import 'package:rrfx/src/controllers/theme_controller.dart';
 import 'package:rrfx/src/controllers/trading_account_controller.dart';
 import 'package:rrfx/src/service/auth_service.dart';
-import 'package:rrfx/src/views/advance_charts/views/chart_advance.dart';
 import 'package:rrfx/src/views/chart/views/chart_tab.dart';
 import 'package:rrfx/src/views/markets/controllers/market_controller.dart';
 import 'package:rrfx/src/views/markets/views/market_page.dart';

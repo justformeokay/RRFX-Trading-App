@@ -165,6 +165,7 @@ Future<void> showCloseConfirmationDialog({
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      foregroundColor: Colors.black,
                       minimumSize: const Size.fromHeight(48),
                     ),
                     child: Text(
@@ -172,7 +173,6 @@ Future<void> showCloseConfirmationDialog({
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
                       ),
                     ),
                   ),

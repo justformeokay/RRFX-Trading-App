@@ -20,8 +20,6 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
   final TradingController tradingController = Get.put(TradingController());
   final AccountController controller = Get.put(AccountController());
 
-  bool _isRefreshing = false;
-
   @override
   void initState() {
     super.initState();
@@ -36,13 +34,6 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
     String? loginID = controller.selectedAccount.value?.login;
     if (loginID == null) return;
     await tradingController.openOrder(login: loginID);
-  }
-
-  Future<void> _onRefresh() async {
-    setState(() => _isRefreshing = true);
-    await Future.delayed(const Duration(milliseconds: 700)); // biar animasi halus
-    await _loadOrders();
-    setState(() => _isRefreshing = false);
   }
 
   @override
@@ -259,7 +250,6 @@ class _PositionTile extends StatelessWidget {
         extentRatio: 0.32,
         children: [
           SlidableAction(
-
             onPressed: (_) => _onClosePosition(context),
             backgroundColor: Colors.red,
             foregroundColor: Colors.white,
@@ -278,6 +268,7 @@ class _PositionTile extends StatelessWidget {
         child: ExpansionTile(
           tilePadding: const EdgeInsets.symmetric(horizontal: 16),
           childrenPadding: EdgeInsets.zero,
+          dense: true,
           title: RichText(
             text: TextSpan(
               children: [
@@ -442,13 +433,15 @@ class _PositionTile extends StatelessWidget {
       commission: "0.00",
       onConfirm: () async {
         await tradingController.closingOrder(loginID: loginID, ticketID: positionId ?? '').then((result){
+          tradingController.openOrder(login: loginID);
+          AppSnackbar.success("Posisi $positionId berhasil ditutup.");
+        }).whenComplete(() {
           String? loginID = accountController.selectedAccount.value?.login;
           if (loginID == null) return;
           tradingController.openOrder(login: loginID);
         });
       },
     );
-    AppSnackbar.success("Close Position menutup posisi $positionId");
   }
 }
 
