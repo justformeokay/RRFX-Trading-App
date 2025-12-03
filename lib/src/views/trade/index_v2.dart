@@ -26,42 +26,16 @@ class MetaQuotesPage extends StatefulWidget {
 
 class _MetaQuotesPageState extends State<MetaQuotesPage> {
   final double appBarHeight = 66.0;
-  Timer? _refreshTimer;
-  UtilitiesController utilitiesController = Get.put(UtilitiesController());
   MarketWebSocketController controller = Get.put(MarketWebSocketController());
-  TradingController tradingController = Get.find();
-  RxInt selectedIndexAccountTrading = 0.obs;
-  RxString selectedAccountTrading = "-".obs;
-  RxString selectedBalanceAccount = "0".obs;
-  RxBool haveRealAccount = false.obs;
-
-
-  int lengthString = 0;
-
-  // cari titik dari angka 1.42423
-  // hitung berapa karakter dari belakang titik
-  // jika lebih dari sama dengan 2, ambil 3 dari belakang
-  // ambil 2 karakter dari 3 karakter di belakang
   //
 
   @override
   void initState() {
     super.initState();
-    tradingController.getTradingAccount().then((result){
-      if(tradingController.tradingAccountModels.value?.response.real?.isEmpty == true){
-        haveRealAccount(false);
-      }else{
-        haveRealAccount(true);
-        selectedAccountTrading(tradingController.tradingAccountModels.value?.response.real?[0].login);
-        selectedIndexAccountTrading(0);
-        selectedBalanceAccount(tradingController.tradingAccountModels.value?.response.real?[0].balance);
-      }
-    });
   }
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
     super.dispose();
   }
 
@@ -71,74 +45,6 @@ class _MetaQuotesPageState extends State<MetaQuotesPage> {
     final size = MediaQuery.of(context).size;
     return CustomScrollView(
       slivers: [
-        SliverAppBar(
-          actionsPadding: EdgeInsets.zero,
-          backgroundColor: CustomColor.secondaryColor,
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Icon(Clarity.bars_line, color: Colors.white),
-              Row(
-                children: [
-                  Icon(Icons.wallet, color: Colors.white),
-                  const SizedBox(width: 5.0),
-                  GestureDetector(
-                    onTap: () {
-                    },
-                    child: Text("My Digital Currency", style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16))),
-                ],
-              ),
-              CupertinoButton(
-                onPressed: (){
-                  CustomMaterialBottomSheets.defaultBottomSheet(context, title: "Pilih Akun Trading", size: size, children: List.generate(tradingController.tradingAccountModels.value?.response.real?.length ?? 0, (i){
-                    final account = tradingController.tradingAccountModels.value?.response.real?[i];
-                    return ListTile(
-                      subtitle: Text("${account?.currency} - ${account?.login ?? "-"}", style: GoogleFonts.inter(fontWeight: FontWeight.w400, color: Colors.black45)),
-                      title: Text("${account?.namaTipeAkun ?? "-"} (1:${NumberFormatter.cleanNumber(account?.leverage ?? '0')})", style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-                      onTap: (){
-                        Get.back();
-                        selectedAccountTrading(tradingController.tradingAccountModels.value?.response.real?[i].login);
-                        selectedIndexAccountTrading(i);
-                        selectedBalanceAccount(tradingController.tradingAccountModels.value?.response.real?[i].balance);
-                      },
-                      leading: Icon(Icons.group, color: CustomColor.secondaryColor),
-                      trailing: Icon(AntDesign.arrow_right_outline, color: CustomColor.secondaryColor),
-                    );
-                  }));
-                },
-                padding: EdgeInsets.zero,
-                child: Icon(Bootstrap.person_fill_gear, color: Colors.white)
-              ),
-            ],
-          ),
-          pinned: true,
-          expandedHeight: 210.0,
-          flexibleSpace: FlexibleSpaceBar(
-            background: Container(
-              color: CustomColor.secondaryColor,
-              padding: EdgeInsets.only(top: appBarHeight),
-              height: appBarHeight + paddingTop,
-              child: Center(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text("Balance", style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w400, color: Colors.white60)),
-                    Obx(() => Text(selectedAccountTrading.value, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white))),
-                    Obx(() => Text("\$${selectedBalanceAccount.value}", style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white))),
-                    // Row(
-                    //   mainAxisAlignment: MainAxisAlignment.center,
-                    //   children: [
-                    //     Text("+24.93%", style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w400, color: Colors.white70)),
-                    //     Icon(Bootstrap.arrow_up, color: Colors.white70, size: 14)
-                    //   ],
-                    // ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
         Obx(
         () => SliverList(
             delegate: SliverChildListDelegate(
@@ -209,22 +115,7 @@ class _MetaQuotesPageState extends State<MetaQuotesPage> {
                   }
                   final flags = RegexFormatter.getFlagsFromPairName(symbol);
                   return CupertinoButton(
-                    onPressed: () {
-                      if(haveRealAccount.value == false){
-                        Get.to(() => TradingChartView(marketName: symbol));
-                        return;
-                        // Get.snackbar(
-                        //   "No Real Account",
-                        //   "Please create a real account first to access the chart.",
-                        //   backgroundColor: Colors.red,
-                        //   colorText: Colors.white,
-                        //   icon: const Icon(Icons.warning, color: Colors.white),
-                        //   snackPosition: SnackPosition.BOTTOM,
-                        // );
-                        // return;
-                      }
-                      Get.to(() => DerivChartPage(login: int.parse(tradingController.tradingAccountModels.value?.response.real?[selectedIndexAccountTrading.value].login ?? '0'), marketName: symbol));
-                    },
+                    onPressed: () {},
                     padding: EdgeInsets.zero,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 10.0),
