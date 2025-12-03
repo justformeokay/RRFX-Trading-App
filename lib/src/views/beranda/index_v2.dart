@@ -55,6 +55,7 @@ class _IndexV2State extends State<IndexV2> {
   RxBool showHideBalance = false.obs;
   RxBool haveDemoAccount = false.obs;
   RxBool haveRealAccount = false.obs;
+  RxBool isLoadingAccount = false.obs;
   Map<String, String>? flag;
   Timer? _timer;
   RxList menus = [
@@ -139,17 +140,24 @@ class _IndexV2State extends State<IndexV2> {
             final theme = Theme.of(context);
             final onSurface = theme.colorScheme.onSurface;
             final onSurfaceVariant = onSurface.withOpacity(0.6);
-            final bool canPress = controller.hasAccounts;
-            final VoidCallback? onPressedHandler = canPress ? () => AccountSelectionBottomSheet.show() : null;
+            bool canPress = controller.hasAccounts;
             final acc = controller.selectedAccount.value;
             if (!canPress) return const SizedBox();
             return TextButton(
-              onPressed: onPressedHandler,
+              onPressed: isLoadingAccount.value ? null : () async {
+                isLoadingAccount.value = true;
+                await controller.fetchAccountInfo().then((result){
+                  isLoadingAccount.value = false;
+                  if(controller.hasAccounts){
+                    AccountSelectionBottomSheet.show();
+                  }
+                });
+              },
               style: TextButton.styleFrom(
                 overlayColor: theme.colorScheme.primary.withOpacity(0.05),
                 padding: EdgeInsets.zero,
               ),
-              child: Padding(
+              child: isLoadingAccount.value ? SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.0, color: CustomColor.secondaryColor)) : Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: Row(
                   children: [
@@ -342,7 +350,7 @@ class _IndexV2State extends State<IndexV2> {
                                 ),
                                 Obx(
                                   () => !controller.hasAccounts ? const SizedBox() : Text(
-                                    "${controller.selectedAccount.value?.currency} ${controller.selectedAccount.value?.marginFree}",
+                                    "USD ${controller.selectedAccount.value?.marginFree}",
                                     style: GoogleFonts.inter(
                                       fontWeight: FontWeight.w700,
                                       fontSize: 13,

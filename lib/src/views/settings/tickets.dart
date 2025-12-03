@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:ui';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -15,7 +14,6 @@ import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/controllers/utilities.dart';
 import 'package:rrfx/src/helpers/handlers/image_picker.dart';
 import 'package:rrfx/src/views/settings/send_image_chat.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 RxInt totalMessages = 0.obs;
 
@@ -361,7 +359,7 @@ class _MessageBarState extends State<_MessageBar> {
                           onTap: () async {
                             Get.back();
                             urlPhoto(await CustomImagePicker.pickImageFromCameraAndReturnUrl(useCamera: true));
-                            Get.to(() => SendImageChat(imageURL: urlPhoto.value));
+                            Get.to(() => SendImageChat(imageURL: urlPhoto.value, codeChat: widget.code));
                           },
                         ),
                         ListTile(
@@ -370,7 +368,7 @@ class _MessageBarState extends State<_MessageBar> {
                           onTap: () async {
                             Get.back();
                             urlPhoto(await CustomImagePicker.pickImageFromCameraAndReturnUrl());
-                            Get.to(() => SendImageChat(imageURL: urlPhoto.value));
+                            Get.to(() => SendImageChat(imageURL: urlPhoto.value, codeChat: widget.code));
                           },
                         ),
                       ],

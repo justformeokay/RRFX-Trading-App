@@ -3,10 +3,8 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
-import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/containers/no_account.dart';
 import 'package:rrfx/src/controllers/trading.dart';
-import 'package:rrfx/src/views/transactions/views/popup_close_order.dart';
 import 'package:shimmer/shimmer.dart';
 
 class CloseTransactionMeta5 extends StatefulWidget {
@@ -408,33 +406,6 @@ class _PositionTile extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  void _onClosePosition(BuildContext context) async {
-    final accountController = Get.put(AccountController());
-    final tradingController = Get.put(TradingController());
-    String? loginID = accountController.selectedAccount.value?.login;
-    if (loginID == null) {
-      AppSnackbar.error("Gagal mendapatkan Login ID akun trading.");
-      return;
-    }
-
-    await showCloseConfirmationDialog(
-      context: context,
-      symbol: symbol ?? '-',
-      lot: volume ?? '0.0',
-      profit: profit.toString(),
-      swap: swap.toString(),
-      commission: "0.00",
-      onConfirm: () async {
-        await tradingController.closingOrder(loginID: loginID, ticketID: positionId ?? '').then((result){
-          String? loginID = accountController.selectedAccount.value?.login;
-          if (loginID == null) return;
-          tradingController.openOrder(login: loginID);
-        });
-      },
-    );
-    AppSnackbar.success("Close Position menutup posisi $positionId");
   }
 }
 

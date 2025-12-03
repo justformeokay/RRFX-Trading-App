@@ -396,13 +396,28 @@ class UtilitiesController extends GetxController {
   }
 
   // Send Ticket Message API
-  Future<bool> sendMessage({String? code, String? message}) async {
+  Future<bool> sendMessage({
+    String? code,
+    String? message,
+    String? attachmentPath, // optional (file)
+  }) async {
     try {
-      Map<String, dynamic> result = await authService.post("ticket/send-message", {
-        'code': code,
-        'message': message
-      });
+      Map<String, String> body = {
+        'code': code ?? "",
+      };
+      if (message != null && message.isNotEmpty) {
+        body['message'] = message;
+      }
+      Map<String, String> file = {
+        'attachment': attachmentPath ?? "",
+      };
+      final result = await authService.multipart(
+        "ticket/send-message",
+        body,
+        file,
+      );
       if (result['status'] != true) {
+        responseMessage(result['message']);
         return false;
       }
       responseMessage(result['message']);
@@ -412,6 +427,7 @@ class UtilitiesController extends GetxController {
       return false;
     }
   }
+
 
   // Desa API
   Future<bool> getSlideImageLogin() async {

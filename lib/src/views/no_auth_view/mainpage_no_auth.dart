@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:rrfx/src/components/colors/default.dart';
+import 'package:rrfx/src/controllers/firebase_api_controller.dart';
+import 'package:rrfx/src/helpers/handlers/permissions.dart';
 import 'package:rrfx/src/views/no_auth_view/explore/explore_no_auth.dart';
 import 'package:rrfx/src/views/no_auth_view/history/history_no_auth.dart';
 import 'package:rrfx/src/views/no_auth_view/markets/markets_no_auth.dart';
@@ -30,6 +32,15 @@ class _MainpageWithoutLoginState extends State<MainpageWithoutLogin> {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    FirebaseAPI.getToken();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await PermissionHandlers.requestPermissions();
     });
   }
 

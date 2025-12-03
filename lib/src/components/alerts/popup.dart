@@ -192,7 +192,7 @@ class AuthDirectionPopup {
                     "Masuk",
                     style: TextStyle(
                       fontSize: 16,
-                      color: isDark ? Colors.black : Colors.white,
+                      color: Colors.black,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

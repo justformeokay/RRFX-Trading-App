@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
+import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/alerts/default.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/appbars/default.dart';
@@ -34,12 +35,13 @@ class _WithdrawalState extends State<Withdrawal> {
   SettingController settingController = Get.put(SettingController());
   UtilitiesController utilitiesController = Get.find();
   TradingController tradingController = Get.put(TradingController());
+  final accountController = Get.find<AccountController>();
   RxString selectedBankUserID = "".obs;
   RxString selectedTradingID = "".obs;
-  RxList akunTradingList = [].obs;
   RxString selectedAccountBalance = "".obs;
   RxString selectedAccountCurrency = "".obs;
   RxBool isLoading = false.obs;
+  RxBool isLoadingAcc = false.obs;
   final _formKey = GlobalKey<FormState>();
   RxString selectedTradingLogin = "".obs;
   TextEditingController myBankCabang = TextEditingController();
@@ -51,9 +53,7 @@ class _WithdrawalState extends State<Withdrawal> {
   TextEditingController myAccountTrading = TextEditingController();
   final TextEditingController convertedAmount = TextEditingController();
   RxBool showOTPField = false.obs;
-
   RxBool isAmountExceedBalance = false.obs;
-
 
   @override
   void initState() {
@@ -66,14 +66,31 @@ class _WithdrawalState extends State<Withdrawal> {
         myAccountTrading.text = selectedTradingLogin.value;
       }
       selectedAccountCurrency(widget.currencyType ?? "ID");
+      isLoading.value = true;
+      accountController.fetchAccountInfo().then((accounts){
+        isLoading.value = false;
+        if(!accountController.hasAccounts){
+          return;
+        }
+        if(accountController.realAccounts.isEmpty){
+          return;
+        }
+        for(int i = 0; i < accountController.realAccounts.length; i++){
+          final acc = accountController.realAccounts[i];
+          if(acc.login == widget.idLogin){
+            selectedTradingLogin(acc.login);
+            myAccountTrading.text = "${acc.login} - USD ${acc.balance}";
+            selectedTradingID(acc.id);
+            selectedAccountCurrency(acc.currency);
+            selectedAccountBalance(acc.balance);
+          }
+        }
+      });
       settingController.getUserBank().then((resultGetMyBank){
         if(!resultGetMyBank){
           CustomAlert.alertError(context, message: settingController.responseMessage.value);
           return;
         }
-        tradingController.getTradingAccountV2().then((resultTrading){
-          akunTradingList.value = resultTrading;
-        });
         selectedBankUserID(settingController.userBankModel.value?.response?[0].id);
         myBankName.text = settingController.userBankModel.value?.response?[0].name ?? "";
         myBankNumber.text = settingController.userBankModel.value?.response?[0].account ?? "";
@@ -157,23 +174,26 @@ class _WithdrawalState extends State<Withdrawal> {
                       ),
                       NameTextField(requiredField: true, controller: myBankNumber, fieldName: "Nomor Rekening", hintText: "Nomor Rekening", labelText: "Nomor Rekening", readOnly: true, useValidator: false),
                       Obx(
-                        () => VoidTextField(requiredField: true, readOnly: false, controller: myAccountTrading, fieldName: "Akun Trading", hintText: "Akun Trading", labelText: "Akun Trading", onPressed: settingController.isLoading.value ? null : () async {
+                        () => VoidTextField(requiredField: true, readOnly: isLoadingAcc.value || isLoading.value ? true : false, controller: myAccountTrading, fieldName: "Akun Trading", hintText: isLoadingAcc.value ? "Getting Akun Trading" : "Akun Trading", labelText: isLoadingAcc.value ? "Getting Akun Trading" : "Akun Trading", onPressed: isLoadingAcc.value ? null : () async {
+                          isLoadingAcc.value = true;
+                          await accountController.fetchAccountInfo();
+                          isLoadingAcc.value = false;
                           if(widget.idLogin == null){
-                            CustomMaterialBottomSheets.defaultBottomSheet(context, title: "Pilih Akun Trading", size: size, children: List.generate(tradingController.tradingAccountModels.value?.response.real?.length ?? 0, (i){
-                            final account = tradingController.tradingAccountModels.value?.response.real?[i];
+                            CustomMaterialBottomSheets.defaultBottomSheet(context, title: "Pilih Akun Trading", size: size, children: List.generate(accountController.realAccounts.length, (i){
+                            final account = accountController.realAccounts[i];
                               return ListTile(
-                                subtitle: Text(account?.login ?? "-", style: GoogleFonts.inter(fontWeight: FontWeight.w400)),
-                                title: Text("${account?.namaTipeAkun ?? "-"} (USD ${account?.balance})", style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                                subtitle: Text(account.login ?? "-", style: GoogleFonts.inter(fontWeight: FontWeight.w400)),
+                                title: Text("${account.namaTipeAkun ?? "-"} (USD ${account.balance})", style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
                                 onTap: (){
                                   Navigator.pop(context);
-                                  selectedAccountCurrency(account?.currency);
-                                  myAccountTrading.text = "${account?.login} - USD ${account?.balance}";
-                                  selectedAccountBalance(account?.balance);
+                                  selectedAccountCurrency(account.currency);
+                                  myAccountTrading.text = "${account.login} - USD ${account.balance}";
+                                  selectedAccountBalance(account.balance);
                                   final amount = double.tryParse(cleanCurrency(myAmount.text)) ?? 0.0;
-                                  final balance = double.tryParse(account?.balance ?? "0") ?? 0.0;
+                                  final balance = double.tryParse(account.balance ?? "0") ?? 0.0;
                                   isAmountExceedBalance(amount > balance);
-                                  selectedTradingID(account?.id);
-                                  selectedTradingLogin(account?.login);
+                                  selectedTradingID(account.id);
+                                  selectedTradingLogin(account.login);
                                 },
                                 leading: Icon(Icons.group),
                                 trailing: Icon(AntDesign.arrow_right_outline, color: CustomColor.defaultColor),
@@ -280,6 +300,8 @@ class _WithdrawalState extends State<Withdrawal> {
         bottomNavigationBar: Obx(
           () {
             final isDisabled = isLoading.value ||
+              otpController.text.isEmpty ||
+              myAmount.text.isEmpty ||
               selectedAccountBalance.value == "0.00" ||
               selectedTradingLogin.value.isEmpty ||
               settingController.isLoadingOTP.value ||
@@ -298,6 +320,16 @@ class _WithdrawalState extends State<Withdrawal> {
                           return;
                         }
 
+                        if(myBankName.text.isEmpty || myBankNumber.text.isEmpty){
+                          AppSnackbar.error("Data bank tidak valid. Mohon periksa kembali data bank anda.");
+                          return;
+                        }
+
+                        if(otpController.text.isEmpty){
+                          AppSnackbar.error("Kode OTP wajib diisi.");
+                          return;
+                        }
+
                         if (selectedAccountBalance.value == "0.00") {
                           AppSnackbar.error("Akun anda belum memiliki saldo. Mohon lakukan deposit terlebih dahulu.");
                           return;
@@ -306,6 +338,25 @@ class _WithdrawalState extends State<Withdrawal> {
                         isLoading(true);
 
                         try {
+                          accountController.fetchAccountInfo().then((result){
+                            if(!accountController.hasAccounts){
+                              AppSnackbar.error("Akun trading tidak ditemukan. Silakan pilih akun yang valid.");
+                              isLoading(false);
+                              return;
+                            }
+                            for(int i = 0; i < accountController.realAccounts.length; i++){
+                              final acc = accountController.realAccounts[i];
+                              if(acc.login == selectedTradingLogin.value){
+                                final balance = double.tryParse(acc.balance ?? "0") ?? 0.0;
+                                final amount = double.tryParse(cleanCurrency(myAmount.text)) ?? 0.0;
+                                if(amount > balance){
+                                  AppSnackbar.error("Jumlah withdrawal melebihi balance akun.");
+                                  isLoading(false);
+                                  return;
+                                }
+                              }
+                            }
+                          });
                           final randomKey = generateFixedId("withdrawal");
                           final result = await settingController.withdrawal(
                             otp: otpController.text,
@@ -331,10 +382,7 @@ class _WithdrawalState extends State<Withdrawal> {
                             );
                           }
                         } catch (e) {
-                          CustomAlert.alertError(
-                            context,
-                            message: "Terjadi kesalahan. Coba lagi.",
-                          );
+                          AppSnackbar.error("Terjadi kesalahan: ${e.toString()}");
                         } finally {
                           isLoading(false);
                         }

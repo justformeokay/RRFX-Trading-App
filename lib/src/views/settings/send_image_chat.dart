@@ -2,12 +2,15 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:icons_plus/icons_plus.dart';
+import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/appbars/default.dart';
+import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/controllers/utilities.dart';
 
 class SendImageChat extends StatefulWidget {
-  const SendImageChat({super.key, this.imageURL});
+  const SendImageChat({super.key, this.imageURL, this.codeChat});
   final String? imageURL;
+  final String? codeChat;
 
   @override
   State<SendImageChat> createState() => _SendImageChatState();
@@ -30,7 +33,7 @@ class _SendImageChatState extends State<SendImageChat> {
             Expanded(
               child: Image.file(File(widget.imageURL ?? ''), fit: BoxFit.cover)
             ),
-            _MessageBar()
+            _MessageBar(codeChat: widget.codeChat, imageURL: widget.imageURL)
           ],
         ),
       ),
@@ -40,7 +43,9 @@ class _SendImageChatState extends State<SendImageChat> {
 
 /// Set of widget that contains TextField and Button to submit message
 class _MessageBar extends StatefulWidget {
-  const _MessageBar();
+  final String? codeChat;
+  final String? imageURL;
+  const _MessageBar({this.codeChat, this.imageURL});
 
   @override
   State<_MessageBar> createState() => _MessageBarState();
@@ -48,6 +53,7 @@ class _MessageBar extends StatefulWidget {
 
 class _MessageBarState extends State<_MessageBar> {
   late final TextEditingController _textController;
+  RxBool isSending = false.obs;
 
   @override
   Widget build(BuildContext context) {
@@ -72,10 +78,12 @@ class _MessageBarState extends State<_MessageBar> {
                   ),
                 ),
               ),
-              IconButton(
-                onPressed: () => _submitMessage(),
-                tooltip: "Send Message",
-                icon: const Icon(Bootstrap.send),
+              Obx(
+                () => IconButton(
+                  onPressed: isSending.value ? null : () => _submitMessage(),
+                  tooltip: "Send Message",
+                  icon: isSending.value ? const CircularProgressIndicator(color: CustomColor.secondaryColor, strokeWidth: 2.0) : const Icon(Bootstrap.send),
+                ),
               ),
             ],
           ),
@@ -99,10 +107,15 @@ class _MessageBarState extends State<_MessageBar> {
   }
 
   void _submitMessage() async {
-    utilitiesController.sendMessage().then((result){
+    isSending.value = true;
+    utilitiesController.sendMessage(code: widget.codeChat, message: _textController.text, attachmentPath: widget.imageURL).then((result){
+      isSending.value = false;
       if(!result){
-
+        AppSnackbar.error("Gagal mengirim pesan. Silakan coba lagi.");
+        return;
       }
+      AppSnackbar.success("Pesan berhasil dikirim.");
+      Navigator.of(context).pop();
     });
   }
 }

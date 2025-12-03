@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/alerts/default.dart';
 import 'package:rrfx/src/components/appbars/default.dart';
 import 'package:rrfx/src/components/bottomsheets/material_bottom_sheets.dart';
@@ -15,7 +16,6 @@ import 'package:rrfx/src/controllers/trading.dart';
 import 'package:rrfx/src/helpers/formatters/deposit_withdraw_prefix.dart';
 import 'package:rrfx/src/helpers/formatters/number_formatter.dart';
 import 'package:rrfx/src/helpers/handlers/image_picker.dart';
-import 'package:rrfx/src/helpers/variables/countrycurrency.dart';
 import 'package:rrfx/src/views/mainpage.dart';
 
 class Deposit extends StatefulWidget {
@@ -31,6 +31,7 @@ class _DepositState extends State<Deposit> {
   
   SettingController settingController = Get.put(SettingController());
   TradingController tradingController = Get.put(TradingController());
+  final accountController = Get.find<AccountController>();
   RxString selectedBankAdminID = "".obs;
   RxString selectedBankUserID = "".obs;
   RxString selectedTradingID = "".obs;
@@ -127,9 +128,6 @@ class _DepositState extends State<Deposit> {
                 () => isLoading.value ? CircularProgressIndicator() : CustomOutlinedButton.defaultOutlinedButton(
                   title: settingController.isLoading.value ? "Processing..." :  "Submit",
                   onPressed: settingController.isLoading.value ? null : () async {
-                    print("Selected Trading Login: ${selectedTradingLogin.value}");
-                    print("Selected Trading ID: ${selectedTradingID.value}");
-                    print("Final Deposit Amount: ${finalDepositAmount.value}");
                     String keyDeposit = generateFixedId("deposit");
                     if(_formKey.currentState!.validate()){
                       final int amount = NumberFormatter.parseRupiahToInt(myAmount.text);
@@ -143,7 +141,7 @@ class _DepositState extends State<Deposit> {
                         key: keyDeposit
                       ).then((result){
                         if(result){
-                            CustomAlert.alertDialogCustomSuccess(context, message: settingController.responseMessage.value, onTap: (){
+                          CustomAlert.alertDialogCustomSuccess(context, message: settingController.responseMessage.value, onTap: (){
                             Get.back();
                             Get.back();
                           });
@@ -151,7 +149,7 @@ class _DepositState extends State<Deposit> {
                           return;
                         }
                         isLoading(false);
-                        CustomAlert.alertError(context, message: settingController.responseMessage.value);
+                        Get.log("Deposit Error: ${settingController.responseMessage.value}");
                       });
                     }
                   }
@@ -282,17 +280,19 @@ class _DepositState extends State<Deposit> {
                           },
                         );
                       })
-
                     ]
                   ),
-
                   UtilitiesWidget.titleContent(
                     title: "Bukti Transfer (Opsional)",
                     subtitle: "Upload foto bukti transfer anda agar proses Deposit dapat kami proses dan dapat dipertanggung jawabkan kebenarannya. Maksimal ukuran file 5 MB dengan format Jpeg, JPG, PNG.",
                     children: [
                       Obx(
                         () => settingController.isLoading.value ? const SizedBox() : UtilitiesWidget.uploadPhoto(isImageOnline: false, title: "Bukti Transfer (Opsional)", onPressed: () async {
-                            selectedPhotoPath(await CustomImagePicker.pickImageFromCameraAndReturnUrl());
+                            final imagePath = await CustomImagePicker.pickImageFromCameraAndReturnUrl();
+                            // Hanya set jika path valid (tidak kosong dan bukan error message)
+                            if(imagePath.isNotEmpty && !imagePath.contains('Exception')) {
+                              selectedPhotoPath(imagePath);
+                            }
                           },
                           urlPhoto: selectedPhotoPath.value
                         ),

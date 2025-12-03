@@ -25,8 +25,8 @@ class CustomImagePicker {
       return imageFile.path;
      
     } catch (e) {
-      return e.toString();
-      // throw Exception("Terjadi kesalahan saat mengambil gambar: $e");
+      // Jika user cancel atau error, return empty string bukan error message
+      return '';
     }
   }
 
