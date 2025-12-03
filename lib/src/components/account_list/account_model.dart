@@ -43,6 +43,13 @@ class AccountDetailModel {
   final String? balance;
   final String? currency;
   final String? marginFree;
+
+  final String? accountCurrency;
+  final double? marginFreePercent;
+  final String? totalDepositUsd;
+  final String? totalWithdrawalUsd;
+  final String? pnl;
+
   final String? equity;
   // Tambahkan properti lain yang relevan di sini
 
@@ -53,9 +60,15 @@ class AccountDetailModel {
     this.namaTipeAkun,
     this.balance,
     this.currency,
+    this.accountCurrency,
+    this.marginFreePercent,
+    this.totalDepositUsd,
+    this.totalWithdrawalUsd,
     this.marginFree,
+    this.pnl,
     this.equity
   });
+  
 
   factory AccountDetailModel.fromJson(Map<String, dynamic> json) {
     return AccountDetailModel(
@@ -66,6 +79,11 @@ class AccountDetailModel {
       balance: json['balance'] as String?,
       currency: json['currency'] as String?,
       marginFree: json['margin_free'] as String?,
+      accountCurrency: json['account_currency'] as String?,
+      marginFreePercent: _toDouble(json['margin_free_percent']),
+      totalDepositUsd: json['total_deposit_usd'] as String?,
+      totalWithdrawalUsd: json['total_withdrawal_usd'] as String?,
+      pnl: json['pnl'] as String?,
       equity: json['equity'] as String?,
       // Inisialisasi properti lain dari API response
     );
@@ -79,7 +97,22 @@ class AccountDetailModel {
       'balance': balance,
       'currency': currency,
       'margin_free': marginFree,
+      'account_currency': accountCurrency,
+      'margin_free_percent': marginFreePercent,
+      'total_deposit_usd': totalDepositUsd,
+      'total_withdrawal_usd': totalWithdrawalUsd,
+      'pnl': pnl,
       'equity': equity
     };
   }
 }
+
+double? _toDouble(dynamic value) {
+    if (value == null) return null;
+
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+
+    return null;
+  }

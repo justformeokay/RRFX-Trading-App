@@ -265,7 +265,7 @@ class _IndexV2State extends State<IndexV2> {
                                     child: Row(
                                       children: [
                                         Obx(
-                                          () => !controller.hasAccounts ? const SizedBox() : Text("USD ${showHideBalance.value ? "****" : controller.selectedAccount.value?.balance}",
+                                          () => !controller.hasAccounts ? const SizedBox() : Text("${controller.selectedAccount.value?.accountCurrency} ${showHideBalance.value ? "****" : controller.selectedAccount.value?.balance}",
                                             style: GoogleFonts.inter(
                                               fontSize: 20,
                                               fontWeight: FontWeight.w800,
@@ -280,7 +280,15 @@ class _IndexV2State extends State<IndexV2> {
                                   ),
                                 ),
                                 Text(
-                                  "Equity: USD ${controller.selectedAccount.value?.equity ?? 0}",
+                                  "Equity: ${controller.selectedAccount.value?.accountCurrency} ${controller.selectedAccount.value?.equity ?? 0}",
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 12,
+                                    color: Get.textTheme.bodySmall?.color,
+                                  ),
+                                ),
+                                Text(
+                                  "Free Margin (%): ${controller.selectedAccount.value?.marginFreePercent ?? 0}%",
                                   style: GoogleFonts.inter(
                                     fontWeight: FontWeight.w500,
                                     fontSize: 12,
@@ -350,7 +358,7 @@ class _IndexV2State extends State<IndexV2> {
                                 ),
                                 Obx(
                                   () => !controller.hasAccounts ? const SizedBox() : Text(
-                                    "USD ${controller.selectedAccount.value?.marginFree}",
+                                    "${controller.selectedAccount.value?.accountCurrency} ${controller.selectedAccount.value?.marginFree}",
                                     style: GoogleFonts.inter(
                                       fontWeight: FontWeight.w700,
                                       fontSize: 13,
@@ -698,7 +706,7 @@ Widget _buildInfoColumn(BuildContext context, String label, String? value) {
                     return ListTile(
                       leading: Icon(Icons.account_circle_rounded, color: CustomColor.secondaryColor),
                       title: Text("${acc.namaTipeAkun} - ${acc.login}", style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-                      subtitle: Text("Balance: USD ${acc.balance}", style: GoogleFonts.inter(fontSize: 12.0)),
+                      subtitle: Text("Balance: ${controller.selectedAccount.value?.accountCurrency} ${acc.balance}", style: GoogleFonts.inter(fontSize: 12.0)),
                       onTap: (){
                         Navigator.pop(context);
                         Future.delayed( Duration(milliseconds: 300), (){
@@ -732,7 +740,7 @@ Widget _buildInfoColumn(BuildContext context, String label, String? value) {
                     return ListTile(
                       leading: Icon(Icons.account_circle_rounded, color: CustomColor.secondaryColor),
                       title: Text("${acc.namaTipeAkun} - ${acc.login}", style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-                      subtitle: Text("Balance: USD ${acc.balance}", style: GoogleFonts.inter(fontSize: 12.0)),
+                      subtitle: Text("Balance: ${controller.selectedAccount.value?.accountCurrency} ${acc.balance}", style: GoogleFonts.inter(fontSize: 12.0)),
                       onTap: (){
                         Navigator.pop(context);
                         Future.delayed( Duration(milliseconds: 300), (){
@@ -766,7 +774,7 @@ Widget _buildInfoColumn(BuildContext context, String label, String? value) {
                     return ListTile(
                       leading: Icon(Icons.account_circle_rounded, color: CustomColor.secondaryColor),
                       title: Text("${acc.namaTipeAkun} - ${acc.login}", style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-                      subtitle: Text("Balance: USD ${acc.balance}", style: GoogleFonts.inter(fontSize: 12.0)),
+                      subtitle: Text("Balance: ${controller.selectedAccount.value?.accountCurrency} ${acc.balance}", style: GoogleFonts.inter(fontSize: 12.0)),
                       onTap: (){
                         Navigator.pop(context);
                         Future.delayed( Duration(milliseconds: 300), (){

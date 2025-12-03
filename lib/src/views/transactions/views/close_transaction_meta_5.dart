@@ -176,10 +176,10 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Obx(() => _balanceRow("Account ID", accountController.selectedAccount.value?.login ?? "N/A", context)),
-          _balanceRow("Deposit", "0", context),
-          _balanceRow("Swap", "0", context),
-          _balanceRow("Commision", "0", context),
-          Obx(() => _balanceRow("Balance", "${accountController.selectedAccount.value?.balance ?? "N/A"} ${accountController.selectedAccount.value?.currency ?? "0"}", context)),
+          Obx(() => _balanceRow("Deposit", accountController.selectedAccount.value?.totalDepositUsd ?? "0", context)),
+          _balanceRow("Swap", "-", context),
+          _balanceRow("Commision", "-", context),
+          Obx(() => _balanceRow("Balance", "${accountController.selectedAccount.value?.balance ?? "N/A"} ${accountController.selectedAccount.value?.accountCurrency ?? "0"}", context)),
         ],
       ),
     );

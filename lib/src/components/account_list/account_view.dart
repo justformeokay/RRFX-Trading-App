@@ -80,7 +80,7 @@ class AccountSelectionView extends StatelessWidget {
             const SizedBox(height: 4),
             Text('Login ID: #${account.login ?? 'N/A'}'),
             Text(
-              'Balance: ${account.currency ?? 'USD'} ${account.balance ?? '0.00'}',
+              'Balance: ${account.accountCurrency ?? 'USD'} ${account.balance ?? '0.00'}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ],

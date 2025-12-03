@@ -79,9 +79,9 @@ class _WithdrawalState extends State<Withdrawal> {
           final acc = accountController.realAccounts[i];
           if(acc.login == widget.idLogin){
             selectedTradingLogin(acc.login);
-            myAccountTrading.text = "${acc.login} - USD ${acc.balance}";
+            myAccountTrading.text = "${acc.login} - ${acc.accountCurrency} ${acc.balance}";
             selectedTradingID(acc.id);
-            selectedAccountCurrency(acc.currency);
+            selectedAccountCurrency(acc.accountCurrency);
             selectedAccountBalance(acc.balance);
           }
         }
@@ -136,6 +136,7 @@ class _WithdrawalState extends State<Withdrawal> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    print("ID Login: ${widget.idLogin}");
     return GestureDetector(
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       child: Scaffold(
@@ -174,7 +175,7 @@ class _WithdrawalState extends State<Withdrawal> {
                       ),
                       NameTextField(requiredField: true, controller: myBankNumber, fieldName: "Nomor Rekening", hintText: "Nomor Rekening", labelText: "Nomor Rekening", readOnly: true, useValidator: false),
                       Obx(
-                        () => VoidTextField(requiredField: true, readOnly: isLoadingAcc.value || isLoading.value ? true : false, controller: myAccountTrading, fieldName: "Akun Trading", hintText: isLoadingAcc.value ? "Getting Akun Trading" : "Akun Trading", labelText: isLoadingAcc.value ? "Getting Akun Trading" : "Akun Trading", onPressed: isLoadingAcc.value ? null : () async {
+                        () => VoidTextField(requiredField: true, readOnly: widget.idLogin != null || isLoadingAcc.value || isLoading.value ? true : false, controller: myAccountTrading, fieldName: "Akun Trading", hintText: isLoadingAcc.value ? "Getting Akun Trading" : "Akun Trading", labelText: isLoadingAcc.value ? "Getting Akun Trading" : "Akun Trading", onPressed: isLoadingAcc.value ? null : () async {
                           isLoadingAcc.value = true;
                           await accountController.fetchAccountInfo();
                           isLoadingAcc.value = false;
@@ -183,11 +184,11 @@ class _WithdrawalState extends State<Withdrawal> {
                             final account = accountController.realAccounts[i];
                               return ListTile(
                                 subtitle: Text(account.login ?? "-", style: GoogleFonts.inter(fontWeight: FontWeight.w400)),
-                                title: Text("${account.namaTipeAkun ?? "-"} (USD ${account.balance})", style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                                title: Text("${account.namaTipeAkun ?? "-"} (${account.accountCurrency} ${account.balance})", style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
                                 onTap: (){
                                   Navigator.pop(context);
-                                  selectedAccountCurrency(account.currency);
-                                  myAccountTrading.text = "${account.login} - USD ${account.balance}";
+                                  selectedAccountCurrency(account.accountCurrency);
+                                  myAccountTrading.text = "${account.login} - ${account.accountCurrency} ${account.balance}";
                                   selectedAccountBalance(account.balance);
                                   final amount = double.tryParse(cleanCurrency(myAmount.text)) ?? 0.0;
                                   final balance = double.tryParse(account.balance ?? "0") ?? 0.0;

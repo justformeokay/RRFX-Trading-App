@@ -85,33 +85,6 @@ class AccountSelectionBottomSheet {
                                 }
                               },
                             );
-
-                            /// KIRIM PASSWORD & OTP
-                            // showMt5PasswordPopup(Get.context!, login: account.login ?? "",
-                            //   onSubmit: (password, otp) async {
-                            //     final changeSuccess = await controller.changePasswordMeta5(
-                            //       loginNumber: account.login,
-                            //       newPassword: password,
-                            //       otp: otp,
-                            //     );
-                            //     if (changeSuccess) {
-                            //       AppSnackbar.success("Password akun ${account.login} berhasil diubah.");
-                            //       final reconnect = await controller.connectToMeta5(loginNumber: account.login);
-                            //       if (reconnect) {
-                            //         AppSnackbar.success("Akun ${account.login} berhasil dihubungkan ke MetaTrader 5.");
-                            //       } else {
-                            //         AppSnackbar.error("Gagal menghubungkan akun ${account.login} setelah mengubah password.");
-                            //       }
-                            //     } else {
-                            //       AppSnackbar.error("Gagal mengubah password akun ${account.login}.");
-                            //     }
-                            //   },
-                            //   /// KIRIM OTP KE SERVER
-                            //   onSendOtp: () async {
-                            //     final res = await controller.sendOTPChangePasswordMeta();
-                            //     return res;
-                            //   },
-                            // );
                           }
                         });
                       },
@@ -164,7 +137,7 @@ class AccountSelectionBottomSheet {
           children: [
             const SizedBox(height: 4),
             Text('Login ID: ${account.login ?? 'N/A'}'),
-            Text('Balance: USD ${account.balance ?? '0.00'}',
+            Text('Balance: ${account.accountCurrency} ${account.balance ?? '0.00'}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ],

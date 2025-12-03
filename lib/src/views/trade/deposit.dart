@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/alerts/default.dart';
+import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/appbars/default.dart';
 import 'package:rrfx/src/components/bottomsheets/material_bottom_sheets.dart';
 import 'package:rrfx/src/components/buttons/outlined_button.dart';
@@ -63,6 +64,24 @@ class _DepositState extends State<Deposit> {
         selectedTradingLogin(widget.idLogin);
         myAccountTrading.text = selectedTradingLogin.value;
       }
+      isLoading.value = true;
+      accountController.fetchAccountInfo().then((accounts){
+        isLoading.value = false;
+        if(!accountController.hasAccounts){
+          return;
+        }
+        if(accountController.realAccounts.isEmpty){
+          return;
+        }
+        for(int i = 0; i < accountController.realAccounts.length; i++){
+          final acc = accountController.realAccounts[i];
+          if(acc.login == widget.idLogin){
+            selectedTradingLogin(acc.login);
+            myAccountTrading.text = "${acc.login} - ${acc.accountCurrency} ${acc.balance}";
+            selectedTradingID(acc.id);
+          }
+        }
+      });
       settingController.getAdminBank().then((resultBank){
         if(!resultBank){
           CustomAlert.alertError(context, message: settingController.responseMessage.value);
@@ -84,11 +103,6 @@ class _DepositState extends State<Deposit> {
             CustomAlert.alertError(context, message: "Anda belum menginput bank, silahkan edit terlebih dahulu informasi bank pada menu Settings Edit Profile", onTap: (){Get.off(() => Mainpage());});
             return;
           }
-          tradingController.getTradingAccount().then((resultTrading){
-            if(!resultTrading){
-              CustomAlert.alertError(context, message: tradingController.responseMessage.value);
-            }
-          });
           selectedBankUserID(settingController.userBankModel.value?.response?[0].id);
           myBankName.text = settingController.userBankModel.value?.response?[0].name ?? "";
           myBankNumber.text = settingController.userBankModel.value?.response?[0].account ?? "";
@@ -123,11 +137,31 @@ class _DepositState extends State<Deposit> {
           autoImplyLeading: true,
           actions: [
             SizedBox(
-              height: 30,
+              height: 25,
               child: Obx(
-                () => isLoading.value ? CircularProgressIndicator() : CustomOutlinedButton.defaultOutlinedButton(
+                () => isLoading.value ? SizedBox(
+                    width: 25,
+                    height: 25,
+                    child: CircularProgressIndicator(strokeWidth: 2.0, color: CustomColor.secondaryColor)) : CustomOutlinedButton.defaultOutlinedButton(
                   title: settingController.isLoading.value ? "Processing..." :  "Submit",
                   onPressed: settingController.isLoading.value ? null : () async {
+                    if(selectedBankAdminID.value.isEmpty){
+                      AppSnackbar.error("Bank admin harus dipilih terlebih dahulu.");
+                      return;
+                    }
+                    if(selectedBankUserID.value.isEmpty){
+                      AppSnackbar.error("Rekening Bank harus dipilih terlebih dahulu. Jika tidak memiliki, daftarkan terlebih dahulu di tab Lainnya");
+                      return;
+                    }
+                    if(selectedTradingID.value.isEmpty){
+                      AppSnackbar.error("Akun trading harus dipilih terlebih dahulu.");
+                      return;
+                    }
+                    if(finalDepositAmount.value == "0" || finalDepositAmount.value.isEmpty){
+                      AppSnackbar.error("Jumlah deposit tidak boleh kosong atau nol.");
+                      return;
+                    }
+                    isLoading(true);
                     String keyDeposit = generateFixedId("deposit");
                     if(_formKey.currentState!.validate()){
                       final int amount = NumberFormatter.parseRupiahToInt(myAmount.text);
@@ -222,20 +256,26 @@ class _DepositState extends State<Deposit> {
                       NameTextField(requiredField: true, controller: myBankNumber, fieldName: "Nomor Rekening", hintText: "Nomor Rekening", labelText: "Nomor Rekening", readOnly: true, useValidator: false),
                       Obx(
                         () {
-                          return VoidTextField(requiredField: true, readOnly: widget.idLogin == null ? false : true, controller: myAccountTrading, fieldName: "Akun Trading", hintText: "Akun Trading", labelText: "Akun Trading", onPressed: settingController.isLoading.value ? null : () async {
+                          return VoidTextField(requiredField: true, readOnly: widget.idLogin == null ? false : true, controller: myAccountTrading, fieldName: "Akun Trading", hintText: "Akun Trading", labelText: "Akun Trading", onPressed: isLoading.value ? null : () async {
+                            isLoading(true);
+                            accountController.fetchAccountInfo().then((result){
+                              isLoading(false);
+                              if(!accountController.hasAccounts){
+                                AppSnackbar.error("Akun trading tidak ditemukan. Silakan pilih akun yang valid.");
+                                isLoading(false);
+                                return;
+                              }
+                            });
                             if(widget.idLogin == null){
-                              CustomMaterialBottomSheets.defaultBottomSheet(context, title: "Pilih Akun Trading", size: size, children: List.generate(tradingController.tradingAccountModels.value?.response.real?.length ?? 0, (i){
-                                final account = tradingController.tradingAccountModels.value?.response.real?[i];
-                                if(account?.currency != currencyCodeSelected.value){
-                                  return const SizedBox();
-                                }
+                              CustomMaterialBottomSheets.defaultBottomSheet(context, title: "Pilih Akun Trading", size: size, children: List.generate(accountController.realAccounts.length, (i){
+                                final account = accountController.realAccounts[i];
                                 return ListTile(
-                                  subtitle: Text("${account?.currency} - ${account?.login ?? "-"}", style: GoogleFonts.inter(fontWeight: FontWeight.w400)),
-                                  title: Text("${account?.namaTipeAkun ?? "-"} (USD ${account?.balance})", style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                                  subtitle: Text("${account.accountCurrency} - ${account.login ?? "-"}", style: GoogleFonts.inter(fontWeight: FontWeight.w400)),
+                                  title: Text("${account.namaTipeAkun ?? "-"} (${account.accountCurrency} ${account.balance})", style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
                                   onTap: (){
-                                    myAccountTrading.text = "${account?.login} - USD ${account?.balance}";
-                                    selectedTradingID(account?.id);
-                                    selectedTradingLogin(account?.login);
+                                    myAccountTrading.text = "${account.login} - ${account.accountCurrency} ${account.balance}";
+                                    selectedTradingID(account.id);
+                                    selectedTradingLogin(account.login);
                                     Get.back();
                                   },
                                   leading: Icon(Icons.group, color: CustomColor.secondaryColor),

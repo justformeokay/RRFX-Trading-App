@@ -140,6 +140,7 @@ class _SettingsState extends State<Settings> {
         () => RefreshIndicator(
           color: CustomColor.secondaryColor,
           onRefresh: isLoading.value ? () async {} : () async {
+            haveRealAccount.value = false;
             await _accountController.fetchAccountInfo().then((result){
               if(_accountController.allAccounts.any((account) => account.type == 'real')){
                 haveRealAccount.value = true;

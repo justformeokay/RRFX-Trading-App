@@ -160,11 +160,11 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Obx(() => _balanceRow("Account ID", accountController.selectedAccount.value?.login ?? "N/A", context)),
-          Obx(() => _balanceRow("Balance", "${accountController.selectedAccount.value?.balance ?? "N/A"} ${accountController.selectedAccount.value?.currency ?? "0"}", context)),
-          Obx(() => _balanceRow("Equity", "${accountController.selectedAccount.value?.equity ?? "N/A"} ${accountController.selectedAccount.value?.currency ?? "0"}", context)),
-          _balanceRow("Margin", "0", context),
-          Obx(() => _balanceRow("Free Margin", "${accountController.selectedAccount.value?.marginFree ?? "N/A"} ${accountController.selectedAccount.value?.currency ?? "0"}", context)),
-          _balanceRow("Margin Level (%)", "0", context),
+          Obx(() => _balanceRow("Balance", "${accountController.selectedAccount.value?.balance ?? "N/A"} ${accountController.selectedAccount.value?.accountCurrency ?? "0"}", context)),
+          Obx(() => _balanceRow("Equity", "${accountController.selectedAccount.value?.equity ?? "N/A"} ${accountController.selectedAccount.value?.accountCurrency ?? "0"}", context)),
+          _balanceRow("Margin", "-", context),
+          Obx(() => _balanceRow("Free Margin", "${accountController.selectedAccount.value?.marginFree ?? "N/A"} ${accountController.selectedAccount.value?.accountCurrency ?? "0"}", context)),
+          Obx(() => _balanceRow("Margin Level (%)", accountController.selectedAccount.value?.marginFreePercent != null ? "${accountController.selectedAccount.value?.marginFreePercent}%" : "N/A", context)),
         ],
       ),
     );
