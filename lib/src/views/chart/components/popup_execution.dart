@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:rrfx/src/components/colors/default.dart'; // Asumsi CustomColor di sini
+import 'package:rrfx/src/components/colors/default.dart';
 
 // --- WIDGET POPUP KONFIRMASI ---
 class PopupExecution {
@@ -9,14 +9,19 @@ class PopupExecution {
     required String symbol,
     required String type,
     required double lot,
-    required double price,
+    required Rx<double> priceObservable, // Changed to Rx<double> untuk realtime
+    required int priceDigits,
     required Function onConfirm,
   }) {
     final isDarkMode = Get.theme.brightness == Brightness.dark;
     final primaryColor = type == 'BUY' ? Colors.green : Colors.red;
-    final secondaryColor = CustomColor.secondaryColor; 
+    final secondaryColor = CustomColor.secondaryColor;
     final dialogBackgroundColor = isDarkMode ? Colors.grey[900] : Colors.white;
     final textColor = isDarkMode ? Colors.white : Colors.black;
+
+    // Track previous price untuk deteksi perubahan
+    final Rx<double> previousPrice = priceObservable.value.obs;
+    final Rx<String> priceDirection = ''.obs; // 'up', 'down', ''
 
     return Dialog(
       backgroundColor: dialogBackgroundColor,
@@ -46,16 +51,119 @@ class PopupExecution {
                 ),
               ],
             ),
-            
+
             const Divider(height: 25, color: Colors.white12),
 
             // Detail Order
             _buildDetailRow('Pasangan', symbol, textColor),
             _buildDetailRow('Lot', lot.toStringAsFixed(2), textColor),
-            _buildDetailRow('Harga Eksekusi', price.toStringAsFixed(4), textColor),
-            
+
+            // Harga Realtime dengan Obx dan animasi
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Harga Eksekusi',
+                        style: TextStyle(
+                          color: textColor.withOpacity(0.6),
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'LIVE',
+                          style: TextStyle(
+                            color: primaryColor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Obx(() {
+                    // Deteksi perubahan price
+                    final currentPrice = priceObservable.value;
+                    if (currentPrice > previousPrice.value) {
+                      priceDirection.value = 'up';
+                      Future.delayed(const Duration(milliseconds: 500), () {
+                        priceDirection.value = '';
+                      });
+                    } else if (currentPrice < previousPrice.value) {
+                      priceDirection.value = 'down';
+                      Future.delayed(const Duration(milliseconds: 500), () {
+                        priceDirection.value = '';
+                      });
+                    }
+                    previousPrice.value = currentPrice;
+
+                    Color priceColor = textColor;
+                    if (priceDirection.value == 'up') {
+                      priceColor = Colors.green;
+                    } else if (priceDirection.value == 'down') {
+                      priceColor = Colors.red;
+                    }
+
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            priceDirection.value.isNotEmpty
+                                ? priceColor.withOpacity(0.1)
+                                : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        children: [
+                          if (priceDirection.value == 'up')
+                            Icon(
+                              Icons.arrow_upward,
+                              size: 14,
+                              color: Colors.green,
+                            ),
+                          if (priceDirection.value == 'down')
+                            Icon(
+                              Icons.arrow_downward,
+                              size: 14,
+                              color: Colors.red,
+                            ),
+                          if (priceDirection.value.isNotEmpty)
+                            const SizedBox(width: 4),
+                          Text(
+                            currentPrice.toStringAsFixed(priceDigits),
+                            style: TextStyle(
+                              color: priceColor,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+
             const SizedBox(height: 20),
-            
+
             Text(
               'Apakah Anda yakin ingin mengeksekusi order ini?',
               style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 14),
@@ -81,11 +189,16 @@ class PopupExecution {
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                   child: Text(
-                    'Konfirmasi ${type}',
+                    'Konfirmasi $type',
                     style: const TextStyle(color: Colors.white),
                   ),
                 ),
@@ -110,7 +223,11 @@ class PopupExecution {
           ),
           Text(
             value,
-            style: TextStyle(color: valueColor, fontSize: 15, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: valueColor,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),

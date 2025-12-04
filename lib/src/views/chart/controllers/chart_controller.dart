@@ -12,13 +12,15 @@ import 'package:rrfx/src/views/chart/controllers/market_list_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-
 class ChartControllers extends GetxController {
   RxBool isLoading = false.obs;
   final accountController = Get.put(AccountController());
   final TradingController tradingController = Get.put(TradingController());
   final marketListController = Get.put(MarketListController());
-  final MarketWebSocketController wsController = Get.put(MarketWebSocketController());
+  final MarketWebSocketController wsController = Get.put(
+    MarketWebSocketController(),
+    permanent: true,
+  );
 
   // Deklarasi Timer
   Timer? _pollingTimer; // 👈 Variabel untuk menyimpan instance Timer
@@ -32,7 +34,8 @@ class ChartControllers extends GetxController {
   final RxString timeFrame = "H1".obs;
   final RxDouble spreadValue = 0.0.obs;
   DateTime now = DateTime.now();
-  final RxList<String> availableTimeframes = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4','D1', 'W1', 'MN'].obs;
+  final RxList<String> availableTimeframes =
+      ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1', 'MN'].obs;
 
   RealtimeChannel? channel;
   final AuthService authService = AuthService();
@@ -50,13 +53,17 @@ class ChartControllers extends GetxController {
     // Listen perubahan pada marketData dari WebSocket
     ever(wsController.marketData, (data) {
       final symbolKey = _getWebSocketSymbol(selectedMarket.value);
-      print('📊 WebSocket data updated. Available symbols: ${data.keys.toList()}');
+      print(
+        '📊 WebSocket data updated. Available symbols: ${data.keys.toList()}',
+      );
       print('🔍 Looking for symbol: $symbolKey');
-      
+
       if (data.containsKey(symbolKey)) {
         final marketData = data[symbolKey];
         if (marketData != null) {
-          print('✅ Found data for $symbolKey - Bid: ${marketData.bid}, Ask: ${marketData.ask}, Digits: ${marketData.digits}');
+          print(
+            '✅ Found data for $symbolKey - Bid: ${marketData.bid}, Ask: ${marketData.ask}, Digits: ${marketData.digits}',
+          );
           bidPrice.value = marketData.bid;
           askPrice.value = marketData.ask;
           priceDigits.value = marketData.digits;
@@ -72,9 +79,15 @@ class ChartControllers extends GetxController {
     ever(selectedMarket, (market) {
       final symbolKey = _getWebSocketSymbol(market);
       print('🔄 Market changed to: $symbolKey');
+
+      // Pastikan WebSocket tetap aktif saat pindah market
+      _ensureWebSocketConnection();
+
       final data = wsController.marketData[symbolKey];
       if (data != null) {
-        print('✅ Immediate data found - Bid: ${data.bid}, Ask: ${data.ask}, Digits: ${data.digits}');
+        print(
+          '✅ Immediate data found - Bid: ${data.bid}, Ask: ${data.ask}, Digits: ${data.digits}',
+        );
         bidPrice.value = data.bid;
         askPrice.value = data.ask;
         priceDigits.value = data.digits;
@@ -119,7 +132,7 @@ class ChartControllers extends GetxController {
 
   void initConnection() {
     isLoading.value = true;
-    if(!accountController.hasAccounts){
+    if (!accountController.hasAccounts) {
       isLoading.value = false;
       return;
     }
@@ -127,9 +140,13 @@ class ChartControllers extends GetxController {
       isLoading.value = false;
       return;
     }
-    accountController.connectToMeta5(loginNumber: accountController.selectedAccount.value?.login).then((success) {
+    accountController.connectToMeta5(loginNumber: accountController.selectedAccount.value?.login).then((
+      success,
+    ) {
       if (success) {
-        AppSnackbar.success('Akun ${accountController.selectedAccount.value?.type} ${accountController.selectedAccount.value?.login} berhasil dihubungkan ke MetaTrader 5.');
+        AppSnackbar.success(
+          'Akun ${accountController.selectedAccount.value?.type} ${accountController.selectedAccount.value?.login} berhasil dihubungkan ke MetaTrader 5.',
+        );
       } else {
         showMt5PasswordPopup(
           Get.context!,
@@ -141,7 +158,9 @@ class ChartControllers extends GetxController {
             );
 
             if (changeSuccess) {
-              AppSnackbar.success("Password akun ${accountController.selectedAccount.value?.login} berhasil diubah.");
+              AppSnackbar.success(
+                "Password akun ${accountController.selectedAccount.value?.login} berhasil diubah.",
+              );
 
               final reconnect = await accountController.connectToMeta5(
                 loginNumber: accountController.selectedAccount.value?.login,
@@ -149,17 +168,16 @@ class ChartControllers extends GetxController {
 
               if (reconnect) {
                 AppSnackbar.success(
-                  "Akun ${accountController.selectedAccount.value?.login} berhasil dihubungkan ke MetaTrader 5."
+                  "Akun ${accountController.selectedAccount.value?.login} berhasil dihubungkan ke MetaTrader 5.",
                 );
               } else {
                 AppSnackbar.error(
-                  "Gagal menghubungkan akun ${accountController.selectedAccount.value?.login} setelah mengubah password."
+                  "Gagal menghubungkan akun ${accountController.selectedAccount.value?.login} setelah mengubah password.",
                 );
               }
-
             } else {
               AppSnackbar.error(
-                "Gagal mengubah password akun ${accountController.selectedAccount.value?.login}."
+                "Gagal mengubah password akun ${accountController.selectedAccount.value?.login}.",
               );
             }
           },
@@ -199,7 +217,10 @@ class ChartControllers extends GetxController {
     timeFrame.value = newTimeframe;
 
     // Hentikan polling lama
-    _stopDataPolling(); 
+    _stopDataPolling();
+
+    // Pastikan WebSocket tetap aktif
+    _ensureWebSocketConnection();
 
     // Load ulang data chart langsung (biar tidak perlu nunggu timer)
     await loadChartData();
@@ -211,24 +232,32 @@ class ChartControllers extends GetxController {
     _startDataPolling();
   }
 
+  void _ensureWebSocketConnection() {
+    // Cek status WebSocket dan reconnect jika perlu
+    if (wsController.status.value == WebSocketStatus.failed ||
+        wsController.status.value == WebSocketStatus.disconnected) {
+      Get.log("🔄 WebSocket disconnected, attempting reconnect...");
+      wsController.reconnect();
+    } else {
+      Get.log("✅ WebSocket is ${wsController.status.value}");
+    }
+  }
 
   /// === Polling Logic ===
 
   void _startDataPolling() {
     bool runIt = isForexHoliday(now);
-    if(runIt) {
+    if (runIt) {
       Get.log("Forex Libur");
       return;
     }
     // Pastikan tidak ada timer yang berjalan sebelumnya
-    _stopDataPolling(); 
-    
+    _stopDataPolling();
 
-    
     // Polling setiap 10 detik
     _pollingTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
       // Panggil fungsi yang hanya memuat ulang data chart
-      loadChartData(); 
+      loadChartData();
     });
     Get.log("Polling data chart dimulai (10 detik)");
   }
@@ -239,7 +268,7 @@ class ChartControllers extends GetxController {
       Get.log("Polling data chart dihentikan");
     }
   }
-  
+
   // Fungsi terpisah untuk memuat data chart saja
   Future<void> loadChartData({String? timeframe}) async {
     final loginID = accountController.selectedAccount.value?.login;
@@ -253,10 +282,11 @@ class ChartControllers extends GetxController {
     );
     if (resultCandle) {
       currentPrice.value = tradingController.ohlcDataDeriv.last.close;
-      Get.log("Data chart untuk ${selectedMarket.value} di-refresh (${timeFrame.value}).");
+      Get.log(
+        "Data chart untuk ${selectedMarket.value} di-refresh (${timeFrame.value}).",
+      );
     }
   }
-
 
   /// === Token ===
   Future<String?> getAccessToken() async {
@@ -319,10 +349,7 @@ class ChartControllers extends GetxController {
       final spreadInt = (selectedSymbolData['spread'] ?? 0).toInt();
       final digits = (selectedSymbolData['digits'] ?? 2).toInt();
 
-      final calcSpread = getSpreadInPrice(
-        spread: spreadInt,
-        digits: digits,
-      );
+      final calcSpread = getSpreadInPrice(spread: spreadInt, digits: digits);
       spreadValue.value = calcSpread;
     }
 
@@ -337,7 +364,9 @@ class ChartControllers extends GetxController {
   }) async {
     // ... (kode getSymbolsGroup tetap sama)
     try {
-      final result = await authService.get("market/symbols-group?account=$loginID");
+      final result = await authService.get(
+        "market/symbols-group?account=$loginID",
+      );
 
       if (result['status'] != true) {
         Get.log("Gagal ambil symbols-group: ${result['message']}");

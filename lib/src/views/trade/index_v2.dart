@@ -18,7 +18,7 @@ class MetaQuotesPage extends StatefulWidget {
 
 class _MetaQuotesPageState extends State<MetaQuotesPage> {
   final double appBarHeight = 66.0;
-  MarketWebSocketController controller = Get.put(MarketWebSocketController());
+  MarketWebSocketController controller = Get.put(MarketWebSocketController(), permanent: true);
   //
 
   @override

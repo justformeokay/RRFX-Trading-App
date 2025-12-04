@@ -50,38 +50,65 @@ class ExpandedAdvanceView extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 5.0),
-            Obx(() => !accountController.hasAccounts ? const SizedBox() : _buildToolbar(size, context)),
+            Obx(
+              () =>
+                  !accountController.hasAccounts
+                      ? const SizedBox()
+                      : _buildToolbar(size, context),
+            ),
             const SizedBox(height: 5.0),
-            Obx(() => ohlcController.ohlcRaw.isNotEmpty ? TimeframeSelector(
-              selected: ohlcController.currentTimeframe,
-              onChanged: (tf) {
-                ohlcController.changeTimeframe(tf);
-              },
-            ) : const SizedBox.shrink()),
-        
+            Obx(
+              () =>
+                  ohlcController.ohlcRaw.isNotEmpty
+                      ? TimeframeSelector(
+                        selected: ohlcController.currentTimeframe,
+                        onChanged: (tf) {
+                          ohlcController.changeTimeframe(tf);
+                        },
+                      )
+                      : const SizedBox.shrink(),
+            ),
+
             const SizedBox(height: 10),
             Expanded(
               child: Obx(() {
                 if (ohlcController.candles.isEmpty) {
-                  return const Center(child: CircularProgressIndicator(color: CustomColor.secondaryColor));
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: CustomColor.secondaryColor,
+                    ),
+                  );
                 }
                 return DerivChart(
-                  key: Key("chart_${ohlcController.currentSymbol}_${ohlcController.currentTimeframe}"),
+                  key: Key(
+                    "chart_${ohlcController.currentSymbol}_${ohlcController.currentTimeframe}",
+                  ),
                   isLive: true,
                   loadingAnimationColor: Colors.transparent,
-                  granularity: ohlcController.convertGranularity(ohlcController.currentTimeframe),
-                  theme: themeController.isDark.value ? ChartDefaultDarkTheme() : ChartDefaultLightTheme(),
+                  granularity: ohlcController.convertGranularity(
+                    ohlcController.currentTimeframe,
+                  ),
+                  theme:
+                      themeController.isDark.value
+                          ? ChartDefaultDarkTheme()
+                          : ChartDefaultLightTheme(),
                   dataFitPadding: const EdgeInsets.all(10),
                   mainSeries: CandleSeries(ohlcController.candles),
                   showDataFitButton: true,
-                  pipSize: symbol.contains("JPY") || symbol.contains("XAU") ? 3 : 5,
+                  pipSize:
+                      symbol.contains("JPY") || symbol.contains("XAU") ? 3 : 5,
                   activeSymbol: ohlcController.currentSymbol,
                   showCurrentTickBlinkAnimation: true,
                   annotations: [...ohlcController.currentPriceBarrier],
                 );
               }),
             ),
-            Obx(() => !accountController.hasAccounts ? const SizedBox() : _buildExecutionButton(context)),
+            Obx(
+              () =>
+                  !accountController.hasAccounts
+                      ? const SizedBox()
+                      : _buildExecutionButton(context),
+            ),
           ],
         ),
       ),
@@ -92,51 +119,68 @@ class ExpandedAdvanceView extends StatelessWidget {
     String? loginID = accountController.selectedAccount.value?.login;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
-      child:  Row(
+      child: Row(
         children: [
           TradingProperty.sellButton(
-            price: ohlcController.currentPrice, 
-            onPressed: loginID == null ? null : () => _executeOrder(context, "sell")
+            price: ohlcController.currentPrice,
+            onPressed:
+                loginID == null ? null : () => _executeOrder(context, "sell"),
           ),
           TradingProperty.lotButton(context),
-          TradingProperty.buyButton(price: ohlcController.currentPrice, 
-            onPressed: loginID == null ? null : () => _executeOrder(context, "buy")
+          TradingProperty.buyButton(
+            price: ohlcController.currentPrice,
+            onPressed:
+                loginID == null ? null : () => _executeOrder(context, "buy"),
           ),
         ],
       ),
     );
   }
 
-  // Fungsi untuk memicu eksekusi order (diperbarui)
+  // Fungsi untuk memicu eksekusi order (dengan realtime price)
   void _executeOrder(BuildContext context, String orderType) async {
     String? loginID = accountController.selectedAccount.value?.login;
-    double finalCurrentPrice = chartController.currentPrice.value;
     double lot = chartController.lot.value;
+
     if (loginID == null) return;
-    if(lot < 0.10){
+    if (lot < 0.10) {
       AppSnackbar.error("Transaksi minimal harus 0.1 Lot");
       return;
     }
-    // 2. Tampilkan Dialog Konfirmasi
+
+    // Gunakan currentPrice sebagai observable untuk realtime
+    // Atau bisa gunakan bidPrice/askPrice jika tersedia
+    final Rx<double> realtimePrice = chartController.currentPrice;
+
+    // Tampilkan Dialog Konfirmasi dengan realtime price
     Get.dialog(
       PopupExecution.buildOrderConfirmationDialog(
         context: context,
         symbol: chartController.selectedMarket.value,
         type: orderType.toUpperCase(),
         lot: lot,
-        price: finalCurrentPrice,
+        priceObservable: realtimePrice,
+        priceDigits: chartController.priceDigits.value,
         onConfirm: () async {
-          // Logika eksekusi order HANYA dijalankan setelah user menekan tombol Konfirmasi
+          // Logika eksekusi order dengan harga terkini saat konfirmasi
           final result = await tradingController.executionOrder(
-            symbol: chartController.selectedMarket.value, 
-            type: orderType, 
-            login: loginID, 
-            lot: lot.toString(), 
+            symbol: chartController.selectedMarket.value,
+            type: orderType,
+            login: loginID,
+            lot: lot.toString(),
           );
-          if(result['status']){
-            CustomScaffoldMessanger.showAppSnackBar(context, message: result['message'], type: SnackBarType.success);
-          }else{
-            CustomScaffoldMessanger.showAppSnackBar(context, message: result['message'], type: SnackBarType.error);
+          if (result['status']) {
+            CustomScaffoldMessanger.showAppSnackBar(
+              context,
+              message: result['message'],
+              type: SnackBarType.success,
+            );
+          } else {
+            CustomScaffoldMessanger.showAppSnackBar(
+              context,
+              message: result['message'],
+              type: SnackBarType.error,
+            );
           }
         },
       ),
@@ -144,7 +188,9 @@ class ExpandedAdvanceView extends StatelessWidget {
   }
 
   Widget _buildToolbar(Size? size, BuildContext context) {
-    String? marketName = removeTextAfterDot(chartController.selectedMarket.value);
+    String? marketName = removeTextAfterDot(
+      chartController.selectedMarket.value,
+    );
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -163,20 +209,32 @@ class ExpandedAdvanceView extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            TradingProperty.iconButton(context, AntDesign.function_outline, (){
-              Get.to(() => ExpandedAdvanceView(
-                symbol: chartController.selectedMarket.value,
-                timeframe: chartController.timeFrame.value,
-                isReal: accountController.selectedAccount.value?.type == "demo" ? false : true,
-              ));
+            TradingProperty.iconButton(context, AntDesign.function_outline, () {
+              Get.to(
+                () => ExpandedAdvanceView(
+                  symbol: chartController.selectedMarket.value,
+                  timeframe: chartController.timeFrame.value,
+                  isReal:
+                      accountController.selectedAccount.value?.type == "demo"
+                          ? false
+                          : true,
+                ),
+              );
             }),
-            Obx(() => TradingProperty.textButton(context, title: "${accountController.selectedAccount.value?.namaTipeAkun != null ? accountController.selectedAccount.value!.namaTipeAkun!.capitalize : ''} - ${accountController.selectedAccount.value?.login ?? ''}", onPressed: (){
-              final bool canPress = accountController.hasAccounts;
-              if(canPress){
-                AccountSelectionBottomSheet.show();
-                chartController.loadChartData();
-              }
-            })),
+            Obx(
+              () => TradingProperty.textButton(
+                context,
+                title:
+                    "${accountController.selectedAccount.value?.namaTipeAkun != null ? accountController.selectedAccount.value!.namaTipeAkun!.capitalize : ''} - ${accountController.selectedAccount.value?.login ?? ''}",
+                onPressed: () {
+                  final bool canPress = accountController.hasAccounts;
+                  if (canPress) {
+                    AccountSelectionBottomSheet.show();
+                    chartController.loadChartData();
+                  }
+                },
+              ),
+            ),
           ],
         ),
       ],

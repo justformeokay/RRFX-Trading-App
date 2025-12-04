@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:deriv_chart/deriv_chart.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:web_socket_channel/io.dart';
 
-enum WebSocketStatus { connecting, connected, failed }
+enum WebSocketStatus { connecting, connected, failed, disconnected }
 
 class TickModel {
   final String symbol;
@@ -27,7 +29,6 @@ class TickModel {
     );
   }
 }
-
 
 class MarketDataModel {
   final String symbol;
@@ -97,17 +98,51 @@ class MarketDataModel {
   }
 }
 
-class MarketWebSocketController extends GetxController {
-  late IOWebSocketChannel channel;
+class MarketWebSocketController extends GetxController
+    with WidgetsBindingObserver {
+  IOWebSocketChannel? channel;
+  Timer? _reconnectTimer;
+  bool _isManuallyDisconnected = false;
+  int _reconnectAttempts = 0;
+  static const int _maxReconnectAttempts = 5;
+  static const Duration _reconnectDelay = Duration(seconds: 3);
 
   final Rx<WebSocketStatus> status = WebSocketStatus.connecting.obs;
-  final RxMap<String, List<TickModel>> tickData = <String, List<TickModel>>{}.obs;
-  final RxMap<String, MarketDataModel> marketData = <String, MarketDataModel>{}.obs;
+  final RxMap<String, List<TickModel>> tickData =
+      <String, List<TickModel>>{}.obs;
+  final RxMap<String, MarketDataModel> marketData =
+      <String, MarketDataModel>{}.obs;
 
   @override
   void onInit() {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
     _connectWebSocket();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    print('🔄 App lifecycle changed: $state');
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        // App kembali ke foreground, reconnect jika perlu
+        if (status.value == WebSocketStatus.failed ||
+            status.value == WebSocketStatus.disconnected) {
+          print('📱 App resumed, reconnecting WebSocket...');
+          _reconnectWebSocket();
+        }
+        break;
+      case AppLifecycleState.paused:
+        // App ke background, jangan disconnect (biarkan tetap berjalan)
+        print('📱 App paused, keeping WebSocket alive...');
+        break;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        break;
+    }
   }
 
   void _connectWebSocket() {
@@ -115,9 +150,10 @@ class MarketWebSocketController extends GetxController {
       status.value = WebSocketStatus.connecting;
       channel = IOWebSocketChannel.connect('ws://207.148.119.106:9003');
 
-      channel.stream.listen(
+      channel!.stream.listen(
         (message) {
           try {
+            _reconnectAttempts = 0; // Reset counter saat berhasil terima data
             print('📥 WebSocket received message: $message');
             final decoded = json.decode(message);
             if (decoded is Map<String, dynamic>) {
@@ -127,11 +163,15 @@ class MarketWebSocketController extends GetxController {
                 final symbol = decoded['symbol'] as String;
                 final bid = decoded['bid'];
                 final ask = decoded['ask'];
-                print('✅ Parsed single market - Symbol: $symbol, Bid: $bid, Ask: $ask');
-                
+                print(
+                  '✅ Parsed single market - Symbol: $symbol, Bid: $bid, Ask: $ask',
+                );
+
                 final data = MarketDataModel.fromJson(symbol, decoded);
                 marketData[symbol] = data;
-                print('💾 Stored in marketData[$symbol] = Bid: ${data.bid}, Ask: ${data.ask}');
+                print(
+                  '💾 Stored in marketData[$symbol] = Bid: ${data.bid}, Ask: ${data.ask}',
+                );
                 status.value = WebSocketStatus.connected;
               } else {
                 // Multiple markets response: { "XAUUSD": {...}, "EURUSD": {...} }
@@ -139,7 +179,9 @@ class MarketWebSocketController extends GetxController {
                 decoded.forEach((symbol, item) {
                   final data = MarketDataModel.fromJson(symbol, item);
                   marketData[symbol] = data;
-                  print('💾 Stored $symbol - Bid: ${data.bid}, Ask: ${data.ask}');
+                  print(
+                    '💾 Stored $symbol - Bid: ${data.bid}, Ask: ${data.ask}',
+                  );
                 });
                 status.value = WebSocketStatus.connected;
               }
@@ -149,13 +191,20 @@ class MarketWebSocketController extends GetxController {
           }
         },
         onError: (err) {
-          print('WebSocket error: $err');
+          print('❌ WebSocket error: $err');
           status.value = WebSocketStatus.failed;
+          if (!_isManuallyDisconnected) {
+            _scheduleReconnect();
+          }
         },
         onDone: () {
-          print('WebSocket done/closed');
-          status.value = WebSocketStatus.failed;
+          print('⚠️ WebSocket connection closed');
+          status.value = WebSocketStatus.disconnected;
+          if (!_isManuallyDisconnected) {
+            _scheduleReconnect();
+          }
         },
+        cancelOnError: false,
       );
     } catch (e) {
       print('WebSocket connection error: $e');
@@ -184,13 +233,15 @@ class MarketWebSocketController extends GetxController {
         low = tick.bid < low ? tick.bid : low;
         close = tick.bid;
       } else {
-        candles.add(Candle(
-          epoch: start.millisecondsSinceEpoch ~/ 1000,
-          open: open,
-          high: high,
-          low: low,
-          close: close,
-        ));
+        candles.add(
+          Candle(
+            epoch: start.millisecondsSinceEpoch ~/ 1000,
+            open: open,
+            high: high,
+            low: low,
+            close: close,
+          ),
+        );
 
         // Mulai candle baru
         start = end;
@@ -203,29 +254,75 @@ class MarketWebSocketController extends GetxController {
     }
 
     // Tambah candle terakhir
-    candles.add(Candle(
-      epoch: start.millisecondsSinceEpoch ~/ 1000,
-      open: open,
-      high: high,
-      low: low,
-      close: close,
-    ));
+    candles.add(
+      Candle(
+        epoch: start.millisecondsSinceEpoch ~/ 1000,
+        open: open,
+        high: high,
+        low: low,
+        close: close,
+      ),
+    );
 
     return candles;
   }
 
-  void reconnect() {
+  void _scheduleReconnect() {
+    if (_reconnectTimer?.isActive == true) return;
+    if (_reconnectAttempts >= _maxReconnectAttempts) {
+      print('❌ Max reconnection attempts reached. Stopping reconnect.');
+      return;
+    }
+
+    _reconnectAttempts++;
+    print(
+      '🔄 Scheduling reconnect attempt $_reconnectAttempts/$_maxReconnectAttempts in ${_reconnectDelay.inSeconds}s...',
+    );
+
+    _reconnectTimer = Timer(_reconnectDelay, () {
+      if (!_isManuallyDisconnected) {
+        _reconnectWebSocket();
+      }
+    });
+  }
+
+  void _reconnectWebSocket() {
+    print('🔄 Attempting to reconnect WebSocket...');
     try {
-      channel.sink.close();
-    } catch (_) {}
+      channel?.sink.close();
+    } catch (e) {
+      print('⚠️ Error closing old channel: $e');
+    }
     _connectWebSocket();
+  }
+
+  void reconnect() {
+    _reconnectAttempts = 0;
+    _reconnectWebSocket();
+  }
+
+  void disconnect() {
+    print('🛑 Manually disconnecting WebSocket');
+    _isManuallyDisconnected = true;
+    _reconnectTimer?.cancel();
+    try {
+      channel?.sink.close();
+    } catch (e) {
+      print('⚠️ Error closing channel: $e');
+    }
+    status.value = WebSocketStatus.disconnected;
   }
 
   @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _reconnectTimer?.cancel();
+    _isManuallyDisconnected = true;
     try {
-      channel.sink.close();
-    } catch (_) {}
+      channel?.sink.close();
+    } catch (e) {
+      print('⚠️ Error closing channel on dispose: $e');
+    }
     super.onClose();
   }
 }

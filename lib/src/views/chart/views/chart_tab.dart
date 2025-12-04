@@ -24,7 +24,7 @@ class ChartTab extends StatefulWidget {
   State<ChartTab> createState() => _ChartTabState();
 }
 
-class _ChartTabState extends State<ChartTab> {
+class _ChartTabState extends State<ChartTab> with WidgetsBindingObserver {
   final ChartControllers chartController = Get.put(ChartControllers());
   final accountController = Get.put(AccountController());
   ThemeController themeController = Get.find<ThemeController>();
@@ -32,45 +32,87 @@ class _ChartTabState extends State<ChartTab> {
   final planets = SplayTreeSet<Marker>((a, b) => a.compareTo(b));
   RegolController regolController = Get.put(RegolController());
   HomeController homeController = Get.put(HomeController());
-  
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // WebSocket controller akan handle lifecycle sendiri
+    // Ini hanya untuk logging atau handling UI jika diperlukan
+    print('📱 ChartTab lifecycle changed: $state');
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     return Scaffold(
-      body: Obx(
-        () {
-          if(!accountController.hasAccounts) return noAccountDetected();
-          return SafeArea(
-            child: SizedBox(
-              width: double.infinity,
-              height: double.infinity,
-              child: Column(
-                children: [
-                  Obx(() => !accountController.hasAccounts ? const SizedBox() : _buildToolbar(size)),
-                  Expanded(child: _buildChart()),
-                  Obx(() => !accountController.hasAccounts ? const SizedBox() : _buildExecutionButton())
-                ],
-              ),
+      body: Obx(() {
+        if (!accountController.hasAccounts) return noAccountDetected();
+        return SafeArea(
+          child: SizedBox(
+            width: double.infinity,
+            height: double.infinity,
+            child: Column(
+              children: [
+                Obx(
+                  () =>
+                      !accountController.hasAccounts
+                          ? const SizedBox()
+                          : _buildToolbar(size),
+                ),
+                Expanded(child: _buildChart()),
+                Obx(
+                  () =>
+                      !accountController.hasAccounts
+                          ? const SizedBox()
+                          : _buildExecutionButton(),
+                ),
+              ],
             ),
-          );
-        }
-      ),
+          ),
+        );
+      }),
     );
   }
 
   Widget _buildChart() {
     return Obx(
       () => DerivChart(
-        key: Key('chart_${chartController.timeFrame.value}_${chartController.selectedMarket.value}'),
+        key: Key(
+          'chart_${chartController.timeFrame.value}_${chartController.selectedMarket.value}',
+        ),
         // granularity: 3600
-        granularity: chartController.timeframeToGranularity(chartController.timeFrame.value)  ,
+        granularity: chartController.timeframeToGranularity(
+          chartController.timeFrame.value,
+        ),
         showScrollToLastTickButton: false,
-        dataFitPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        dataFitPadding: const EdgeInsets.symmetric(
+          horizontal: 10,
+          vertical: 10,
+        ),
         isLive: true,
-        theme: themeController.isDark.value ? ChartDefaultDarkTheme() : ChartDefaultLightTheme(),
+        theme:
+            themeController.isDark.value
+                ? ChartDefaultDarkTheme()
+                : ChartDefaultLightTheme(),
         mainSeries: CandleSeries(tradingController.ohlcDataDeriv),
         showDataFitButton: true,
-        pipSize: chartController.selectedMarket.value.contains("JPY") || chartController.selectedMarket.value.contains("XAU") ? 3 : 5,
+        pipSize:
+            chartController.selectedMarket.value.contains("JPY") ||
+                    chartController.selectedMarket.value.contains("XAU")
+                ? 3
+                : 5,
         showCurrentTickBlinkAnimation: true,
         activeSymbol: chartController.selectedMarket.value,
         loadingAnimationColor: Colors.transparent,
@@ -113,7 +155,8 @@ class _ChartTabState extends State<ChartTab> {
     // Open orders barriers
     final openOrders = tradingController.openOrderModel.value?.response ?? [];
     for (var order in openOrders) {
-      final double openPrice = double.tryParse(order.openPrice.toString()) ?? 0.0;
+      final double openPrice =
+          double.tryParse(order.openPrice.toString()) ?? 0.0;
       final String type = order.orderType?.toUpperCase() ?? "";
       final double lot = order.lot ?? 0.0;
 
@@ -127,7 +170,8 @@ class _ChartTabState extends State<ChartTab> {
               color: type == "BUY" ? Colors.blue : Colors.red,
               lineColor: type == "BUY" ? Colors.blue : Colors.red,
               titleBackgroundColor: type == "BUY" ? Colors.blue : Colors.red,
-              labelShapeBackgroundColor: type == "BUY" ? Colors.blue : Colors.red,
+              labelShapeBackgroundColor:
+                  type == "BUY" ? Colors.blue : Colors.red,
               hasBlinkingDot: true,
             ),
           ),
@@ -138,7 +182,9 @@ class _ChartTabState extends State<ChartTab> {
   }
 
   Widget _buildToolbar(Size? size) {
-    String? marketName = removeTextAfterDot(chartController.selectedMarket.value);
+    String? marketName = removeTextAfterDot(
+      chartController.selectedMarket.value,
+    );
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -158,7 +204,7 @@ class _ChartTabState extends State<ChartTab> {
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            TradingProperty.iconButton(context, AntDesign.function_outline, (){
+            TradingProperty.iconButton(context, AntDesign.function_outline, () {
               FeatureUnderDevPopup.show();
               // print("Open Expanded Chart View");
               // print("Symbol: ${chartController.selectedMarket.value}, Timeframe: ${chartController.timeFrame.value}, isReal: ${accountController.selectedAccount.value?.type == "demo" ? false : true}");
@@ -168,13 +214,20 @@ class _ChartTabState extends State<ChartTab> {
               //   isReal: accountController.selectedAccount.value?.type == "demo" ? false : true,
               // ));
             }),
-            Obx(() => TradingProperty.textButton(context, title: "${accountController.selectedAccount.value?.namaTipeAkun != null ? accountController.selectedAccount.value!.namaTipeAkun!.capitalize : ''} - ${accountController.selectedAccount.value?.login ?? ''}", onPressed: (){
-              final bool canPress = accountController.hasAccounts;
-              if(canPress){
-                AccountSelectionBottomSheet.show();
-                chartController.loadChartData();
-              }
-            })),
+            Obx(
+              () => TradingProperty.textButton(
+                context,
+                title:
+                    "${accountController.selectedAccount.value?.namaTipeAkun != null ? accountController.selectedAccount.value!.namaTipeAkun!.capitalize : ''} - ${accountController.selectedAccount.value?.login ?? ''}",
+                onPressed: () {
+                  final bool canPress = accountController.hasAccounts;
+                  if (canPress) {
+                    AccountSelectionBottomSheet.show();
+                    chartController.loadChartData();
+                  }
+                },
+              ),
+            ),
           ],
         ),
       ],
@@ -184,14 +237,19 @@ class _ChartTabState extends State<ChartTab> {
   // --- WIDGET DROPDOWN TIMEFRAME BARU ---
   Widget _buildTimeframeDropdown() {
     return Obx(() {
-      String currentValue = chartController.availableTimeframes.contains(chartController.timeFrame.value) ? chartController.timeFrame.value : 'H1';
+      String currentValue =
+          chartController.availableTimeframes.contains(
+                chartController.timeFrame.value,
+              )
+              ? chartController.timeFrame.value
+              : 'H1';
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 4.0),
         child: DropdownButton<String>(
           value: currentValue,
           borderRadius: BorderRadius.circular(10.0),
           icon: const Icon(Icons.arrow_drop_down, color: Colors.white70),
-          dropdownColor: Colors.grey[800], 
+          dropdownColor: Colors.grey[800],
           underline: Container(), // Menghilangkan garis bawah default
           style: const TextStyle(
             color: Colors.white,
@@ -207,91 +265,150 @@ class _ChartTabState extends State<ChartTab> {
               });
             }
           },
-          items: chartController.availableTimeframes.map<DropdownMenuItem<String>>((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                child: Text(
-                  value,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: value == currentValue ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
+          items:
+              chartController.availableTimeframes.map<DropdownMenuItem<String>>(
+                (String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                      child: Text(
+                        value,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight:
+                              value == currentValue
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ).toList(),
         ),
       );
     });
   }
 
-  Widget _buildExecutionButton(){
+  Widget _buildExecutionButton() {
     String? loginID = accountController.selectedAccount.value?.login;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
-      child:  Row(
+      child: Row(
         children: [
-
           // Sell tombol - menggunakan bid price dari WebSocket
-          Obx(() => TradingProperty.sellButton(
-            price: double.tryParse(chartController.bidPrice.value.toStringAsFixed(chartController.priceDigits.value)), 
-            onPressed: loginID == null ? null : () => _executeOrder("sell")
-          )),
+          Obx(
+            () => TradingProperty.sellButton(
+              price: double.tryParse(
+                chartController.bidPrice.value.toStringAsFixed(
+                  chartController.priceDigits.value,
+                ),
+              ),
+              onPressed: loginID == null ? null : () => _executeOrder("sell"),
+            ),
+          ),
 
           // Lot Contorller
           TradingProperty.lotButton(context),
 
           // Buy tombol - menggunakan ask price dari WebSocket
-          Obx(() => TradingProperty.buyButton(
-            price: double.tryParse(chartController.askPrice.value.toStringAsFixed(chartController.priceDigits.value)), 
-            onPressed: loginID == null ? null : () => _executeOrder("buy")
-          )),
-
-
+          Obx(
+            () => TradingProperty.buyButton(
+              price: double.tryParse(
+                chartController.askPrice.value.toStringAsFixed(
+                  chartController.priceDigits.value,
+                ),
+              ),
+              onPressed: loginID == null ? null : () => _executeOrder("buy"),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // Fungsi untuk memicu eksekusi order (diperbarui)
+  // Fungsi untuk memicu eksekusi order (diperbarui dengan realtime price)
   void _executeOrder(String orderType) async {
     String? loginID = accountController.selectedAccount.value?.login;
-    // Gunakan bidPrice untuk sell dan askPrice untuk buy dari WebSocket
-    double finalCurrentPrice = orderType.toLowerCase() == "sell" 
-        ? chartController.bidPrice.value 
-        : chartController.askPrice.value;
     double lot = chartController.lot.value;
+
     if (loginID == null) return;
-    if(lot < 0.10){
-      CustomScaffoldMessanger.showAppSnackBar(context, message: "Transaksi minimal harus 0.1 Lot", type: SnackBarType.info);
+    if (lot < 0.10) {
+      CustomScaffoldMessanger.showAppSnackBar(
+        context,
+        message: "Transaksi minimal harus 0.1 Lot",
+        type: SnackBarType.info,
+      );
       return;
     }
-    // 2. Tampilkan Dialog Konfirmasi
-    Get.dialog(
-      PopupExecution.buildOrderConfirmationDialog(
-        context: context,
-        symbol: chartController.selectedMarket.value,
-        type: orderType.toUpperCase(),
-        lot: lot,
-        price: finalCurrentPrice,
-        onConfirm: () async {
-          // Logika eksekusi order HANYA dijalankan setelah user menekan tombol Konfirmasi
-          final result = await tradingController.executionOrder(
-            symbol: chartController.selectedMarket.value, 
-            type: orderType, 
-            login: loginID, 
-            lot: lot.toString(), 
-          );
-          if(result['status']){
-            CustomScaffoldMessanger.showAppSnackBar(context, message: result['message'], type: SnackBarType.success);
-          }else{
-            CustomScaffoldMessanger.showAppSnackBar(context, message: result['message'], type: SnackBarType.error);
-          }
-        },
-      ),
+
+    final result = await tradingController.executionOrder(
+      symbol: chartController.selectedMarket.value,
+      type: orderType,
+      login: loginID,
+      lot: lot.toString(),
     );
+
+    SnackBarType type;
+    if (result['status']) {
+      if(orderType.toLowerCase() == "buy"){
+        type = SnackBarType.success;
+      }else{
+        type = SnackBarType.error;
+      }
+      CustomScaffoldMessanger.showAppSnackBar(
+        context,
+        message: "${chartController.selectedMarket.value} $orderType $lot lot",
+        type: type,
+      );
+    } else {
+      CustomScaffoldMessanger.showAppSnackBar(
+        context,
+        message: result['message'],
+        type: SnackBarType.error,
+      );
+    }
+
+    // // Gunakan Rx observable untuk realtime price
+    // final Rx<double> realtimePrice =
+    //     orderType.toLowerCase() == "sell"
+    //         ? chartController.bidPrice
+    //         : chartController.askPrice;
+
+    // // Tampilkan Dialog Konfirmasi dengan realtime price
+    // Get.dialog(
+    //   PopupExecution.buildOrderConfirmationDialog(
+    //     context: context,
+    //     symbol: chartController.selectedMarket.value,
+    //     type: orderType.toUpperCase(),
+    //     lot: lot,
+    //     priceObservable: realtimePrice,
+    //     priceDigits: chartController.priceDigits.value,
+    //     onConfirm: () async {
+    //       // Logika eksekusi order dengan harga terkini saat konfirmasi
+    //       final result = await tradingController.executionOrder(
+    //         symbol: chartController.selectedMarket.value,
+    //         type: orderType,
+    //         login: loginID,
+    //         lot: lot.toString(),
+    //       );
+    //       if (result['status']) {
+    //         CustomScaffoldMessanger.showAppSnackBar(
+    //           context,
+    //           message: result['message'],
+    //           type: SnackBarType.success,
+    //         );
+    //       } else {
+    //         CustomScaffoldMessanger.showAppSnackBar(
+    //           context,
+    //           message: result['message'],
+    //           type: SnackBarType.error,
+    //         );
+    //       }
+    //     },
+    //   ),
+    // );
   }
 
   String removeTextAfterDot(String input) {
