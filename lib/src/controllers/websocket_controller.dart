@@ -39,6 +39,8 @@ class MarketDataModel {
   final double askLow;
   final int datetime;
   final String direction;
+  final int digits;
+  final int spread;
 
   MarketDataModel({
     required this.symbol,
@@ -50,6 +52,8 @@ class MarketDataModel {
     required this.askLow,
     required this.datetime,
     required this.direction,
+    required this.digits,
+    required this.spread,
   });
 
   factory MarketDataModel.fromJson(String symbol, Map<String, dynamic> json) {
@@ -61,8 +65,10 @@ class MarketDataModel {
       ask: (json['ask'] ?? 0).toDouble(),
       askHigh: (json['ask_high'] ?? 0).toDouble(),
       askLow: (json['ask_low'] ?? 0).toDouble(),
-      datetime: json['datetime'] ?? 0,
+      datetime: json['datetime_msc'] ?? json['datetime'] ?? 0,
       direction: json['direction'] ?? '',
+      digits: json['digits'] ?? 5,
+      spread: json['spread'] ?? 0,
     );
   }
 
@@ -107,29 +113,52 @@ class MarketWebSocketController extends GetxController {
   void _connectWebSocket() {
     try {
       status.value = WebSocketStatus.connecting;
-      channel = IOWebSocketChannel.connect('ws://207.148.119.106:9003'); // Ganti dengan URL Anda
+      channel = IOWebSocketChannel.connect('ws://207.148.119.106:9003');
 
       channel.stream.listen(
         (message) {
           try {
+            print('📥 WebSocket received message: $message');
             final decoded = json.decode(message);
             if (decoded is Map<String, dynamic>) {
-              decoded.forEach((symbol, item) {
-                final data = MarketDataModel.fromJson(symbol, item);
+              // Check apakah response adalah single market object
+              if (decoded.containsKey('symbol')) {
+                // Single market response: { "symbol": "XAUUSD.db", "bid": 4209.27, ... }
+                final symbol = decoded['symbol'] as String;
+                final bid = decoded['bid'];
+                final ask = decoded['ask'];
+                print('✅ Parsed single market - Symbol: $symbol, Bid: $bid, Ask: $ask');
+                
+                final data = MarketDataModel.fromJson(symbol, decoded);
                 marketData[symbol] = data;
-              });
-              status.value = WebSocketStatus.connected;
+                print('💾 Stored in marketData[$symbol] = Bid: ${data.bid}, Ask: ${data.ask}');
+                status.value = WebSocketStatus.connected;
+              } else {
+                // Multiple markets response: { "XAUUSD": {...}, "EURUSD": {...} }
+                print('📦 Parsing multiple markets...');
+                decoded.forEach((symbol, item) {
+                  final data = MarketDataModel.fromJson(symbol, item);
+                  marketData[symbol] = data;
+                  print('💾 Stored $symbol - Bid: ${data.bid}, Ask: ${data.ask}');
+                });
+                status.value = WebSocketStatus.connected;
+              }
             }
-          } catch (_) {}
+          } catch (e) {
+            print('❌ WebSocket parse error: $e');
+          }
         },
         onError: (err) {
+          print('WebSocket error: $err');
           status.value = WebSocketStatus.failed;
         },
         onDone: () {
+          print('WebSocket done/closed');
           status.value = WebSocketStatus.failed;
         },
       );
-    } catch (_) {
+    } catch (e) {
+      print('WebSocket connection error: $e');
       status.value = WebSocketStatus.failed;
     }
   }

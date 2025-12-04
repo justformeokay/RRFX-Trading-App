@@ -5,6 +5,7 @@ import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/alerts/popup.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/controllers/trading.dart';
+import 'package:rrfx/src/controllers/websocket_controller.dart';
 import 'package:rrfx/src/helpers/handlers/holiday.dart';
 import 'package:rrfx/src/service/auth_service.dart';
 import 'package:rrfx/src/views/chart/controllers/market_list_controller.dart';
@@ -17,6 +18,7 @@ class ChartControllers extends GetxController {
   final accountController = Get.put(AccountController());
   final TradingController tradingController = Get.put(TradingController());
   final marketListController = Get.put(MarketListController());
+  final MarketWebSocketController wsController = Get.put(MarketWebSocketController());
 
   // Deklarasi Timer
   Timer? _pollingTimer; // 👈 Variabel untuk menyimpan instance Timer
@@ -24,6 +26,9 @@ class ChartControllers extends GetxController {
   final selectedMarket = 'XAUUSD.db'.obs;
   final lot = 0.10.obs;
   final RxDouble currentPrice = 0.0.obs;
+  final RxDouble bidPrice = 0.0.obs;
+  final RxDouble askPrice = 0.0.obs;
+  final RxInt priceDigits = 2.obs; // Digits untuk format price
   final RxString timeFrame = "H1".obs;
   final RxDouble spreadValue = 0.0.obs;
   DateTime now = DateTime.now();
@@ -37,7 +42,54 @@ class ChartControllers extends GetxController {
     initConnection();
     _runProcessInit();
     _startDataPolling(); // 👈 Mulai polling saat inisialisasi
+    _listenToWebSocketPrices(); // 👈 Listen ke WebSocket untuk real-time prices
     super.onInit();
+  }
+
+  void _listenToWebSocketPrices() {
+    // Listen perubahan pada marketData dari WebSocket
+    ever(wsController.marketData, (data) {
+      final symbolKey = _getWebSocketSymbol(selectedMarket.value);
+      print('📊 WebSocket data updated. Available symbols: ${data.keys.toList()}');
+      print('🔍 Looking for symbol: $symbolKey');
+      
+      if (data.containsKey(symbolKey)) {
+        final marketData = data[symbolKey];
+        if (marketData != null) {
+          print('✅ Found data for $symbolKey - Bid: ${marketData.bid}, Ask: ${marketData.ask}, Digits: ${marketData.digits}');
+          bidPrice.value = marketData.bid;
+          askPrice.value = marketData.ask;
+          priceDigits.value = marketData.digits;
+          currentPrice.value = marketData.bid; // Update current price dengan bid
+          spreadValue.value = marketData.ask - marketData.bid;
+        }
+      } else {
+        print('❌ Symbol $symbolKey not found in WebSocket data');
+      }
+    });
+
+    // Listen perubahan selected market untuk update prices
+    ever(selectedMarket, (market) {
+      final symbolKey = _getWebSocketSymbol(market);
+      print('🔄 Market changed to: $symbolKey');
+      final data = wsController.marketData[symbolKey];
+      if (data != null) {
+        print('✅ Immediate data found - Bid: ${data.bid}, Ask: ${data.ask}, Digits: ${data.digits}');
+        bidPrice.value = data.bid;
+        askPrice.value = data.ask;
+        priceDigits.value = data.digits;
+        currentPrice.value = data.bid;
+        spreadValue.value = data.ask - data.bid;
+      } else {
+        print('⏳ Waiting for WebSocket data for $symbolKey');
+      }
+    });
+  }
+
+  String _getWebSocketSymbol(String market) {
+    // WebSocket response sudah include '.db' (contoh: "XAUUSD.db")
+    // Jadi kita langsung return market yang sudah sesuai format
+    return market;
   }
 
   @override

@@ -229,19 +229,27 @@ class _ChartTabState extends State<ChartTab> {
 
   Widget _buildExecutionButton(){
     String? loginID = accountController.selectedAccount.value?.login;
-    double finalCurrentPrice = chartController.currentPrice.value;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
       child:  Row(
         children: [
-          TradingProperty.sellButton(
-            price: double.tryParse(finalCurrentPrice.toStringAsFixed(4)), 
+
+          // Sell tombol - menggunakan bid price dari WebSocket
+          Obx(() => TradingProperty.sellButton(
+            price: double.tryParse(chartController.bidPrice.value.toStringAsFixed(chartController.priceDigits.value)), 
             onPressed: loginID == null ? null : () => _executeOrder("sell")
-          ),
+          )),
+
+          // Lot Contorller
           TradingProperty.lotButton(context),
-          TradingProperty.buyButton(price: double.tryParse(finalCurrentPrice.toStringAsFixed(4)), 
+
+          // Buy tombol - menggunakan ask price dari WebSocket
+          Obx(() => TradingProperty.buyButton(
+            price: double.tryParse(chartController.askPrice.value.toStringAsFixed(chartController.priceDigits.value)), 
             onPressed: loginID == null ? null : () => _executeOrder("buy")
-          ),
+          )),
+
+
         ],
       ),
     );
@@ -250,7 +258,10 @@ class _ChartTabState extends State<ChartTab> {
   // Fungsi untuk memicu eksekusi order (diperbarui)
   void _executeOrder(String orderType) async {
     String? loginID = accountController.selectedAccount.value?.login;
-    double finalCurrentPrice = chartController.currentPrice.value;
+    // Gunakan bidPrice untuk sell dan askPrice untuk buy dari WebSocket
+    double finalCurrentPrice = orderType.toLowerCase() == "sell" 
+        ? chartController.bidPrice.value 
+        : chartController.askPrice.value;
     double lot = chartController.lot.value;
     if (loginID == null) return;
     if(lot < 0.10){

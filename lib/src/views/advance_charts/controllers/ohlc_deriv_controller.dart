@@ -131,7 +131,7 @@ class OhlcDerivController extends GetxController {
   }) async {
     try {
       final url = Uri.parse(
-        "http://139.180.219.85:6003/chart/$server/$symbol"
+        "http://139.180.219.85:6003/chart/${server.toLowerCase()}/$symbol"
         "?timeframe=$timeframe"
         "&granularity=$granularity",
       );
@@ -164,7 +164,7 @@ class OhlcDerivController extends GetxController {
 
     try {
       final url = Uri.parse(
-        "http://139.180.219.85:6003/chart/$server/$symbol"
+        "http://139.180.219.85:6003/chart/${server.toLowerCase()}/$symbol"
         "?timeframe=$timeframe"
         "&granularity=$granularity",
       );
