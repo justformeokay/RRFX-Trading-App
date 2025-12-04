@@ -1,21 +1,13 @@
-import 'dart:async';
-import 'package:country_flags/country_flags.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:intl/intl.dart';
-import 'package:rrfx/src/components/bottomsheets/material_bottom_sheets.dart';
 import 'package:rrfx/src/components/colors/default.dart';
-import 'package:rrfx/src/controllers/trading.dart';
-import 'package:rrfx/src/controllers/utilities.dart';
 import 'package:get/get.dart';
 import 'package:rrfx/src/controllers/websocket_controller.dart';
 import 'package:rrfx/src/helpers/formatters/currency.dart';
-import 'package:rrfx/src/helpers/formatters/number_formatter.dart';
 import 'package:rrfx/src/helpers/formatters/regex_formatter.dart';
-import 'package:rrfx/src/views/trade/derivchart_without_loginid.dart';
-import 'deriv_chart_page.dart';
 
 class MetaQuotesPage extends StatefulWidget {
   const MetaQuotesPage({super.key});
@@ -41,7 +33,6 @@ class _MetaQuotesPageState extends State<MetaQuotesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final paddingTop = MediaQuery.of(context).padding.top;
     final size = MediaQuery.of(context).size;
     return CustomScrollView(
       slivers: [
@@ -122,26 +113,6 @@ class _MetaQuotesPageState extends State<MetaQuotesPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          SizedBox(
-                            width: 40,
-                            child: Stack(
-                              children: [
-                                Positioned(
-                                  right: 0,
-                                  child: CountryFlag.fromCountryCode(
-                                    flags['flag_two']!,
-                                    width: 28,
-                                    shape: const Circle(),
-                                  ),
-                                ),
-                                CountryFlag.fromCountryCode(
-                                  flags['flag_one']!,
-                                  width: 28,
-                                  shape: const Circle(),
-                                ),
-                              ],
-                            ),
-                          ),
                           // Symbol & Direction
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,71 +166,6 @@ class _MetaQuotesPageState extends State<MetaQuotesPage> {
             ),
           ),
         )
-
-          // : SliverList(
-          //   delegate: SliverChildListDelegate(
-          //     List.generate(utilitiesController.marketModel.value?.message.length ?? 0, (i){
-          //       // PriceParts bid = processAndExtractPriceParts(utilitiesController.marketModel.value?.message[i].bid != null ? utilitiesController.marketModel.value!.message[i].bid.toString() : "0", currency: utilitiesController.marketModel.value?.message[i].currency ?? "EURUSD");
-          //       // PriceParts ask = processAndExtractPriceParts(utilitiesController.marketModel.value?.message[i].ask != null ? utilitiesController.marketModel.value!.message[i].ask.toString() : "0", currency: utilitiesController.marketModel.value?.message[i].currency ?? "EURUSD");
-          //       return CupertinoButton(
-          //         onPressed: (){
-          //           Get.to(() => DerivChartPage(login: int.parse(tradingController.tradingAccountModels.value?.response.real?[selectedIndexAccountTrading.value].login ?? '0') ?? 0, marketName: utilitiesController.marketModel.value?.message[i].currency));
-          //         },
-          //         padding: EdgeInsets.zero,
-          //         child: Padding(
-          //           padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 10.0),
-          //           child: Row(
-          //             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          //             children: [
-          //               Column(
-          //                 crossAxisAlignment: CrossAxisAlignment.start,
-          //                 children: [
-          //                   Obx(() => Text(utilitiesController.marketModel.value?.message[i].currency ?? "EURUSD", style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.black, fontSize: 17))),
-          //                   Row(
-          //                     mainAxisAlignment: MainAxisAlignment.start,
-          //                     children: [
-          //                       Icon(Icons.space_bar_rounded, size: 12, color: Colors.black38),
-          //                       const SizedBox(width: 3),
-          //                       Text(utilitiesController.marketModel.value?.message[i].spread != null ? utilitiesController.marketModel.value!.message[i].spread.toString() : "0", style: GoogleFonts.inter(fontWeight: FontWeight.w400, color: Colors.black38, fontSize: 10))
-          //                     ],
-          //                   )
-          //                 ],
-          //               ),
-          //               Column(
-          //                 crossAxisAlignment: CrossAxisAlignment.center,
-          //                 children: [
-          //                   Row(
-          //                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          //                     children: [
-          //                       // BID Price
-          //                       PriceDisplayWidget(
-          //                         fullPriceString: formatPrices(utilitiesController.marketModel.value?.message[i].bid != null ? utilitiesController.marketModel.value!.message[i].bid.toString() : "0", currency: "USD"), // Hasilnya "1.15490"
-          //                       ),
-          //                       const SizedBox(width: 10),
-          //                       // ASK Price
-          //                       PriceDisplayWidget(
-          //                         fullPriceString: formatPrices(utilitiesController.marketModel.value?.message[i].ask != null ? utilitiesController.marketModel.value!.message[i].ask.toString() : "0", currency: "USD"), // Hasilnya "1.15490"
-          //                       ),
-          //                     ],
-          //                   ),
-          //                   Row(
-          //                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          //                     children: [
-          //                       Obx(() => Text("L: ${utilitiesController.marketModel.value?.message[i].low != null ? utilitiesController.marketModel.value!.message[i].low.toString() : '0'}", style: GoogleFonts.inter(fontWeight: FontWeight.w400, color: Colors.black38, fontSize: 10))),
-          //                       const SizedBox(width: 10),
-          //                       Obx(() => Text("H: ${utilitiesController.marketModel.value?.message[i].high != null ? utilitiesController.marketModel.value!.message[i].high.toString() : '0'}", style: GoogleFonts.inter(fontWeight: FontWeight.w400, color: Colors.black38, fontSize: 10))),
-          //                     ],
-          //                   ),
-          //                 ],
-          //               ),
-          //             ],
-          //           ),
-          //         ),
-          //       );
-          //     })
-          //   )
-          // ),
-
       ],
     );
   }

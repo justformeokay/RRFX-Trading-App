@@ -120,7 +120,7 @@ class SettingController extends GetxController{
     String? amount,
     String? key,
     String? imageURL
-}) async {
+  }) async {
     try {
       isLoading(true);
       print('imageURL deposit: $imageURL');

@@ -67,7 +67,7 @@ class _TradingChartViewState extends State<TradingChartView> {
       
       if (_isChartLoaded) {
         // OPTIMASI: Jika chart sudah dimuat, cukup panggil fungsi setSymbol dari JS
-        _controller.runJavaScript("window.tvWidget.setSymbol('${newSymbol}');");
+        _controller.runJavaScript("window.tvWidget.setSymbol('$newSymbol');");
         debugPrint("Market diubah ke $newSymbol menggunakan JS API.");
       } else {
         // Fallback: Jika belum dimuat (walaupun jarang terjadi), muat ulang HTML

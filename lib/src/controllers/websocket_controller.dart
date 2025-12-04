@@ -107,7 +107,7 @@ class MarketWebSocketController extends GetxController {
   void _connectWebSocket() {
     try {
       status.value = WebSocketStatus.connecting;
-      channel = IOWebSocketChannel.connect('ws://45.76.163.26:9002'); // Ganti dengan URL Anda
+      channel = IOWebSocketChannel.connect('ws://207.148.119.106:9003'); // Ganti dengan URL Anda
 
       channel.stream.listen(
         (message) {

@@ -12,7 +12,9 @@ import 'package:rrfx/src/views/chart/views/chart_tab.dart';
 import 'package:rrfx/src/views/markets/controllers/market_controller.dart';
 import 'package:rrfx/src/views/markets/views/market_page.dart';
 import 'package:rrfx/src/views/beranda/index_v2.dart';
+import 'package:rrfx/src/views/markets/views/markets_meta_5.dart' show MarketsMeta5, MarketsMeta5View;
 import 'package:rrfx/src/views/settings/index.dart';
+import 'package:rrfx/src/views/trade/index_v2.dart';
 import 'package:rrfx/src/views/transactions/views/transaction_tab.dart';
 
 class Mainpage extends StatefulWidget {
@@ -33,7 +35,8 @@ class _MainpageState extends State<Mainpage> {
 
   static final List<Widget> _widgetOptions = <Widget>[
     const IndexV2(),
-    MarketPage(),
+    // MarketPage(),
+    const MarketsMeta5View(),
     const ChartTab(),
     // const ChartAdvance(),
     const TransactionTab(),

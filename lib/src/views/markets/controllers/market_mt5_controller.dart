@@ -1,0 +1,103 @@
+import 'dart:convert';
+import 'package:flutter/widgets.dart';
+import 'package:get/get.dart';
+import 'package:rrfx/src/views/markets/models/market_mt5_model.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+
+class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
+  // Observable Map untuk menyimpan data market. Key: Symbol (String), Value: MarketModel
+  final RxMap<String, MarketMt5Model> marketData = <String, MarketMt5Model>{}.obs;
+  
+  // URL WebSocket
+  final String _wsUrl = 'ws://207.148.119.106:9003';
+  // Status koneksi
+  final RxBool isConnected = false.obs;
+  late WebSocketChannel _channel;
+
+  @override
+  void onInit() {
+    super.onInit();
+    WidgetsBinding.instance.addObserver(this); 
+    connectWebSocket();
+  }
+
+  @override
+  void onClose() {
+    WidgetsBinding.instance.removeObserver(this); 
+    _channel.sink.close();
+    super.onClose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    // Ketika aplikasi kembali ke foreground (Resumed)
+    if (state == AppLifecycleState.resumed) {
+      print("Aplikasi kembali aktif (RESUMED). Memeriksa koneksi...");
+      if (!isConnected.value) {
+        // Hanya sambungkan ulang jika saat ini terputus
+        connectWebSocket(); 
+      }
+    } 
+    
+    // Opsional: Putuskan koneksi saat aplikasi di-background (Paused)
+    // Walaupun OS sering memutusnya, ini bisa jadi housekeeping yang baik.
+    else if (state == AppLifecycleState.paused) {
+        print("Aplikasi di-background (PAUSED). Menutup koneksi...");
+        _channel.sink.close();
+        isConnected.value = false;
+    }
+  }
+
+  void connectWebSocket() {
+    if (isConnected.value) return; // Hindari koneksi ganda
+
+    try {
+      _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
+      isConnected.value = true;
+      print('WebSocket TERSAMBUNG ke $_wsUrl');
+      
+      _channel.stream.listen(
+        (data) {
+          _handleNewData(data.toString());
+        },
+        onError: (error) {
+          print('WebSocket Error: $error');
+          isConnected.value = false;
+        },
+        onDone: () {
+          print('WebSocket TERPUTUS');
+          isConnected.value = false;
+          // Implementasi re-koneksi otomatis singkat saat terputus
+          // Jika Anda ingin mencoba re-koneksi saat masih di foreground:
+          // Future.delayed(Duration(seconds: 5), () => connectWebSocket());
+        },
+      );
+    } catch (e) {
+      print('Gagal menyambung ke WebSocket: $e');
+      isConnected.value = false;
+    }
+  }
+
+  void _handleNewData(String data) {
+    // Asumsikan data yang diterima adalah string JSON tunggal per pesan
+    try {
+      final json = jsonDecode(data) as Map<String, dynamic>;
+      final newModel = MarketMt5Model.fromJson(json);
+      final symbol = newModel.symbol;
+
+      // Logika pembaruan state
+      marketData.update(symbol, (existingModel) {
+        // Jika model sudah ada, update dengan data baru sambil menyimpan previous price
+        return existingModel.updateWithNewData(newModel);
+      }, ifAbsent: () {
+        // Jika model belum ada, tambahkan baru
+        return newModel;
+      });
+    } catch (e) {
+      print('Error parsing or processing JSON: $e');
+      print('Received data: $data');
+    }
+  }
+}

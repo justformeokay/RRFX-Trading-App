@@ -150,7 +150,7 @@ class _DepositState extends State<Deposit> {
                       return;
                     }
                     if(selectedBankUserID.value.isEmpty){
-                      AppSnackbar.error("Rekening Bank harus dipilih terlebih dahulu. Jika tidak memiliki, daftarkan terlebih dahulu di tab Lainnya");
+                      AppSnackbar.error("Rekening Bank harus dipilih terlebih dahulu.");
                       return;
                     }
                     if(selectedTradingID.value.isEmpty){
@@ -161,11 +161,24 @@ class _DepositState extends State<Deposit> {
                       AppSnackbar.error("Jumlah deposit tidak boleh kosong atau nol.");
                       return;
                     }
+
                     isLoading(true);
                     String keyDeposit = generateFixedId("deposit");
+
                     if(_formKey.currentState!.validate()){
-                      final int amount = NumberFormatter.parseRupiahToInt(myAmount.text);
-                      finalDepositAmount(amount.toString());
+
+                      /// ✔ FIX UTAMA ADA DI SINI
+                      if (currencyCodeSelected.value == "IDR") {
+                        final int amount = NumberFormatter.parseRupiahToInt(myAmount.text);
+                        finalDepositAmount.value = amount.toString();
+                      } else {
+                        String cleanUsd = myAmount.text.replaceAll(RegExp(r'[^0-9.]'), "");
+                        finalDepositAmount.value = cleanUsd; 
+                      }
+
+                      print("Submit deposit");
+                      print("Jumlah deposit: ${finalDepositAmount.value}");
+
                       settingController.deposit(
                         imageURL: selectedPhotoPath.value,
                         accountID: selectedTradingLogin.value,
@@ -175,15 +188,19 @@ class _DepositState extends State<Deposit> {
                         key: keyDeposit
                       ).then((result){
                         if(result){
-                          CustomAlert.alertDialogCustomSuccess(context, message: settingController.responseMessage.value, onTap: (){
-                            Get.back();
-                            Get.back();
-                          });
+                          CustomAlert.alertDialogCustomSuccess(
+                            context,
+                            message: settingController.responseMessage.value,
+                            onTap: (){
+                              Get.back();
+                              Get.back();
+                            }
+                          );
                           isLoading(false);
                           return;
                         }
                         isLoading(false);
-                        Get.log("Deposit Error: ${settingController.responseMessage.value}");
+                        AppSnackbar.error(settingController.responseMessage.value);
                       });
                     }
                   }
@@ -221,6 +238,11 @@ class _DepositState extends State<Deposit> {
                                 bankAdminName.text = settingController.adminBankModel.value?.response?[i].bankName ?? "";
                                 bankAdminCurrency.text = settingController.adminBankModel.value?.response?[i].currency ?? "0";
                                 currencyCodeSelected(settingController.adminBankModel.value?.response?[i].currency ?? "");
+                                myAccountTrading.text = "";
+                                selectedTradingID("");
+                                selectedTradingLogin("");
+                                myAmount.text = "";
+                                finalDepositAmount("0");
                               },
                               title: Text("${settingController.adminBankModel.value?.response?[i].bankHolder ?? ""} - ${settingController.adminBankModel.value?.response?[i].currency ?? ""}", style: GoogleFonts.inter()),
                             );
@@ -265,23 +287,26 @@ class _DepositState extends State<Deposit> {
                                 isLoading(false);
                                 return;
                               }
+                              if(widget.idLogin == null){
+                                CustomMaterialBottomSheets.defaultBottomSheet(context, title: "Pilih Akun Trading ${currencyCodeSelected.value} Anda", size: size, children: List.generate(accountController.realAccounts.length, (i){
+                                  final account = accountController.realAccounts[i];
+                                  if(account.currency != currencyCodeSelected.value){
+                                    return const SizedBox();
+                                  }
+                                  return ListTile(
+                                    subtitle: Text("Kurs ${account.currency} - ${account.login ?? "-"}", style: GoogleFonts.inter(fontWeight: FontWeight.w400)),
+                                    title: Text("${account.namaTipeAkun ?? "-"} (${account.accountCurrency} ${account.balance})", style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                                    onTap: (){
+                                      myAccountTrading.text = "${account.login} - ${account.accountCurrency} ${account.balance}";
+                                      selectedTradingID(account.id);
+                                      selectedTradingLogin(account.login);
+                                      Get.back();
+                                    },
+                                    leading: Icon(Icons.group, color: CustomColor.secondaryColor),
+                                  );
+                                }));
+                              }
                             });
-                            if(widget.idLogin == null){
-                              CustomMaterialBottomSheets.defaultBottomSheet(context, title: "Pilih Akun Trading", size: size, children: List.generate(accountController.realAccounts.length, (i){
-                                final account = accountController.realAccounts[i];
-                                return ListTile(
-                                  subtitle: Text("${account.accountCurrency} - ${account.login ?? "-"}", style: GoogleFonts.inter(fontWeight: FontWeight.w400)),
-                                  title: Text("${account.namaTipeAkun ?? "-"} (${account.accountCurrency} ${account.balance})", style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-                                  onTap: (){
-                                    myAccountTrading.text = "${account.login} - ${account.accountCurrency} ${account.balance}";
-                                    selectedTradingID(account.id);
-                                    selectedTradingLogin(account.login);
-                                    Get.back();
-                                  },
-                                  leading: Icon(Icons.group, color: CustomColor.secondaryColor),
-                                );
-                              }));
-                            }
                           });
                         } 
                       ),
@@ -298,26 +323,41 @@ class _DepositState extends State<Deposit> {
                           requiredField: true,
                           controller: myAmount,
                           fieldName: "Jumlah Deposit",
-                          hintText: currencyCodeSelected.value == "IDR" ? "Masukkan nominal (Rp)" : "Masukkan nominal (\$)",
-                          labelText: currencyCodeSelected.value == "IDR" ? "Jumlah Deposit (Rp)" : "Jumlah Deposit (\$)",
+                          hintText: bankAdminCurrency.text == "IDR" ? "Masukkan nominal (Rp)" : "Masukkan nominal (\$)",
+                          labelText: bankAdminCurrency.text == "IDR" ? "Jumlah Deposit (Rp)" : "Jumlah Deposit (\$)",
                           onChanged: (value) {
                             String clean = value.replaceAll(RegExp(r'[^0-9]'), "");
+
                             if (clean.isEmpty) {
                               myAmount.text = "";
+                              finalDepositAmount.value = "";
                               return;
                             }
+
                             if (currencyCodeSelected.value == "IDR") {
+                              // ---- Format ke tampilan ----
                               myAmount.text = NumberFormattersService.formatRupiah(int.parse(clean));
-                            } else {
+
+                              // ---- Simpan nilai final sebagai string ----
+                              finalDepositAmount.value = int.parse(clean).toString();
+                            } 
+                            else {
+                              // ---- USD: dua desimal ----
                               double val = double.parse(clean) / 100;
+
+                              // ---- Format ke tampilan ----
                               myAmount.text = NumberFormattersService.formatUSD(val);
+
+                              // ---- Simpan nilai final yang BENAR (string) ----
+                              finalDepositAmount.value = val.toString(); 
+                              // contoh: 0.2, 20.0, 150.55
                             }
-                            // menghindari cursor lompat
+
+                            // menjaga cursor tetap di akhir
                             myAmount.selection = TextSelection.fromPosition(
                               TextPosition(offset: myAmount.text.length),
                             );
-                            finalDepositAmount.value = clean;
-                          },
+                          }
                         );
                       })
                     ]
