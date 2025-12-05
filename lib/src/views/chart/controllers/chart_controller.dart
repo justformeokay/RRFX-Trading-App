@@ -10,7 +10,6 @@ import 'package:rrfx/src/helpers/handlers/holiday.dart';
 import 'package:rrfx/src/service/auth_service.dart';
 import 'package:rrfx/src/views/chart/controllers/market_list_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChartControllers extends GetxController {
   RxBool isLoading = false.obs;
@@ -34,10 +33,8 @@ class ChartControllers extends GetxController {
   final RxString timeFrame = "H1".obs;
   final RxDouble spreadValue = 0.0.obs;
   DateTime now = DateTime.now();
-  final RxList<String> availableTimeframes =
-      ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1', 'MN'].obs;
+  final RxList<String> availableTimeframes = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1', 'MN'].obs;
 
-  RealtimeChannel? channel;
   final AuthService authService = AuthService();
 
   @override

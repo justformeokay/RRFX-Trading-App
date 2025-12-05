@@ -6,6 +6,11 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:rrfx/src/views/advance_charts/controllers/extension_candle_deriv.dart';
 import '../models/advance_candle_model.dart';
+import 'package:rrfx/src/controllers/websocket_controller.dart';
+
+// Realtime prices from WebSocket
+// This controller will listen to MarketWebSocketController.marketData and
+// update liveBid/liveAsk accordingly for the currentSymbol.
 
 class OhlcDerivController extends GetxController {
   /// RAW OHLC DATA
@@ -13,7 +18,8 @@ class OhlcDerivController extends GetxController {
 
   /// Converted candles for chart
   final candles = <Candle>[].obs;
-  final RxList<String> availableTimeframes = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4','D1'].obs;
+  final RxList<String> availableTimeframes =
+      ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1'].obs;
   String currentTimeframe = "H1";
   String currentSymbol = "";
   bool currentIsReal = false;
@@ -77,7 +83,13 @@ class OhlcDerivController extends GetxController {
   // =============================================================
   // CURRENT PRICE FOR BARRIERS
   // =============================================================
+  // liveBid/liveAsk will be updated from WebSocket (if available)
+  final RxDouble liveBid = 0.0.obs;
+  final RxDouble liveAsk = 0.0.obs;
+
   double get currentPrice {
+    // Prefer live bid if available (realtime), fallback to last candle close
+    if (liveBid.value != 0.0) return liveBid.value;
     if (candles.isEmpty) return 0;
     return candles.last.close;
   }
@@ -98,22 +110,35 @@ class OhlcDerivController extends GetxController {
 
     final server = isReal ? "real" : "demo";
 
-    fetchInitial(
-      server: server,
-      symbol: symbol,
-      timeframe: timeframe,
-    );
+    fetchInitial(server: server, symbol: symbol, timeframe: timeframe);
 
     timer = Timer.periodic(
       const Duration(seconds: 3),
-      (_) => fetchLastCandle(
-        server: server,
-        symbol: symbol,
-        timeframe: timeframe,
-      ),
+      (_) =>
+          fetchLastCandle(server: server, symbol: symbol, timeframe: timeframe),
     );
-  }
 
+    // Bind websocket updates for realtime price
+    try {
+      final MarketWebSocketController ws =
+          Get.isRegistered<MarketWebSocketController>()
+              ? Get.find<MarketWebSocketController>()
+              : Get.put(MarketWebSocketController(), permanent: true);
+
+      // Listen to changes in marketData and update liveBid/liveAsk when symbol matches
+      ever(ws.marketData, (Map<String, MarketDataModel> data) {
+        final key = currentSymbol;
+        if (key.isEmpty) return;
+        if (data.containsKey(key)) {
+          final md = data[key];
+          if (md != null) {
+            liveBid.value = md.bid;
+            liveAsk.value = md.ask;
+          }
+        }
+      });
+    } catch (_) {}
+  }
 
   @override
   void onClose() {
@@ -194,7 +219,6 @@ class OhlcDerivController extends GetxController {
         ohlcRaw[ohlcRaw.length - 1] = last;
         candles[candles.length - 1] = last.toCandle();
       }
-
       // -----------------------------------------------------------
       // NEW CANDLE → append
       // -----------------------------------------------------------
@@ -228,5 +252,4 @@ class OhlcDerivController extends GetxController {
       ),
     ];
   }
-
 }

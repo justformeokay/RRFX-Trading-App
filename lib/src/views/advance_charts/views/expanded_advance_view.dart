@@ -121,17 +121,29 @@ class ExpandedAdvanceView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
       child: Row(
         children: [
-          TradingProperty.sellButton(
-            price: ohlcController.currentPrice,
-            onPressed:
-                loginID == null ? null : () => _executeOrder(context, "sell"),
-          ),
+          Obx(() {
+            final double sellPrice =
+                ohlcController.liveBid.value != 0.0
+                    ? ohlcController.liveBid.value
+                    : ohlcController.currentPrice;
+            return TradingProperty.sellButton(
+              price: double.tryParse(sellPrice.toStringAsFixed(5)),
+              onPressed:
+                  loginID == null ? null : () => _executeOrder(context, "sell"),
+            );
+          }),
           TradingProperty.lotButton(context),
-          TradingProperty.buyButton(
-            price: ohlcController.currentPrice,
-            onPressed:
-                loginID == null ? null : () => _executeOrder(context, "buy"),
-          ),
+          Obx(() {
+            final double buyPrice =
+                ohlcController.liveAsk.value != 0.0
+                    ? ohlcController.liveAsk.value
+                    : ohlcController.currentPrice;
+            return TradingProperty.buyButton(
+              price: double.tryParse(buyPrice.toStringAsFixed(5)),
+              onPressed:
+                  loginID == null ? null : () => _executeOrder(context, "buy"),
+            );
+          }),
         ],
       ),
     );

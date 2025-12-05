@@ -9,7 +9,6 @@ import 'package:rrfx/src/controllers/theme_controller.dart';
 import 'package:rrfx/src/service/auth_service.dart';
 import 'package:rrfx/src/service/deeplink_service.dart';
 import 'package:rrfx/src/views/no_network_page.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'src/components/languages/languages.dart';
 import 'src/components/themes/default.dart';
 import 'src/helpers/get_utilities/routes.dart';
@@ -21,10 +20,6 @@ final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<Scaffol
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init(); 
-  await Supabase.initialize(
-    url: 'https://epptafokbdelrxfpiiqu.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwcHRhZm9rYmRlbHJ4ZnBpaXF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3NjQzMTgsImV4cCI6MjA3ODM0MDMxOH0.HGlmriIkdCUsnEc8oWavzA0DD6aVRKTVvje4M1rZk9g',
-  );
   final themeController = Get.put(ThemeController());
 
   final deepLinkService = DeepLinkService();
@@ -52,22 +47,16 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    // Panggil pengaturan UI setelah build awal
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _setSystemUIOverlayStyle();
     });
-    // Tambahkan listener untuk mendengarkan perubahan tema
     ever(widget.themeController.isDark, (_) {
       _setSystemUIOverlayStyle();
     });
   }
-
-  // Fungsi untuk menentukan dan menerapkan SystemUiOverlayStyle
   void _setSystemUIOverlayStyle() {
     final bool isDark = widget.themeController.isDark.value;
     final Color systemNavBarColor = isDark ? Colors.black : Colors.white; // Warna hitam untuk Dark Mode, putih untuk Light Mode
-
-    // Menggunakan SystemChrome untuk mengatur warna Navigation Bar (bilah bawah di Android)
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       systemNavigationBarColor: systemNavBarColor,
       systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark, 
@@ -85,22 +74,13 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      // 1. Dapatkan tema saat ini (Light atau Dark)
       final bool isDark = widget.themeController.isDark.value;
-      
-      // 2. Tentukan SystemUiOverlayStyle berdasarkan tema
-      // Gunakan warna latar belakang Scaffold/AppBar untuk StatusBar dan NavigationBar
       final SystemUiOverlayStyle overlayStyle = SystemUiOverlayStyle(
-        // Untuk Bilah Status (atas)
         statusBarColor: Colors.transparent, // Biarkan transparan
         statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark, // Icon Status Bar (jam, sinyal, baterai)
-        
-        // Untuk Bilah Navigasi (bawah)
         systemNavigationBarColor: isDark ? Colors.black : Colors.white, // Inilah yang mengatasi warna putih
         systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark, // Icon Navigation Bar (Home, Back)
       );
-
-      // 3. Bungkus GetMaterialApp dengan AnnotatedRegion
       return AnnotatedRegion<SystemUiOverlayStyle>(
         value: overlayStyle,
         child: GetMaterialApp(

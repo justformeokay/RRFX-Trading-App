@@ -4,9 +4,10 @@ import 'package:icons_plus/icons_plus.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/controllers/firebase_api_controller.dart';
 import 'package:rrfx/src/helpers/handlers/permissions.dart';
+import 'package:rrfx/src/views/markets/views/markets_meta_5.dart';
 import 'package:rrfx/src/views/no_auth_view/explore/explore_no_auth.dart';
 import 'package:rrfx/src/views/no_auth_view/history/history_no_auth.dart';
-import 'package:rrfx/src/views/no_auth_view/markets/markets_no_auth.dart';
+import 'package:rrfx/src/views/no_auth_view/markets/markets_meta_5_no_auth.dart';
 import 'package:rrfx/src/views/no_auth_view/settings/settings_no_auth.dart';
 import 'package:rrfx/src/views/trade/derivchart_without_loginid.dart';
 
@@ -23,8 +24,9 @@ class _MainpageWithoutLoginState extends State<MainpageWithoutLogin> {
 
   final List<Widget> _widgetOptions = <Widget>[
     const ExploreNoAuth(),
-    const MarketsNoAuth(),
-    const TradingChartView(marketName: "EURUSD", ),
+    // const MarketsNoAuth(),
+    const MarketsMeta5NoAuth(),
+    const TradingChartView(marketName: "EURUSD"),
     const HistoryNoAuth(),
     const SettingsNoAuth(),
   ];

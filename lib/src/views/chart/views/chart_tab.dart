@@ -12,7 +12,8 @@ import 'package:rrfx/src/components/containers/no_account.dart';
 import 'package:rrfx/src/controllers/regol.dart';
 import 'package:rrfx/src/controllers/theme_controller.dart';
 import 'package:rrfx/src/controllers/trading.dart';
-import 'package:rrfx/src/views/chart/components/popup_execution.dart';
+import 'package:rrfx/src/views/advance_charts/views/expanded_advance_view.dart';
+import 'package:rrfx/src/views/chart/components/snackbar_order.dart';
 import 'package:rrfx/src/views/chart/controllers/chart_controller.dart';
 import 'package:rrfx/src/views/chart/views/market_bottom_sheet.dart';
 import 'package:rrfx/src/views/trade/components/chart_section.dart';
@@ -217,8 +218,7 @@ class _ChartTabState extends State<ChartTab> with WidgetsBindingObserver {
             Obx(
               () => TradingProperty.textButton(
                 context,
-                title:
-                    "${accountController.selectedAccount.value?.namaTipeAkun != null ? accountController.selectedAccount.value!.namaTipeAkun!.capitalize : ''} - ${accountController.selectedAccount.value?.login ?? ''}",
+                title: "${accountController.selectedAccount.value?.namaTipeAkun != null ? accountController.selectedAccount.value!.namaTipeAkun!.capitalize : ''} - ${accountController.selectedAccount.value?.login ?? ''}",
                 onPressed: () {
                   final bool canPress = accountController.hasAccounts;
                   if (canPress) {
@@ -328,12 +328,12 @@ class _ChartTabState extends State<ChartTab> with WidgetsBindingObserver {
     );
   }
 
-  // Fungsi untuk memicu eksekusi order (diperbarui dengan realtime price)
   void _executeOrder(String orderType) async {
     String? loginID = accountController.selectedAccount.value?.login;
     double lot = chartController.lot.value;
 
     if (loginID == null) return;
+
     if (lot < 0.10) {
       CustomScaffoldMessanger.showAppSnackBar(
         context,
@@ -343,73 +343,23 @@ class _ChartTabState extends State<ChartTab> with WidgetsBindingObserver {
       return;
     }
 
-    final result = await tradingController.executionOrder(
+    // Snackbar loading
+    showOrderProcessSnackbar(
       symbol: chartController.selectedMarket.value,
-      type: orderType,
-      login: loginID,
-      lot: lot.toString(),
+      type: orderType.toUpperCase(),
+      lot: lot,
+      onProcess: () async {
+        await tradingController.executionOrder(
+          symbol: chartController.selectedMarket.value,
+          type: orderType,
+          login: loginID,
+          lot: lot.toString(),
+        );
+      },
     );
-
-    SnackBarType type;
-    if (result['status']) {
-      if(orderType.toLowerCase() == "buy"){
-        type = SnackBarType.success;
-      }else{
-        type = SnackBarType.error;
-      }
-      CustomScaffoldMessanger.showAppSnackBar(
-        context,
-        message: "${chartController.selectedMarket.value} $orderType $lot lot",
-        type: type,
-      );
-    } else {
-      CustomScaffoldMessanger.showAppSnackBar(
-        context,
-        message: result['message'],
-        type: SnackBarType.error,
-      );
-    }
-
-    // // Gunakan Rx observable untuk realtime price
-    // final Rx<double> realtimePrice =
-    //     orderType.toLowerCase() == "sell"
-    //         ? chartController.bidPrice
-    //         : chartController.askPrice;
-
-    // // Tampilkan Dialog Konfirmasi dengan realtime price
-    // Get.dialog(
-    //   PopupExecution.buildOrderConfirmationDialog(
-    //     context: context,
-    //     symbol: chartController.selectedMarket.value,
-    //     type: orderType.toUpperCase(),
-    //     lot: lot,
-    //     priceObservable: realtimePrice,
-    //     priceDigits: chartController.priceDigits.value,
-    //     onConfirm: () async {
-    //       // Logika eksekusi order dengan harga terkini saat konfirmasi
-    //       final result = await tradingController.executionOrder(
-    //         symbol: chartController.selectedMarket.value,
-    //         type: orderType,
-    //         login: loginID,
-    //         lot: lot.toString(),
-    //       );
-    //       if (result['status']) {
-    //         CustomScaffoldMessanger.showAppSnackBar(
-    //           context,
-    //           message: result['message'],
-    //           type: SnackBarType.success,
-    //         );
-    //       } else {
-    //         CustomScaffoldMessanger.showAppSnackBar(
-    //           context,
-    //           message: result['message'],
-    //           type: SnackBarType.error,
-    //         );
-    //       }
-    //     },
-    //   ),
-    // );
   }
+
+
 
   String removeTextAfterDot(String input) {
     if (input.isEmpty) {
