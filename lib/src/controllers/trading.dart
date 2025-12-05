@@ -69,9 +69,9 @@ class TradingController extends GetxController {
       _wsController = Get.find<MarketWebSocketController>();
       _listenToWebSocketUpdates();
       _isListening = true;
-      print('✅ WebSocket listener initialized for TradingController');
+      // print('✅ WebSocket listener initialized for TradingController');
     } catch (e) {
-      print('⚠️ WebSocket controller not available yet: $e');
+      // print('⚠️ WebSocket controller not available yet: $e');
     }
   }
 
@@ -90,20 +90,16 @@ class TradingController extends GetxController {
         final updatedCandle = Candle(
           epoch: lastCandle.epoch,
           open: lastCandle.open,
-          high:
-              lastCandle.high > marketData.bid
-                  ? lastCandle.high
-                  : marketData.bid,
-          low:
-              lastCandle.low < marketData.bid ? lastCandle.low : marketData.bid,
+          high: lastCandle.high > marketData.bid ? lastCandle.high : marketData.bid,
+          low: lastCandle.low < marketData.bid ? lastCandle.low : marketData.bid,
           close: marketData.bid, // Close = bid price dari WebSocket
         );
 
         // Replace candle terakhir
         ohlcDataDeriv[ohlcDataDeriv.length - 1] = updatedCandle;
-        print(
-          '📊 Updated last candle for $_currentSymbol - close: ${marketData.bid}',
-        );
+        // print(
+        //   '📊 Updated last candle for $_currentSymbol - close: ${marketData.bid}',
+        // );
       }
     });
   }

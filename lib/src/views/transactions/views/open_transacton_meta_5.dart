@@ -8,7 +8,9 @@ import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/containers/no_account.dart';
 import 'package:rrfx/src/controllers/account_balance_ws_controller.dart';
 import 'package:rrfx/src/controllers/trading.dart';
+import 'package:rrfx/src/controllers/websocket_controller.dart';
 import 'package:rrfx/src/views/transactions/views/popup_close_order.dart';
+import 'package:rrfx/src/views/transactions/views/popup_edit_position.dart';
 import 'package:shimmer/shimmer.dart';
 
 class OpenTransactonMeta5 extends StatefulWidget {
@@ -23,6 +25,12 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
   final AccountController controller = Get.put(AccountController());
   final AccountBalanceWSController accountWS = Get.put(
     AccountBalanceWSController(),
+    permanent: true,
+  );
+
+  // Ensure MarketWebSocketController is registered
+  final MarketWebSocketController marketWS = Get.put(
+    MarketWebSocketController(),
     permanent: true,
   );
 
@@ -96,6 +104,10 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
               delegate: SliverChildBuilderDelegate((context, index) {
                 return _PositionTile(
                   index: index,
+                  digits:
+                      opened[index].digits != null
+                          ? int.tryParse("${opened[index].digits}")
+                          : null,
                   positionId: "${opened[index].ticket}",
                   openTime: "${opened[index].openTime}",
                   swap: "${opened[index].swap}",
@@ -286,6 +298,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
 
 class _PositionTile extends StatelessWidget {
   final int index;
+  final int? digits;
   final String? positionId;
   final String? openTime;
   final String? swap;
@@ -302,6 +315,7 @@ class _PositionTile extends StatelessWidget {
 
   const _PositionTile({
     required this.index,
+    this.digits,
     this.positionId,
     this.openTime,
     this.swap,
@@ -349,6 +363,13 @@ class _PositionTile extends StatelessWidget {
         motion: const BehindMotion(),
         extentRatio: 0.32,
         children: [
+          SlidableAction(
+            onPressed: (_) => _onEditPosition(context),
+            backgroundColor: Colors.grey,
+            foregroundColor: Colors.white,
+            icon: Icons.edit,
+            label: "Edit",
+          ),
           SlidableAction(
             onPressed: (_) => _onClosePosition(context),
             backgroundColor: Colors.red,
@@ -614,5 +635,61 @@ class _PositionTile extends StatelessWidget {
 
     // Dispose worker when dialog closes
     worker.dispose();
+  }
+
+  void _onEditPosition(BuildContext context) async {
+    final tradingController = Get.put(TradingController());
+
+    // Get current price observable that updates from tradingController
+    final currentPriceObs = (double.tryParse(currentPrice ?? "0") ?? 0.0).obs;
+
+    // Listen to openOrderModel changes and update current price for this position
+    final worker = ever(tradingController.openOrderModel, (model) {
+      if (model?.response != null) {
+        final thisPosition = model!.response!.firstWhereOrNull(
+          (pos) => pos.ticket.toString() == positionId,
+        );
+        if (thisPosition != null && thisPosition.currentPrice != null) {
+          currentPriceObs.value =
+              double.tryParse(thisPosition.currentPrice.toString()) ??
+              currentPriceObs.value;
+        }
+      }
+    });
+
+    // Get digits from symbol or use provided digits
+    final symbolDigits = digits ?? _getDigitsForSymbol(symbol ?? '');
+
+    await showEditPositionDialog(
+      context: context,
+      symbol: symbol?.replaceAll('.db', '') ?? '-',
+      positionId: positionId ?? '-',
+      direction: direction ?? 'buy',
+      openPrice: double.tryParse(openPrice ?? "0") ?? 0.0,
+      currentPrice: currentPriceObs.value,
+      stopLoss: double.tryParse(stopLoss ?? "0") ?? 0.0,
+      takeProfit: double.tryParse(takeProfit ?? "0") ?? 0.0,
+      digits: symbolDigits,
+      currentPriceObservable: currentPriceObs,
+      onModify: (sl, tp) async {
+        worker.dispose();
+        AppSnackbar.success("Position modified: SL=$sl, TP=$tp");
+        // Reload positions
+        final accountController = Get.find<AccountController>();
+        final loginID = accountController.selectedAccount.value?.login;
+        if (loginID != null) {
+          await tradingController.openOrder(login: loginID);
+        }
+      },
+    );
+
+    worker.dispose();
+  }
+
+  int _getDigitsForSymbol(String symbol) {
+    final symbolUpper = symbol.toUpperCase();
+    if (symbolUpper.contains('JPY')) return 3;
+    if (symbolUpper.contains('XAU') || symbolUpper.contains('GOLD')) return 2;
+    return 5;
   }
 }
