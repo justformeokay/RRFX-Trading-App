@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 
@@ -6,7 +7,7 @@ Future<void> showCloseConfirmationDialog({
   required BuildContext context,
   required String symbol,
   required String lot,
-  required String profit,
+  required dynamic profit, // Support both String and Rx<String>
   required String swap,
   required String commission,
   required VoidCallback onConfirm,
@@ -18,18 +19,11 @@ Future<void> showCloseConfirmationDialog({
   final onSurface = theme.colorScheme.onSurface;
   final onSurfaceVariant = onSurface.withOpacity(0.6);
 
-  final sheetColor = theme.bottomSheetTheme.backgroundColor ??
+  final sheetColor =
+      theme.bottomSheetTheme.backgroundColor ??
       (isDark ? const Color(0xFF121212) : Colors.white);
 
   final dividerColor = onSurface.withOpacity(0.15);
-
-  // PROFIT COLOR
-  final profitValue = double.tryParse(profit) ?? 0.0;
-  final profitColor = profitValue > 0
-      ? Colors.greenAccent.shade400
-      : profitValue < 0
-          ? Colors.redAccent.shade200
-          : onSurfaceVariant;
 
   await showModalBottomSheet(
     context: context,
@@ -39,6 +33,43 @@ Future<void> showCloseConfirmationDialog({
     ),
     isScrollControlled: true,
     builder: (_) {
+      // Helper function untuk get profit value
+      String getProfitValue() {
+        if (profit is Rx<String> || profit is RxString) {
+          return (profit as dynamic).value;
+        }
+        return profit.toString();
+      }
+
+      Widget buildProfitBox() {
+        final profitStr = getProfitValue();
+        final profitValue = double.tryParse(profitStr) ?? 0.0;
+        final profitColor =
+            profitValue > 0
+                ? Colors.greenAccent.shade400
+                : profitValue < 0
+                ? Colors.redAccent.shade200
+                : onSurfaceVariant;
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: profitColor.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            "Profit: ${profitValue >= 0 ? '+' : ''}${profitValue.toStringAsFixed(2)} USD",
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: profitColor,
+            ),
+          ),
+        );
+      }
+
       return Padding(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
         child: Column(
@@ -71,10 +102,7 @@ Future<void> showCloseConfirmationDialog({
             Text(
               "Pastikan Anda yakin untuk menutup posisi ini.",
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                color: onSurfaceVariant,
-                fontSize: 13,
-              ),
+              style: GoogleFonts.inter(color: onSurfaceVariant, fontSize: 13),
             ),
 
             const SizedBox(height: 20),
@@ -82,14 +110,19 @@ Future<void> showCloseConfirmationDialog({
             // INFO CARD
             Container(
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E1E1E) : surface.withOpacity(0.7),
+                color:
+                    isDark ? const Color(0xFF1E1E1E) : surface.withOpacity(0.7),
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(color: dividerColor, width: 1),
               ),
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  _buildInfoRow(context, "Market", symbol.replaceAll('.db', '')),
+                  _buildInfoRow(
+                    context,
+                    "Market",
+                    symbol.replaceAll('.db', ''),
+                  ),
                   const SizedBox(height: 8),
                   _buildInfoRow(context, "Lot", lot),
                   const SizedBox(height: 8),
@@ -99,24 +132,11 @@ Future<void> showCloseConfirmationDialog({
 
                   const SizedBox(height: 12),
 
-                  // PROFIT BOX
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: profitColor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      "Profit: ${profitValue >= 0 ? '+' : ''}${profitValue.toStringAsFixed(2)} USD",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: profitColor,
-                      ),
-                    ),
-                  ),
+                  // PROFIT BOX - Realtime
+                  if (profit is Rx<String> || profit is RxString)
+                    Obx(() => buildProfitBox())
+                  else
+                    buildProfitBox(),
                 ],
               ),
             ),
@@ -131,9 +151,10 @@ Future<void> showCloseConfirmationDialog({
                   child: ElevatedButton(
                     onPressed: () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark
-                          ? const Color(0xFF2A2A2A)
-                          : Colors.grey.shade200,
+                      backgroundColor:
+                          isDark
+                              ? const Color(0xFF2A2A2A)
+                              : Colors.grey.shade200,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -196,10 +217,7 @@ Widget _buildInfoRow(BuildContext context, String label, String value) {
     children: [
       Text(
         label,
-        style: GoogleFonts.inter(
-          color: onSurfaceVariant,
-          fontSize: 12,
-        ),
+        style: GoogleFonts.inter(color: onSurfaceVariant, fontSize: 12),
       ),
       Text(
         value,

@@ -40,17 +40,18 @@ class AccountDetailModel {
   final String? login;
   final String? type; // 'demo' atau 'real'
   final String? namaTipeAkun;
-  final String? balance;
+  String? balance;
   final String? currency;
-  final String? marginFree;
+  String? marginFree;
 
   final String? accountCurrency;
-  final double? marginFreePercent;
+  double? marginFreePercent;
   final String? totalDepositUsd;
   final String? totalWithdrawalUsd;
   final String? pnl;
 
-  final String? equity;
+  String? equity;
+  String? margin;
   // Tambahkan properti lain yang relevan di sini
 
   AccountDetailModel({
@@ -66,7 +67,8 @@ class AccountDetailModel {
     this.totalWithdrawalUsd,
     this.marginFree,
     this.pnl,
-    this.equity
+    this.equity,
+    this.margin,
   });
   
 
@@ -85,6 +87,7 @@ class AccountDetailModel {
       totalWithdrawalUsd: json['total_withdrawal_usd'] as String?,
       pnl: json['pnl'] as String?,
       equity: json['equity'] as String?,
+      margin: json['margin'] as String?,
       // Inisialisasi properti lain dari API response
     );
   }
@@ -97,6 +100,7 @@ class AccountDetailModel {
       'balance': balance,
       'currency': currency,
       'margin_free': marginFree,
+      'margin': margin,
       'account_currency': accountCurrency,
       'margin_free_percent': marginFreePercent,
       'total_deposit_usd': totalDepositUsd,

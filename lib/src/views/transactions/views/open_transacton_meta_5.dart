@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/containers/no_account.dart';
+import 'package:rrfx/src/controllers/account_balance_ws_controller.dart';
 import 'package:rrfx/src/controllers/trading.dart';
 import 'package:rrfx/src/views/transactions/views/popup_close_order.dart';
 import 'package:shimmer/shimmer.dart';
@@ -19,15 +21,32 @@ class OpenTransactonMeta5 extends StatefulWidget {
 class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
   final TradingController tradingController = Get.put(TradingController());
   final AccountController controller = Get.put(AccountController());
+  final AccountBalanceWSController accountWS = Get.put(
+    AccountBalanceWSController(),
+    permanent: true,
+  );
 
   @override
   void initState() {
     super.initState();
     _loadOrders();
+    _subscribeToAccountWS();
+  }
+
+  void _subscribeToAccountWS() {
+    if (!controller.hasAccounts) return;
+
+    final login = controller.selectedAccount.value?.login;
+    final serverType = controller.selectedAccount.value?.type;
+
+    if (login != null && serverType != null) {
+      accountWS.subscribe(login: login, serverType: serverType);
+      print('✅ Subscribed to account WS: login=$login, server=$serverType');
+    }
   }
 
   Future<void> _loadOrders() async {
-    if(!controller.hasAccounts){
+    if (!controller.hasAccounts) {
       Get.log("TIDAK MEMILIKI AKUN TRADING DEMO MAUPUN REAL");
       return;
     }
@@ -38,74 +57,68 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(
-      (){
-        if(!controller.hasAccounts) return noAccountDetected();
-        var opened = tradingController.openOrderModel.value?.response;
-        if (opened == null) {
-          return _buildShimmerList(context);
-        }
-        return Scaffold(
-          body: CustomScrollView(
-            slivers: [
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _BalanceHeaderDelegate(),
-              ),
-              
-              SliverToBoxAdapter(
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.1),
-                    border: Border(
-                      top: BorderSide(
-                        color: Colors.grey.withOpacity(0.1),
-                      ),
-                      bottom: BorderSide(
-                        color: Colors.grey.withOpacity(0.1),
-                      ),
-                    ),
-                  ),
-                  child: Text(
-                    "Positions",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    return _PositionTile(
-                      index: index,
-                      positionId: "${opened[index].ticket}",
-                      openTime: "${opened[index].openTime}",
-                      swap: "${opened[index].swap}",
-                      stopLoss: "${opened[index].stopLoss}",
-                      takeProfit: "${opened[index].takeProfit}",
-                      doubleProfit: -0.10 * index,
-                      profit: opened[index].profit != null ? "${opened[index].profit}" : "0.00",
-                      symbol: "${opened[index].symbol}",
-                      direction: "${opened[index].orderType}",
-                      volume: "${opened[index].lot}",
-                      openPrice: "${opened[index].openPrice}",
-                      closePrice: "-",
-                      currentPrice: "${opened[index].currentPrice}",
-                    );
-                  },
-                  childCount: opened.length,
-                ),
-              ),
-            ],
-          ),
-        );
+    return Obx(() {
+      if (!controller.hasAccounts) return noAccountDetected();
+      var opened = tradingController.openOrderModel.value?.response;
+      if (opened == null) {
+        return _buildShimmerList(context);
       }
-    );
+      return Scaffold(
+        body: CustomScrollView(
+          slivers: [
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _BalanceHeaderDelegate(),
+            ),
+
+            SliverToBoxAdapter(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 15,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.1),
+                  border: Border(
+                    top: BorderSide(color: Colors.grey.withOpacity(0.1)),
+                    bottom: BorderSide(color: Colors.grey.withOpacity(0.1)),
+                  ),
+                ),
+                child: Text(
+                  "Positions",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+
+            SliverList(
+              delegate: SliverChildBuilderDelegate((context, index) {
+                return _PositionTile(
+                  index: index,
+                  positionId: "${opened[index].ticket}",
+                  openTime: "${opened[index].openTime}",
+                  swap: "${opened[index].swap}",
+                  stopLoss: "${opened[index].stopLoss}",
+                  takeProfit: "${opened[index].takeProfit}",
+                  doubleProfit: -0.10 * index,
+                  profit:
+                      opened[index].profit != null
+                          ? "${opened[index].profit}"
+                          : "0.00",
+                  symbol: "${opened[index].symbol}",
+                  direction: "${opened[index].orderType}",
+                  volume: "${opened[index].lot}",
+                  openPrice: "${opened[index].openPrice}",
+                  closePrice: "-",
+                  currentPrice: "${opened[index].currentPrice}",
+                );
+              }, childCount: opened.length),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildShimmerList(BuildContext context) {
@@ -128,9 +141,7 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
           child: Container(
             margin: const EdgeInsets.symmetric(vertical: 2),
             height: 80,
-            decoration: BoxDecoration(
-              color: surface.withOpacity(0.6),
-            ),
+            decoration: BoxDecoration(color: surface.withOpacity(0.6)),
           ),
         );
       },
@@ -141,15 +152,33 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
 // ---------------- BALANCE SECTION --------------------
 class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
-  double get minExtent => 160;
+  double get minExtent => 180;
 
   @override
-  double get maxExtent => 170;
+  double get maxExtent => 190;
 
   final accountController = Get.find<AccountController>();
+  final accountWS = Get.find<AccountBalanceWSController>();
+
+  String _formatNumber(String? value) {
+    if (value == null || value == "N/A") return "N/A";
+    final number = double.tryParse(value);
+    if (number == null) return value;
+    final formatter = NumberFormat('#,##0.00', 'en_US');
+    return formatter.format(number).replaceAll(',', ' ');
+  }
+
+  String _formatProfit(double value) {
+    final formatter = NumberFormat('#,##0.00', 'en_US');
+    return formatter.format(value).replaceAll(',', ' ');
+  }
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     final theme = Theme.of(context);
 
     return Container(
@@ -159,32 +188,100 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Obx(() => _balanceRow("Account ID", accountController.selectedAccount.value?.login ?? "N/A", context)),
-          Obx(() => _balanceRow("Balance", "${accountController.selectedAccount.value?.balance ?? "N/A"} ${accountController.selectedAccount.value?.accountCurrency ?? "0"}", context)),
-          Obx(() => _balanceRow("Equity", "${accountController.selectedAccount.value?.equity ?? "N/A"} ${accountController.selectedAccount.value?.accountCurrency ?? "0"}", context)),
-          _balanceRow("Margin", "-", context),
-          Obx(() => _balanceRow("Free Margin", "${accountController.selectedAccount.value?.marginFree ?? "N/A"} ${accountController.selectedAccount.value?.accountCurrency ?? "0"}", context)),
-          Obx(() => _balanceRow("Margin Level (%)", accountController.selectedAccount.value?.marginFreePercent != null ? "${accountController.selectedAccount.value?.marginFreePercent}%" : "N/A", context)),
+          Obx(
+            () => _balanceRow(
+              "Account ID",
+              accountController.selectedAccount.value?.login ?? "N/A",
+              context,
+            ),
+          ),
+          // Only show Profit if there are open positions
+          Obx(() {
+            final tradingController = Get.find<TradingController>();
+            final hasOpenPositions =
+                tradingController.openOrderModel.value?.response?.isNotEmpty ??
+                false;
+
+            if (!hasOpenPositions) return SizedBox.shrink();
+
+            return _balanceRow(
+              "Profit",
+              _formatProfit(accountWS.profit.value),
+              context,
+              color: accountWS.profit.value >= 0 ? Colors.blue : Colors.red,
+            );
+          }),
+          Obx(
+            () => _balanceRow(
+              "Balance",
+              _formatNumber(accountController.selectedAccount.value?.balance),
+              context,
+            ),
+          ),
+          Obx(
+            () => _balanceRow(
+              "Equity",
+              _formatNumber(accountController.selectedAccount.value?.equity),
+              context,
+            ),
+          ),
+          Obx(
+            () => _balanceRow(
+              "Margin",
+              _formatNumber(accountController.selectedAccount.value?.margin),
+              context,
+            ),
+          ),
+          Obx(
+            () => _balanceRow(
+              "Free Margin",
+              _formatNumber(
+                accountController.selectedAccount.value?.marginFree,
+              ),
+              context,
+            ),
+          ),
+          Obx(
+            () => _balanceRow(
+              "Margin Level (%)",
+              accountController.selectedAccount.value?.marginFreePercent != null
+                  ? "${accountController.selectedAccount.value?.marginFreePercent}"
+                  : "N/A",
+              context,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _balanceRow(String label, String value, BuildContext context) {
+  Widget _balanceRow(
+    String label,
+    String value,
+    BuildContext context, {
+    Color? color,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          Text(value, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
   }
 
   @override
-  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) => false;
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) =>
+      false;
 }
 
 class _PositionTile extends StatelessWidget {
@@ -227,19 +324,22 @@ class _PositionTile extends StatelessWidget {
     final bool isPositive = parsedProfit > 0;
     final bool isNegative = parsedProfit < 0;
 
-    final String profitText = isPositive
-        ? parsedProfit.toStringAsFixed(2)
-        : isNegative
+    final String profitText =
+        isPositive
+            ? parsedProfit.toStringAsFixed(2)
+            : isNegative
             ? "-${parsedProfit.abs().toStringAsFixed(2)}"
             : "0.00";
 
-    final Color profitColor = isPositive
-        ? Colors.blue
-        : isNegative
+    final Color profitColor =
+        isPositive
+            ? Colors.blue
+            : isNegative
             ? Colors.red
             : Theme.of(context).colorScheme.onSurfaceVariant;
 
-    final Color buySellColor = direction?.toLowerCase() == "buy" ? Colors.blue : Colors.red;
+    final Color buySellColor =
+        direction?.toLowerCase() == "buy" ? Colors.blue : Colors.red;
 
     return Slidable(
       key: ValueKey(positionId),
@@ -282,7 +382,10 @@ class _PositionTile extends StatelessWidget {
                 ),
                 const TextSpan(text: ", "),
                 TextSpan(
-                  text: direction != null ? "${direction!.toLowerCase()} ${volume ?? "0.0"}" : "-",
+                  text:
+                      direction != null
+                          ? "${direction!.toLowerCase()} ${volume ?? "0.0"}"
+                          : "-",
                   style: GoogleFonts.inter(
                     color: buySellColor,
                     fontSize: 12.0,
@@ -293,8 +396,14 @@ class _PositionTile extends StatelessWidget {
             ),
           ),
 
-
-          subtitle: Text("${openPrice ?? '0.00000'} → ${currentPrice ?? '-'}", style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)),
+          subtitle: Text(
+            "${openPrice ?? '0.00000'} → ${currentPrice ?? '-'}",
+            style: GoogleFonts.inter(
+              fontSize: 13.0,
+              fontWeight: FontWeight.w700,
+              color: Get.theme.textTheme.bodySmall?.color,
+            ),
+          ),
 
           trailing: Text(
             profitText,
@@ -327,7 +436,11 @@ class _PositionTile extends StatelessWidget {
                       Expanded(
                         child: Text(
                           "#${positionId ?? "-"}",
-                          style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)
+                          style: GoogleFonts.inter(
+                            fontSize: 13.0,
+                            fontWeight: FontWeight.w700,
+                            color: Get.theme.textTheme.bodySmall?.color,
+                          ),
                         ),
                       ),
                       Expanded(
@@ -335,13 +448,21 @@ class _PositionTile extends StatelessWidget {
                           children: [
                             Text(
                               "Open: ",
-                              style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)
+                              style: GoogleFonts.inter(
+                                fontSize: 13.0,
+                                fontWeight: FontWeight.w700,
+                                color: Get.theme.textTheme.bodySmall?.color,
+                              ),
                             ),
                             Expanded(
                               child: Text(
                                 openTime ?? "-",
                                 textAlign: TextAlign.right,
-                                style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)
+                                style: GoogleFonts.inter(
+                                  fontSize: 13.0,
+                                  fontWeight: FontWeight.w700,
+                                  color: Get.theme.textTheme.bodySmall?.color,
+                                ),
                               ),
                             ),
                           ],
@@ -360,12 +481,22 @@ class _PositionTile extends StatelessWidget {
                           children: [
                             Text(
                               "S / L: ",
-                              style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)
+                              style: GoogleFonts.inter(
+                                fontSize: 13.0,
+                                fontWeight: FontWeight.w700,
+                                color: Get.theme.textTheme.bodySmall?.color,
+                              ),
                             ),
                             Expanded(
                               child: Text(
-                                (stopLoss != null && stopLoss != "0") ? stopLoss! : "–",
-                                style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)
+                                (stopLoss != null && stopLoss != "0")
+                                    ? stopLoss!
+                                    : "–",
+                                style: GoogleFonts.inter(
+                                  fontSize: 13.0,
+                                  fontWeight: FontWeight.w700,
+                                  color: Get.theme.textTheme.bodySmall?.color,
+                                ),
                               ),
                             ),
                           ],
@@ -376,13 +507,21 @@ class _PositionTile extends StatelessWidget {
                           children: [
                             Text(
                               "Swap: ",
-                              style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)
+                              style: GoogleFonts.inter(
+                                fontSize: 13.0,
+                                fontWeight: FontWeight.w700,
+                                color: Get.theme.textTheme.bodySmall?.color,
+                              ),
                             ),
                             Expanded(
                               child: Text(
                                 swap ?? "0.00",
                                 textAlign: TextAlign.right,
-                                style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)
+                                style: GoogleFonts.inter(
+                                  fontSize: 13.0,
+                                  fontWeight: FontWeight.w700,
+                                  color: Get.theme.textTheme.bodySmall?.color,
+                                ),
                               ),
                             ),
                           ],
@@ -398,11 +537,21 @@ class _PositionTile extends StatelessWidget {
                     children: [
                       Text(
                         "T / P: ",
-                        style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)
+                        style: GoogleFonts.inter(
+                          fontSize: 13.0,
+                          fontWeight: FontWeight.w700,
+                          color: Get.theme.textTheme.bodySmall?.color,
+                        ),
                       ),
                       Text(
-                        (takeProfit != null && takeProfit != "0") ? takeProfit! : "–",
-                        style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)
+                        (takeProfit != null && takeProfit != "0")
+                            ? takeProfit!
+                            : "–",
+                        style: GoogleFonts.inter(
+                          fontSize: 13.0,
+                          fontWeight: FontWeight.w700,
+                          color: Get.theme.textTheme.bodySmall?.color,
+                        ),
                       ),
                     ],
                   ),
@@ -418,30 +567,52 @@ class _PositionTile extends StatelessWidget {
   void _onClosePosition(BuildContext context) async {
     final accountController = Get.put(AccountController());
     final tradingController = Get.put(TradingController());
+
     String? loginID = accountController.selectedAccount.value?.login;
     if (loginID == null) {
       AppSnackbar.error("Gagal mendapatkan Login ID akun trading.");
       return;
     }
 
+    // Create reactive profit observable that updates from tradingController
+    final realtimeProfit = (profit ?? "0.0").obs;
+
+    // Use ever() to listen to openOrderModel changes and update this position's profit
+    final worker = ever(tradingController.openOrderModel, (model) {
+      if (model?.response != null) {
+        final thisPosition = model!.response!.firstWhereOrNull(
+          (pos) => pos.ticket.toString() == positionId,
+        );
+        if (thisPosition != null && thisPosition.profit != null) {
+          realtimeProfit.value = thisPosition.profit.toString();
+        }
+      }
+    });
+
     await showCloseConfirmationDialog(
       context: context,
       symbol: symbol ?? '-',
       lot: volume ?? '0.0',
-      profit: profit.toString(),
+      profit: realtimeProfit, // Pass Rx observable
       swap: swap.toString(),
       commission: "0.00",
       onConfirm: () async {
-        await tradingController.closingOrder(loginID: loginID, ticketID: positionId ?? '').then((result){
-          tradingController.openOrder(login: loginID);
-          AppSnackbar.success("Posisi $positionId berhasil ditutup.");
-        }).whenComplete(() {
-          String? loginID = accountController.selectedAccount.value?.login;
-          if (loginID == null) return;
-          tradingController.openOrder(login: loginID);
-        });
+        worker.dispose(); // Dispose worker when closing
+        await tradingController
+            .closingOrder(loginID: loginID, ticketID: positionId ?? '')
+            .then((result) {
+              tradingController.openOrder(login: loginID);
+              AppSnackbar.success("Posisi $positionId berhasil ditutup.");
+            })
+            .whenComplete(() {
+              String? loginID = accountController.selectedAccount.value?.login;
+              if (loginID == null) return;
+              tradingController.openOrder(login: loginID);
+            });
       },
     );
+
+    // Dispose worker when dialog closes
+    worker.dispose();
   }
 }
-
