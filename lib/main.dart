@@ -107,3 +107,31 @@ class _MyAppState extends State<MyApp> {
     });
   }
 }
+
+
+// // main.dart
+
+// void main() {
+//   // Binding Controllers
+//   Get.put(ThemeControllerExperimentals());
+//   Get.put(ChartControllerExperimentals());
+//   runApp(const MyApp());
+// }
+
+// class MyApp extends StatelessWidget {
+//   const MyApp({super.key});
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final themeController = Get.find<ThemeControllerExperimentals>();
+//     return Obx(() => GetMaterialApp(
+//           title: 'Trading Chart Demo',
+//           // Menggunakan ThemeData yang diurus oleh ThemeController
+//           theme: themeController.themeData, 
+//           // Mengatur mode tema berdasarkan state di controller
+//           themeMode: themeController.isDark.value ? ThemeMode.dark : ThemeMode.light,
+//           debugShowCheckedModeBanner: false,
+//           home: ChartPageExperimentals(),
+//         ));
+//   }
+// }

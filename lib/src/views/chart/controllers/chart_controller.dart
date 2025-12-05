@@ -33,12 +33,15 @@ class ChartControllers extends GetxController {
   final RxString timeFrame = "H1".obs;
   final RxDouble spreadValue = 0.0.obs;
   DateTime now = DateTime.now();
-  final RxList<String> availableTimeframes = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1', 'MN'].obs;
+  final RxList<String> availableTimeframes =
+      ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1', 'MN'].obs;
 
   final AuthService authService = AuthService();
 
   @override
   void onInit() {
+    // Set initial priceDigits based on symbol
+    priceDigits.value = _getDefaultDigitsForSymbol(selectedMarket.value);
     initConnection();
     _runProcessInit();
     _startDataPolling(); // 👈 Mulai polling saat inisialisasi
@@ -46,29 +49,44 @@ class ChartControllers extends GetxController {
     super.onInit();
   }
 
+  // Helper function untuk mendapatkan default digits berdasarkan symbol
+  int _getDefaultDigitsForSymbol(String symbol) {
+    final upperSymbol = symbol.toUpperCase();
+    if (upperSymbol.contains('JPY')) {
+      return 3; // JPY pairs have 3 decimal places
+    } else if (upperSymbol.contains('XAU') || upperSymbol.contains('GOLD')) {
+      return 2; // Gold has 2 decimal places
+    } else if (upperSymbol.contains('XAG') || upperSymbol.contains('SILVER')) {
+      return 3; // Silver has 3 decimal places
+    } else {
+      return 5; // Most forex pairs have 5 decimal places
+    }
+  }
+
   void _listenToWebSocketPrices() {
     // Listen perubahan pada marketData dari WebSocket
     ever(wsController.marketData, (data) {
       final symbolKey = _getWebSocketSymbol(selectedMarket.value);
-      print(
-        '📊 WebSocket data updated. Available symbols: ${data.keys.toList()}',
-      );
-      print('🔍 Looking for symbol: $symbolKey');
+      // print(
+      //   '📊 WebSocket data updated. Available symbols: ${data.keys.toList()}',
+      // );
+      // print('🔍 Looking for symbol: $symbolKey');
 
       if (data.containsKey(symbolKey)) {
         final marketData = data[symbolKey];
         if (marketData != null) {
-          print(
-            '✅ Found data for $symbolKey - Bid: ${marketData.bid}, Ask: ${marketData.ask}, Digits: ${marketData.digits}',
-          );
+          // print(
+          //   '✅ Found data for $symbolKey - Bid: ${marketData.bid}, Ask: ${marketData.ask}, Digits: ${marketData.digits}',
+          // );
           bidPrice.value = marketData.bid;
           askPrice.value = marketData.ask;
           priceDigits.value = marketData.digits;
-          currentPrice.value = marketData.bid; // Update current price dengan bid
+          currentPrice.value =
+              marketData.bid; // Update current price dengan bid
           spreadValue.value = marketData.ask - marketData.bid;
         }
       } else {
-        print('❌ Symbol $symbolKey not found in WebSocket data');
+        // print('❌ Symbol $symbolKey not found in WebSocket data');
       }
     });
 
@@ -77,21 +95,26 @@ class ChartControllers extends GetxController {
       final symbolKey = _getWebSocketSymbol(market);
       print('🔄 Market changed to: $symbolKey');
 
+      // Set default digits immediately berdasarkan symbol
+      priceDigits.value = _getDefaultDigitsForSymbol(market);
+
       // Pastikan WebSocket tetap aktif saat pindah market
       _ensureWebSocketConnection();
 
       final data = wsController.marketData[symbolKey];
       if (data != null) {
-        print(
-          '✅ Immediate data found - Bid: ${data.bid}, Ask: ${data.ask}, Digits: ${data.digits}',
-        );
+        // print(
+        //   '✅ Immediate data found - Bid: ${data.bid}, Ask: ${data.ask}, Digits: ${data.digits}',
+        // );
         bidPrice.value = data.bid;
         askPrice.value = data.ask;
-        priceDigits.value = data.digits;
+        priceDigits.value = data.digits; // Override dengan data dari WS
         currentPrice.value = data.bid;
         spreadValue.value = data.ask - data.bid;
       } else {
-        print('⏳ Waiting for WebSocket data for $symbolKey');
+        print(
+          '⏳ Waiting for WebSocket data for $symbolKey (using default digits: ${priceDigits.value})',
+        );
       }
     });
   }
@@ -252,7 +275,7 @@ class ChartControllers extends GetxController {
     _stopDataPolling();
 
     // Polling setiap 10 detik
-    _pollingTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       // Panggil fungsi yang hanya memuat ulang data chart
       loadChartData();
     });
@@ -269,13 +292,15 @@ class ChartControllers extends GetxController {
   // Fungsi terpisah untuk memuat data chart saja
   Future<void> loadChartData({String? timeframe}) async {
     final loginID = accountController.selectedAccount.value?.login;
+    final accountType = accountController.selectedAccount.value?.type;
     if (loginID == null) return;
     final accessToken = await getAccessToken();
     if (accessToken == null) return;
-    final resultCandle = await tradingController.getMarketForDerivChartV3(
+    final resultCandle = await tradingController.getMarketForDerivChartV4(
       loginID: loginID,
       symbol: selectedMarket.value,
-      timeframe: timeframe ?? timeFrame.value,
+      timeFrame: timeframe ?? timeFrame.value,
+      accountType: accountType ?? "demo",
     );
     if (resultCandle) {
       currentPrice.value = tradingController.ohlcDataDeriv.last.close;

@@ -12,7 +12,6 @@ import 'package:rrfx/src/components/containers/no_account.dart';
 import 'package:rrfx/src/controllers/regol.dart';
 import 'package:rrfx/src/controllers/theme_controller.dart';
 import 'package:rrfx/src/controllers/trading.dart';
-import 'package:rrfx/src/views/advance_charts/views/expanded_advance_view.dart';
 import 'package:rrfx/src/views/chart/components/snackbar_order.dart';
 import 'package:rrfx/src/views/chart/controllers/chart_controller.dart';
 import 'package:rrfx/src/views/chart/views/market_bottom_sheet.dart';
@@ -218,7 +217,8 @@ class _ChartTabState extends State<ChartTab> with WidgetsBindingObserver {
             Obx(
               () => TradingProperty.textButton(
                 context,
-                title: "${accountController.selectedAccount.value?.namaTipeAkun != null ? accountController.selectedAccount.value!.namaTipeAkun!.capitalize : ''} - ${accountController.selectedAccount.value?.login ?? ''}",
+                title:
+                    "${accountController.selectedAccount.value?.namaTipeAkun != null ? accountController.selectedAccount.value!.namaTipeAkun!.capitalize : ''} - ${accountController.selectedAccount.value?.login ?? ''}",
                 onPressed: () {
                   final bool canPress = accountController.hasAccounts;
                   if (canPress) {
@@ -298,31 +298,37 @@ class _ChartTabState extends State<ChartTab> with WidgetsBindingObserver {
       child: Row(
         children: [
           // Sell tombol - menggunakan bid price dari WebSocket
-          Obx(
-            () => TradingProperty.sellButton(
+          Obx(() {
+            // Gunakan priceDigits dari controller, dengan fallback minimal 2
+            final digits =
+                chartController.priceDigits.value > 0
+                    ? chartController.priceDigits.value
+                    : 5; // fallback ke 5 untuk forex pairs
+            return TradingProperty.sellButton(
               price: double.tryParse(
-                chartController.bidPrice.value.toStringAsFixed(
-                  chartController.priceDigits.value,
-                ),
+                chartController.bidPrice.value.toStringAsFixed(digits),
               ),
               onPressed: loginID == null ? null : () => _executeOrder("sell"),
-            ),
-          ),
+            );
+          }),
 
           // Lot Contorller
           TradingProperty.lotButton(context),
 
           // Buy tombol - menggunakan ask price dari WebSocket
-          Obx(
-            () => TradingProperty.buyButton(
+          Obx(() {
+            // Gunakan priceDigits dari controller, dengan fallback minimal 2
+            final digits =
+                chartController.priceDigits.value > 0
+                    ? chartController.priceDigits.value
+                    : 5; // fallback ke 5 untuk forex pairs
+            return TradingProperty.buyButton(
               price: double.tryParse(
-                chartController.askPrice.value.toStringAsFixed(
-                  chartController.priceDigits.value,
-                ),
+                chartController.askPrice.value.toStringAsFixed(digits),
               ),
               onPressed: loginID == null ? null : () => _executeOrder("buy"),
-            ),
-          ),
+            );
+          }),
         ],
       ),
     );
@@ -358,8 +364,6 @@ class _ChartTabState extends State<ChartTab> with WidgetsBindingObserver {
       },
     );
   }
-
-
 
   String removeTextAfterDot(String input) {
     if (input.isEmpty) {

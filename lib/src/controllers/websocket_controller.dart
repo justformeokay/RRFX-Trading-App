@@ -154,7 +154,7 @@ class MarketWebSocketController extends GetxController
         (message) {
           try {
             _reconnectAttempts = 0; // Reset counter saat berhasil terima data
-            print('📥 WebSocket received message: $message');
+            // print('📥 WebSocket received message: $message');
             final decoded = json.decode(message);
             if (decoded is Map<String, dynamic>) {
               // Check apakah response adalah single market object
@@ -163,25 +163,25 @@ class MarketWebSocketController extends GetxController
                 final symbol = decoded['symbol'] as String;
                 final bid = decoded['bid'];
                 final ask = decoded['ask'];
-                print(
-                  '✅ Parsed single market - Symbol: $symbol, Bid: $bid, Ask: $ask',
-                );
+                // print(
+                //   '✅ Parsed single market - Symbol: $symbol, Bid: $bid, Ask: $ask',
+                // );
 
                 final data = MarketDataModel.fromJson(symbol, decoded);
                 marketData[symbol] = data;
-                print(
-                  '💾 Stored in marketData[$symbol] = Bid: ${data.bid}, Ask: ${data.ask}',
-                );
+                // print(
+                //   '💾 Stored in marketData[$symbol] = Bid: ${data.bid}, Ask: ${data.ask}',
+                // );
                 status.value = WebSocketStatus.connected;
               } else {
                 // Multiple markets response: { "XAUUSD": {...}, "EURUSD": {...} }
-                print('📦 Parsing multiple markets...');
+                // print('📦 Parsing multiple markets...');
                 decoded.forEach((symbol, item) {
                   final data = MarketDataModel.fromJson(symbol, item);
                   marketData[symbol] = data;
-                  print(
-                    '💾 Stored $symbol - Bid: ${data.bid}, Ask: ${data.ask}',
-                  );
+                  // print(
+                  // //   '💾 Stored $symbol - Bid: ${data.bid}, Ask: ${data.ask}',
+                  // );
                 });
                 status.value = WebSocketStatus.connected;
               }

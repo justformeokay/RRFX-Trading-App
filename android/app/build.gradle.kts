@@ -31,7 +31,7 @@ android {
 
     defaultConfig {
         applicationId = "com.rrfx.app"
-        minSdk = 30
+        minSdk = 27
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
