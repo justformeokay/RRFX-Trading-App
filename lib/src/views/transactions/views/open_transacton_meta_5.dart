@@ -104,20 +104,14 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
               delegate: SliverChildBuilderDelegate((context, index) {
                 return _PositionTile(
                   index: index,
-                  digits:
-                      opened[index].digits != null
-                          ? int.tryParse("${opened[index].digits}")
-                          : null,
+                  digits: opened[index].digits != null ? int.tryParse("${opened[index].digits}") : null,
                   positionId: "${opened[index].ticket}",
                   openTime: "${opened[index].openTime}",
                   swap: "${opened[index].swap}",
                   stopLoss: "${opened[index].stopLoss}",
                   takeProfit: "${opened[index].takeProfit}",
                   doubleProfit: -0.10 * index,
-                  profit:
-                      opened[index].profit != null
-                          ? "${opened[index].profit}"
-                          : "0.00",
+                  profit: opened[index].profit != null ? "${opened[index].profit}" : "0.00",
                   symbol: "${opened[index].symbol}",
                   direction: "${opened[index].orderType}",
                   volume: "${opened[index].lot}",
@@ -279,6 +273,22 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                '.' * 100,
+                maxLines: 1,
+                overflow: TextOverflow.clip,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  letterSpacing: 2,
+                  color: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.color?.withOpacity(0.3),
+                ),
+              ),
+            ),
+          ),
           Text(
             value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(

@@ -45,73 +45,68 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(
-      (){
-        if(!controller.hasAccounts) return noAccountDetected();
-        var closed = tradingController.tradingHistoryModel.value?.response;
-        if (closed == null) {
-          return _buildShimmerList(context);
-        }
-        return Scaffold(
-          body: CustomScrollView(
-            slivers: [
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _BalanceHeaderDelegate(),
-              ),
-              
-              SliverToBoxAdapter(
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.1),
-                    border: Border(
-                      top: BorderSide(
-                        color: Colors.grey.withOpacity(0.1),
-                      ),
-                      bottom: BorderSide(
-                        color: Colors.grey.withOpacity(0.1),
-                      ),
-                    ),
-                  ),
-                  child: Text(
-                    "Closed Positions",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    return _PositionTile(
-                      index: index,
-                      positionId: "${closed[index].ticket}",
-                      openTime: "${closed[index].openTime}",
-                      swap: "-",
-                      stopLoss: "${closed[index].stopLoss}",
-                      takeProfit: "${closed[index].takeProfit}",
-                      doubleProfit: -0.10 * index,
-                      profit: closed[index].profit != null ? "${closed[index].profit}" : "0.00",
-                      symbol: "${closed[index].symbol}",
-                      direction: "${closed[index].orderType}",
-                      volume: _formatLot(closed[index].lot),
-                      openPrice: "${closed[index].openPrice}",
-                      closePrice: "${closed[index].closePrice}",
-                    );
-                  },
-                  childCount: closed.length,
-                ),
-              ),
-            ],
-          ),
-        );
+    return Obx(() {
+      if (!controller.hasAccounts) return noAccountDetected();
+      var closed = tradingController.tradingHistoryModel.value?.response;
+      if (closed == null) {
+        return _buildShimmerList(context);
       }
-    );
+      return Scaffold(
+        body: CustomScrollView(
+          slivers: [
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _BalanceHeaderDelegate(),
+            ),
+
+            SliverToBoxAdapter(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 15,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.1),
+                  border: Border(
+                    top: BorderSide(color: Colors.grey.withOpacity(0.1)),
+                    bottom: BorderSide(color: Colors.grey.withOpacity(0.1)),
+                  ),
+                ),
+                child: Text(
+                  "Closed Positions",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+
+            SliverList(
+              delegate: SliverChildBuilderDelegate((context, index) {
+                return _PositionTile(
+                  index: index,
+                  positionId: "${closed[index].ticket}",
+                  swap: "-",
+                  stopLoss: "${closed[index].stopLoss}",
+                  openTime: "${closed[index].openTime}",
+                  closeTime: "${closed[index].closeTime}",
+                  takeProfit: "${closed[index].takeProfit}",
+                  doubleProfit: -0.10 * index,
+                  profit:
+                      closed[index].profit != null
+                          ? "${closed[index].profit}"
+                          : "0.00",
+                  symbol: "${closed[index].symbol}",
+                  direction: "${closed[index].orderType}",
+                  volume: _formatLot(closed[index].lot),
+                  openPrice: "${closed[index].openPrice}",
+                  closePrice: "${closed[index].closePrice}",
+                );
+              }, childCount: closed.length),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   String _formatLot(dynamic lot) {
@@ -122,7 +117,6 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
 
     return value.toStringAsFixed(2);
   }
-
 
   Widget _buildShimmerList(BuildContext context) {
     final theme = Theme.of(context);
@@ -144,9 +138,7 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
           child: Container(
             margin: const EdgeInsets.symmetric(vertical: 2),
             height: 80,
-            decoration: BoxDecoration(
-              color: surface.withOpacity(0.6),
-            ),
+            decoration: BoxDecoration(color: surface.withOpacity(0.6)),
           ),
         );
       },
@@ -165,7 +157,11 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
   final accountController = Get.find<AccountController>();
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     final theme = Theme.of(context);
 
     return Container(
@@ -175,11 +171,29 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Obx(() => _balanceRow("Account ID", accountController.selectedAccount.value?.login ?? "N/A", context)),
-          Obx(() => _balanceRow("Deposit", accountController.selectedAccount.value?.totalDepositUsd ?? "0", context)),
+          Obx(
+            () => _balanceRow(
+              "Account ID",
+              accountController.selectedAccount.value?.login ?? "N/A",
+              context,
+            ),
+          ),
+          Obx(
+            () => _balanceRow(
+              "Deposit",
+              accountController.selectedAccount.value?.totalDepositUsd ?? "0",
+              context,
+            ),
+          ),
           _balanceRow("Swap", "-", context),
           _balanceRow("Commision", "-", context),
-          Obx(() => _balanceRow("Balance", "${accountController.selectedAccount.value?.balance ?? "N/A"} ${accountController.selectedAccount.value?.accountCurrency ?? "0"}", context)),
+          Obx(
+            () => _balanceRow(
+              "Balance",
+              "${accountController.selectedAccount.value?.balance ?? "N/A"} ${accountController.selectedAccount.value?.accountCurrency ?? "0"}",
+              context,
+            ),
+          ),
         ],
       ),
     );
@@ -192,14 +206,36 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          Text(value, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                '.' * 100,
+                maxLines: 1,
+                overflow: TextOverflow.clip,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  letterSpacing: 2,
+                  color: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.color?.withOpacity(0.3),
+                ),
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );
   }
 
   @override
-  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) => false;
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) =>
+      false;
 }
 
 class _PositionTile extends StatelessWidget {
@@ -216,11 +252,13 @@ class _PositionTile extends StatelessWidget {
   final String? volume;
   final String? openPrice;
   final String? closePrice;
+  final String? closeTime;
 
   const _PositionTile({
     required this.index,
     this.positionId,
     this.openTime,
+    this.closeTime,
     this.swap,
     this.stopLoss,
     this.takeProfit,
@@ -240,19 +278,22 @@ class _PositionTile extends StatelessWidget {
     final bool isPositive = parsedProfit > 0;
     final bool isNegative = parsedProfit < 0;
 
-    final String profitText = isPositive
-        ? parsedProfit.toStringAsFixed(2)
-        : isNegative
+    final String profitText =
+        isPositive
+            ? parsedProfit.toStringAsFixed(2)
+            : isNegative
             ? "-${parsedProfit.abs().toStringAsFixed(2)}"
             : "0.00";
 
-    final Color profitColor = isPositive
-        ? Colors.blue
-        : isNegative
+    final Color profitColor =
+        isPositive
+            ? Colors.blue
+            : isNegative
             ? Colors.red
             : Theme.of(context).colorScheme.onSurfaceVariant;
 
-    final Color buySellColor = direction?.toLowerCase() == "buy" ? Colors.blue : Colors.red;
+    final Color buySellColor =
+        direction?.toLowerCase() == "buy" ? Colors.blue : Colors.red;
 
     return Slidable(
       key: ValueKey(positionId),
@@ -275,7 +316,10 @@ class _PositionTile extends StatelessWidget {
                 ),
                 const TextSpan(text: ", "),
                 TextSpan(
-                  text: direction != null ? "${direction!.toLowerCase()} ${volume ?? "0.0"}" : "-",
+                  text:
+                      direction != null
+                          ? "${direction!.toLowerCase()} ${volume ?? "0.0"}"
+                          : "-",
                   style: GoogleFonts.inter(
                     color: buySellColor,
                     fontSize: 12.0,
@@ -286,16 +330,36 @@ class _PositionTile extends StatelessWidget {
             ),
           ),
 
-
-          subtitle: Text("${openPrice ?? '0.00000'} → ${closePrice == "null" || closePrice == null || closePrice == "" ? '0' : closePrice}", style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)),
-
-          trailing: Text(
-            profitText,
+          subtitle: Text(
+            "${openPrice ?? '0.00000'} → ${closePrice == "null" || closePrice == null || closePrice == "" ? '0' : closePrice}",
             style: GoogleFonts.inter(
-              color: profitColor,
-              fontWeight: FontWeight.w800,
               fontSize: 13.0,
+              fontWeight: FontWeight.w700,
+              color: Get.theme.textTheme.bodySmall?.color,
             ),
+          ),
+
+          trailing: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                "$closeTime",
+                style: GoogleFonts.inter(
+                  color: Get.theme.textTheme.bodySmall?.color,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11.0,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                profitText,
+                style: GoogleFonts.inter(
+                  color: profitColor,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13.0,
+                ),
+              ),
+            ],
           ),
 
           children: [
@@ -320,7 +384,11 @@ class _PositionTile extends StatelessWidget {
                       Expanded(
                         child: Text(
                           "#${positionId ?? "-"}",
-                          style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)
+                          style: GoogleFonts.inter(
+                            fontSize: 13.0,
+                            fontWeight: FontWeight.w700,
+                            color: Get.theme.textTheme.bodySmall?.color,
+                          ),
                         ),
                       ),
                       Expanded(
@@ -328,13 +396,21 @@ class _PositionTile extends StatelessWidget {
                           children: [
                             Text(
                               "Open: ",
-                              style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)
+                              style: GoogleFonts.inter(
+                                fontSize: 13.0,
+                                fontWeight: FontWeight.w700,
+                                color: Get.theme.textTheme.bodySmall?.color,
+                              ),
                             ),
                             Expanded(
                               child: Text(
                                 openTime ?? "-",
                                 textAlign: TextAlign.right,
-                                style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)
+                                style: GoogleFonts.inter(
+                                  fontSize: 13.0,
+                                  fontWeight: FontWeight.w700,
+                                  color: Get.theme.textTheme.bodySmall?.color,
+                                ),
                               ),
                             ),
                           ],
@@ -353,12 +429,22 @@ class _PositionTile extends StatelessWidget {
                           children: [
                             Text(
                               "S / L: ",
-                              style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)
+                              style: GoogleFonts.inter(
+                                fontSize: 13.0,
+                                fontWeight: FontWeight.w700,
+                                color: Get.theme.textTheme.bodySmall?.color,
+                              ),
                             ),
                             Expanded(
                               child: Text(
-                                (stopLoss != null && stopLoss != "0") ? stopLoss! : "–",
-                                style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)
+                                (stopLoss != null && stopLoss != "0")
+                                    ? stopLoss!
+                                    : "–",
+                                style: GoogleFonts.inter(
+                                  fontSize: 13.0,
+                                  fontWeight: FontWeight.w700,
+                                  color: Get.theme.textTheme.bodySmall?.color,
+                                ),
                               ),
                             ),
                           ],
@@ -369,13 +455,21 @@ class _PositionTile extends StatelessWidget {
                           children: [
                             Text(
                               "Swap: ",
-                              style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)
+                              style: GoogleFonts.inter(
+                                fontSize: 13.0,
+                                fontWeight: FontWeight.w700,
+                                color: Get.theme.textTheme.bodySmall?.color,
+                              ),
                             ),
                             Expanded(
                               child: Text(
                                 swap ?? "0.00",
                                 textAlign: TextAlign.right,
-                                style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)
+                                style: GoogleFonts.inter(
+                                  fontSize: 13.0,
+                                  fontWeight: FontWeight.w700,
+                                  color: Get.theme.textTheme.bodySmall?.color,
+                                ),
                               ),
                             ),
                           ],
@@ -391,11 +485,21 @@ class _PositionTile extends StatelessWidget {
                     children: [
                       Text(
                         "T / P: ",
-                        style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)
+                        style: GoogleFonts.inter(
+                          fontSize: 13.0,
+                          fontWeight: FontWeight.w700,
+                          color: Get.theme.textTheme.bodySmall?.color,
+                        ),
                       ),
                       Text(
-                        (takeProfit != null && takeProfit != "0") ? takeProfit! : "–",
-                        style: GoogleFonts.inter(fontSize: 13.0, fontWeight: FontWeight.w700, color: Get.theme.textTheme.bodySmall?.color)
+                        (takeProfit != null && takeProfit != "0")
+                            ? takeProfit!
+                            : "–",
+                        style: GoogleFonts.inter(
+                          fontSize: 13.0,
+                          fontWeight: FontWeight.w700,
+                          color: Get.theme.textTheme.bodySmall?.color,
+                        ),
                       ),
                     ],
                   ),
@@ -408,4 +512,3 @@ class _PositionTile extends StatelessWidget {
     );
   }
 }
-

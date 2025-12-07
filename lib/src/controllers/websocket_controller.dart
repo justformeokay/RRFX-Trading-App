@@ -123,20 +123,20 @@ class MarketWebSocketController extends GetxController
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    print('🔄 App lifecycle changed: $state');
+    // print('🔄 App lifecycle changed: $state');
 
     switch (state) {
       case AppLifecycleState.resumed:
         // App kembali ke foreground, reconnect jika perlu
         if (status.value == WebSocketStatus.failed ||
             status.value == WebSocketStatus.disconnected) {
-          print('📱 App resumed, reconnecting WebSocket...');
+          // print('📱 App resumed, reconnecting WebSocket...');
           _reconnectWebSocket();
         }
         break;
       case AppLifecycleState.paused:
         // App ke background, jangan disconnect (biarkan tetap berjalan)
-        print('📱 App paused, keeping WebSocket alive...');
+        // print('📱 App paused, keeping WebSocket alive...');
         break;
       case AppLifecycleState.inactive:
       case AppLifecycleState.detached:
