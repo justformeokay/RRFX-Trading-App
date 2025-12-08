@@ -26,11 +26,24 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   
   Timer? _incrementTimer;
   Timer? _decrementTimer;
+  
+  // Queue untuk mengelola multiple executions
+  final RxList<Map<String, dynamic>> _executionQueue = <Map<String, dynamic>>[].obs;
+  bool _isProcessingQueue = false;
+  
+OverlayEntry? _overlayEntry;
 
-  @override
+   @override
   void dispose() {
     _incrementTimer?.cancel();
     _decrementTimer?.cancel();
+    if (_overlayEntry != null) {
+      try {
+        _overlayEntry?.remove();
+      } catch (e) {
+        print('Error removing overlay on dispose: $e');
+      }
+    }
     super.dispose();
   }
 
@@ -58,72 +71,239 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     _decrementTimer = null;
   }
 
-  Future<void> _executeBuy() async {
-    try {
-      await executionController.executeBuy(
-        login: widget.login,
-        symbol: widget.symbol,
-      );
-      
-      if (mounted) {
-        Get.snackbar(
-          'Order Berhasil',
-          'BUY ${widget.symbol.replaceAll('.db', '')} @ ${executionController.lot.value} lot',
-          backgroundColor: Colors.green.shade800,
-          colorText: Colors.white,
-          icon: Icon(Iconsax.tick_circle_bold, color: Colors.white),
-          snackPosition: SnackPosition.TOP,
-          duration: const Duration(seconds: 2),
-        );
-        widget.onOrderExecuted?.call('buy');
-      }
-    } catch (e) {
-      if (mounted) {
-        Get.snackbar(
-          'Order Gagal',
-          e.toString().replaceAll('Exception: ', ''),
-          backgroundColor: Colors.red.shade800,
-          colorText: Colors.white,
-          icon: Icon(Iconsax.close_circle_bold, color: Colors.white),
-          snackPosition: SnackPosition.TOP,
-          duration: const Duration(seconds: 3),
-        );
-      }
+  Widget _buildExecutionItem(Map<String, dynamic> item) {
+    final symbolClean = widget.symbol.replaceAll('.db', '');
+    final operation = item['operation'] as String;
+    final lot = item['lot'] as double;
+    final status = item['status'] as String; // 'loading', 'success', 'error'
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Get.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: operation == 'buy' ? Colors.green : Colors.red,
+          width: 2,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            symbolClean,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Get.isDarkMode ? Colors.white : Colors.black,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            operation.toUpperCase(),
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: operation == 'buy' ? Colors.green : Colors.red,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            lot.toStringAsFixed(1),
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Get.isDarkMode ? Colors.white70 : Colors.black87,
+            ),
+          ),
+          const SizedBox(width: 12),
+          if (status == 'loading')
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  operation == 'buy' ? Colors.green : Colors.red,
+                ),
+              ),
+            )
+          else if (status == 'success')
+            Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: operation == 'buy' ? Colors.green : Colors.red,
+              ),
+              child: const Icon(
+                Icons.check_rounded,
+                color: Colors.white,
+                size: 12,
+              ),
+            )
+          else if (status == 'error')
+            const Icon(
+              Icons.close_rounded,
+              color: Colors.red,
+              size: 16,
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _addToQueue(String operation) {
+    final lot = executionController.lot.value;
+    final newItem = {
+      'operation': operation,
+      'lot': lot,
+      'status': 'loading',
+      'id': DateTime.now().millisecondsSinceEpoch,
+    };
+    
+    _executionQueue.add(newItem);
+    print('Added to queue: $operation $lot, Total items: ${_executionQueue.length}');
+    
+    // Show overlay entry
+    _showQueueOverlay();
+    
+    if (!_isProcessingQueue) {
+      _processQueue();
     }
   }
 
-  Future<void> _executeSell() async {
+  void _showQueueOverlay() {
+    // Remove old overlay if exists and is mounted
+    if (_overlayEntry != null) {
+      try {
+        _overlayEntry?.remove();
+      } catch (e) {
+        print('Error removing overlay: $e');
+      }
+      _overlayEntry = null;
+    }
+    
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        bottom: 80,
+        left: 16,
+        child: SafeArea(
+          child: Obx(() {
+            if (_executionQueue.isEmpty) {
+              Future.microtask(() {
+                if (_overlayEntry != null) {
+                  try {
+                    _overlayEntry?.remove();
+                    _overlayEntry = null;
+                  } catch (e) {
+                    print('Error removing overlay on empty: $e');
+                  }
+                }
+              });
+              return const SizedBox.shrink();
+            }
+            
+            return Material(
+              color: Colors.transparent,
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: Get.width * 0.7,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: _executionQueue.map((item) => _buildExecutionItem(item)).toList(),
+                ),
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+    
     try {
-      await executionController.executeSell(
-        login: widget.login,
-        symbol: widget.symbol,
-      );
+      Overlay.of(context).insert(_overlayEntry!);
+    } catch (e) {
+      print('Error inserting overlay: $e');
+    }
+  }
+
+  Future<void> _processQueue() async {
+    if (_executionQueue.isEmpty) {
+      _isProcessingQueue = false;
+      return;
+    }
+    
+    _isProcessingQueue = true;
+    final item = _executionQueue.first;
+    final operation = item['operation'] as String;
+    
+    try {
+      if (operation == 'buy') {
+        await executionController.executeBuy(
+          login: widget.login,
+          symbol: widget.symbol,
+        );
+      } else {
+        await executionController.executeSell(
+          login: widget.login,
+          symbol: widget.symbol,
+        );
+      }
+      
+      // Update status to success
+      final index = _executionQueue.indexWhere((e) => e['id'] == item['id']);
+      if (index != -1) {
+        _executionQueue[index]['status'] = 'success';
+        _executionQueue.refresh();
+      }
+      
+      // Remove after 1.5 seconds
+      await Future.delayed(const Duration(milliseconds: 1500));
+      _executionQueue.removeWhere((e) => e['id'] == item['id']);
       
       if (mounted) {
-        Get.snackbar(
-          'Order Berhasil',
-          'SELL ${widget.symbol.replaceAll('.db', '')} @ ${executionController.lot.value} lot',
-          backgroundColor: Colors.red.shade800,
-          colorText: Colors.white,
-          icon: Icon(Iconsax.tick_circle_bold, color: Colors.white),
-          snackPosition: SnackPosition.TOP,
-          duration: const Duration(seconds: 2),
-        );
-        widget.onOrderExecuted?.call('sell');
+        widget.onOrderExecuted?.call(operation);
       }
+      
     } catch (e) {
+      // Update status to error
+      final index = _executionQueue.indexWhere((e) => e['id'] == item['id']);
+      if (index != -1) {
+        _executionQueue[index]['status'] = 'error';
+        _executionQueue.refresh();
+      }
+      
+      // Show error snackbar
       if (mounted) {
         Get.snackbar(
           'Order Gagal',
           e.toString().replaceAll('Exception: ', ''),
           backgroundColor: Colors.red.shade800,
           colorText: Colors.white,
-          icon: Icon(Iconsax.close_circle_bold, color: Colors.white),
+          icon: const Icon(Iconsax.close_circle_bold, color: Colors.white),
           snackPosition: SnackPosition.TOP,
-          duration: const Duration(seconds: 3),
+          duration: const Duration(seconds: 2),
         );
       }
+      
+      // Remove after 1 second
+      await Future.delayed(const Duration(milliseconds: 1000));
+      _executionQueue.removeWhere((e) => e['id'] == item['id']);
     }
+    
+    // Process next item
+    _processQueue();
+  }
+
+  Future<void> _executeBuy() async {
+    _addToQueue('buy');
+  }
+
+  Future<void> _executeSell() async {
+    _addToQueue('sell');
   }
 
   @override
@@ -156,20 +336,15 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
             Expanded(
               flex: 3,
               child: GestureDetector(
-                onTap: executionController.isExecuting.value ? null : _executeSell,
+                onTap: _executeSell,
                 child: Container(
                   height: 38,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: executionController.isExecuting.value
-                          ? [
-                              Colors.red.shade300.withOpacity(0.5),
-                              Colors.red.shade400.withOpacity(0.5),
-                            ]
-                          : [
-                              Colors.red.shade400,
-                              Colors.red.shade500,
-                            ],
+                      colors: [
+                        Colors.red.shade400,
+                        Colors.red.shade500,
+                      ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -179,24 +354,15 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                     ),
                   ),
                   child: Center(
-                    child: executionController.isExecuting.value
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : Text(
-                            'SELL',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              letterSpacing: 1,
-                            ),
-                          ),
+                    child: Text(
+                      'SELL',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: 1,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -278,20 +444,15 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
             Expanded(
               flex: 3,
               child: GestureDetector(
-                onTap: executionController.isExecuting.value ? null : _executeBuy,
+                onTap: _executeBuy,
                 child: Container(
                   height: 38,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: executionController.isExecuting.value
-                          ? [
-                              Colors.green.shade300.withOpacity(0.5),
-                              Colors.green.shade400.withOpacity(0.5),
-                            ]
-                          : [
-                              Colors.green.shade400,
-                              Colors.green.shade500,
-                            ],
+                      colors: [
+                        Colors.green.shade400,
+                        Colors.green.shade500,
+                      ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -301,24 +462,15 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                     ),
                   ),
                   child: Center(
-                    child: executionController.isExecuting.value
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : Text(
-                            'BUY',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              letterSpacing: 1,
-                            ),
-                          ),
+                    child: Text(
+                      'BUY',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: 1,
+                      ),
+                    ),
                   ),
                 ),
               ),
