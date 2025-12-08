@@ -158,7 +158,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
               child: GestureDetector(
                 onTap: executionController.isExecuting.value ? null : _executeSell,
                 child: Container(
-                  height: 56,
+                  height: 38,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: executionController.isExecuting.value
@@ -174,15 +174,15 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      bottomLeft: Radius.circular(20),
+                      topLeft: Radius.circular(8),
+                      bottomLeft: Radius.circular(8),
                     ),
                   ),
                   child: Center(
                     child: executionController.isExecuting.value
                         ? const SizedBox(
-                            width: 20,
-                            height: 20,
+                            width: 18,
+                            height: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
@@ -191,7 +191,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                         : Text(
                             'SELL',
                             style: GoogleFonts.inter(
-                              fontSize: 20,
+                              fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
                               letterSpacing: 1,
@@ -204,9 +204,9 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
             
             // Lot selector in the middle
             Expanded(
-              flex: 2,
+              flex: 3,
               child: Container(
-                height: 56,
+                height: 38,
                 decoration: BoxDecoration(
                   color: isDark ? Colors.grey.shade900 : Colors.white,
                   border: Border.all(
@@ -243,7 +243,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                         child: Text(
                           executionController.lot.value.toStringAsFixed(1),
                           style: GoogleFonts.inter(
-                            fontSize: 20,
+                            fontSize: 15,
                             fontWeight: FontWeight.w700,
                             color: isDark ? Colors.white : Colors.black,
                           ),
@@ -280,7 +280,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
               child: GestureDetector(
                 onTap: executionController.isExecuting.value ? null : _executeBuy,
                 child: Container(
-                  height: 56,
+                  height: 38,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: executionController.isExecuting.value
@@ -296,15 +296,15 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: const BorderRadius.only(
-                      topRight: Radius.circular(20),
-                      bottomRight: Radius.circular(20),
+                      topRight: Radius.circular(8),
+                      bottomRight: Radius.circular(8),
                     ),
                   ),
                   child: Center(
                     child: executionController.isExecuting.value
                         ? const SizedBox(
-                            width: 20,
-                            height: 20,
+                            width: 18,
+                            height: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
@@ -313,7 +313,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                         : Text(
                             'BUY',
                             style: GoogleFonts.inter(
-                              fontSize: 20,
+                              fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
                               letterSpacing: 1,

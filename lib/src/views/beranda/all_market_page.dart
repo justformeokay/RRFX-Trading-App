@@ -11,7 +11,7 @@ import 'package:rrfx/src/controllers/home.dart';
 import 'package:rrfx/src/controllers/regol.dart';
 import 'package:rrfx/src/controllers/trading.dart';
 import 'package:rrfx/src/helpers/formatters/number_formatter.dart';
-import 'package:rrfx/src/views/trade/deriv_chart_page.dart';
+import 'package:rrfx/src/views/advance_charts/webview_chart_view_from_tile.dart';
 
 class AllMarketPage extends StatefulWidget {
   const AllMarketPage({super.key});
@@ -319,10 +319,10 @@ class _AllMarketPageState extends State<AllMarketPage> {
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
                 onTap: () {
-                  Get.to(() => DerivChartPage(
+                  Get.to(() => WebViewChartViewFromTile(
                         login: int.parse(selectedLogin.value),
-                        balance: selectedLoginBalance.value,
-                        marketName: item.symbol,
+                        balance: double.tryParse(selectedLoginBalance.value),
+                        marketName: item.symbol ?? '',
                       ));
                 },
                 child: Container(

@@ -21,8 +21,8 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
 
   // --- Helper: Menentukan apakah sebuah simbol harus 0 desimal ---
   bool _isZeroDecimalPair(String symbol) {
-    // List simbol yang harga Bid/Ask/Low/High-nya harus integer
-    const zeroDecimalSymbols = ['UNK.DB', 'UPK.DB', 'JPK.DB'];
+    // JPK menggunakan format 0 desimal
+    const zeroDecimalSymbols = ['JPK.DB'];
     return zeroDecimalSymbols.contains(symbol.toUpperCase());
   }
 
@@ -33,6 +33,58 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
     RxBool isLoading = false.obs;
     
     return Scaffold(
+      appBar: AppBar(
+        forceMaterialTransparency: true,
+        title: Obx(() {
+          final isDark = Get.isDarkMode;
+          return Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: controller.isConnected.value 
+                    ? Colors.green 
+                    : Colors.red,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                controller.isConnected.value ? 'Live Market' : 'Disconnected',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
+            ],
+          );
+        }),
+        // actions: [
+        //   Obx(() => IconButton(
+        //     onPressed: controller.isReconnecting.value 
+        //       ? null 
+        //       : () {
+        //           controller.retryConnection();
+        //         },
+        //     icon: controller.isReconnecting.value
+        //       ? SizedBox(
+        //           width: 20,
+        //           height: 20,
+        //           child: CircularProgressIndicator(
+        //             strokeWidth: 2,
+        //             color: CustomColor.secondaryColor,
+        //           ),
+        //         )
+        //       : Icon(
+        //           Iconsax.refresh_outline,
+        //           color: CustomColor.secondaryColor,
+        //         ),
+        //     tooltip: 'Reconnect',
+        //   )),
+        // ],
+      ),
       body: SafeArea(
         child: Obx(
           () {
@@ -248,10 +300,20 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
 
     String priceStr = currentPrice.toStringAsFixed(decimalDigits);
     
-    // Tampilan sederhana jika:
-    // 1. UNK/UPK/JPK (0 desimal)
-    // 2. Pair dengan 1 atau 2 desimal (misalnya XAUUSD dengan digits: 2)
-    if (isZeroDecimal || decimalDigits <= 2) {
+    // Tampilan sederhana jika 0 desimal (hanya JPK)
+    if (isZeroDecimal || decimalDigits == 0) {
+        return Text(
+          priceStr, 
+          style: TextStyle(
+              color: color, 
+              fontSize: 20, 
+              fontWeight: FontWeight.bold
+          ),
+        );
+    }
+    
+    // Untuk 1 desimal, tampilkan sederhana
+    if (decimalDigits == 1) {
         return Text(
           priceStr, 
           style: TextStyle(
@@ -262,10 +324,10 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
         );
     }
 
-    // --- Logika RichText (Hanya untuk Pair dengan 3 atau lebih desimal) ---
+    // --- Logika RichText (untuk 2 desimal ke atas) ---
     final dotIndex = priceStr.indexOf('.');
     
-    if (dotIndex == -1 || decimalDigits < 3) {
+    if (dotIndex == -1 || decimalDigits < 2) {
         // Fallback jika format tidak sesuai
         return Text(
           priceStr, 
@@ -277,7 +339,14 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
     int prefixDecimals; // Jumlah digit desimal untuk Prefix (ukuran sedang)
     int majorPipDigits; // Jumlah digit desimal untuk Major Pip (ukuran besar)
 
-    if (decimalDigits == 3) {
+    if (decimalDigits == 2) {
+        // UNK, UPK, XAUUSD: Integer part sedang, 2 digit desimal besar
+        // Contoh: 25796.00 -> 25796. | 00
+        //         6889.50 -> 6889. | 50
+        //         4210.69 -> 4210. | 69
+        prefixDecimals = 0; // Hanya sampai titik
+        majorPipDigits = 2; // 2 digit desimal besar
+    } else if (decimalDigits == 3) {
         // EURJPY, XAGUSD: 1 desimal Prefix, 1 digit Major Pip, 1 digit Pipette.
         // Contoh: 180.725 -> 180.7 | 2 | 5
         prefixDecimals = 1; 
@@ -317,6 +386,35 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
     String pipetteDigit = priceStr.substring(endMajorPip, endPipette); 
 
     // 3. Implementasi RichText 
+    // Untuk 2 desimal (UNK, UPK): tidak ada pipette, hanya prefix (integer+dot) dan major (2 digit desimal)
+    if (decimalDigits == 2) {
+      return RichText(
+        text: TextSpan(
+          children: <InlineSpan>[
+            // Bagian 1: Integer + titik (ukuran sedang)
+            TextSpan(
+              text: priceStr.substring(0, dotIndex + 1), // "25796."
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontSize: 16, // Ukuran sedang
+              ),
+            ),
+            // Bagian 2: 2 digit desimal (ukuran besar)
+            TextSpan(
+              text: priceStr.substring(dotIndex + 1), // "00" atau "50"
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w900,
+                fontSize: 22, // Ukuran besar
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    // Untuk 3+ desimal: prefix, major pip, dan pipette
     return RichText(
       text: TextSpan(
         children: <InlineSpan>[ 

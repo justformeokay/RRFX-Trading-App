@@ -29,7 +29,7 @@ import 'package:rrfx/src/views/beranda/rrfx-contents/promotions/promotion_sectio
 import 'package:rrfx/src/views/chart/components/flag_pair.dart';
 import 'package:rrfx/src/views/no_auth_view/explore/explore_content_controller.dart';
 import 'package:rrfx/src/views/trade/deposit.dart';
-import 'package:rrfx/src/views/trade/deriv_chart_page.dart';
+import 'package:rrfx/src/views/advance_charts/webview_chart_view_from_tile.dart';
 import 'package:rrfx/src/views/trade/internal_transfer.dart';
 import 'package:rrfx/src/views/trade/withdrawal.dart';
 
@@ -520,7 +520,11 @@ class _IndexV2State extends State<IndexV2> {
                             }
                             selectedAccountType.toLowerCase();
                             print(signal.symbol);
-                            Get.to(() => DerivChartPage(login: int.parse(controller.selectedAccount.value?.login ?? '0'), marketName: "${signal.symbol}", balance: controller.selectedAccount.value?.balance));
+                            Get.to(() => WebViewChartViewFromTile(
+                              login: int.parse(controller.selectedAccount.value?.login ?? '0'), 
+                              marketName: "${signal.symbol}", 
+                              balance: double.tryParse(controller.selectedAccount.value?.balance ?? "0")
+                            ));
                           },
                           (){
                             

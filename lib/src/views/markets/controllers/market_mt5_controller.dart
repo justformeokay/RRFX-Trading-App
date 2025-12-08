@@ -53,20 +53,34 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
   }
 
   void connectWebSocket() {
-    if (isConnected.value) return; // Hindari koneksi ganda
+    // Tutup koneksi lama jika ada
+    try {
+      if (isConnected.value) {
+        _channel.sink.close();
+      }
+    } catch (e) {
+      print('Error closing old channel: $e');
+    }
 
     try {
       isReconnecting.value = true;
       hasConnectionError.value = false;
+      isConnected.value = false; // Reset dulu
       
+      print('Mencoba koneksi ke $_wsUrl...');
       _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
-      isConnected.value = true;
-      isReconnecting.value = false;
-      print('WebSocket TERSAMBUNG ke $_wsUrl');
       
       _channel.stream.listen(
         (data) {
+          // Set connected saat data pertama diterima
+          if (!isConnected.value) {
+            isConnected.value = true;
+            isReconnecting.value = false;
+            print('WebSocket TERSAMBUNG ke $_wsUrl');
+          }
+          
           _handleNewData(data.toString());
+          
           // Reset error jika data diterima
           if (hasConnectionError.value) {
             hasConnectionError.value = false;
@@ -82,15 +96,29 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
           print('WebSocket TERPUTUS');
           isConnected.value = false;
           isReconnecting.value = false;
-          // Jika belum ada error sebelumnya, set error
+          
+          // Set error jika belum ada
           if (!hasConnectionError.value) {
             hasConnectionError.value = true;
           }
-          // Implementasi re-koneksi otomatis singkat saat terputus
-          // Jika Anda ingin mencoba re-koneksi saat masih di foreground:
-          // Future.delayed(Duration(seconds: 5), () => connectWebSocket());
         },
+        cancelOnError: false, // Jangan cancel stream saat error
       );
+      
+      // Set timeout untuk koneksi
+      Future.delayed(const Duration(seconds: 5), () {
+        if (isReconnecting.value && !isConnected.value) {
+          print('WebSocket connection timeout');
+          isReconnecting.value = false;
+          hasConnectionError.value = true;
+          try {
+            _channel.sink.close();
+          } catch (e) {
+            print('Error closing channel after timeout: $e');
+          }
+        }
+      });
+      
     } catch (e) {
       print('Gagal menyambung ke WebSocket: $e');
       isConnected.value = false;
