@@ -188,7 +188,8 @@ OverlayEntry? _overlayEntry;
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         bottom: 80,
-        left: 16,
+        left: 0,
+        right: 0,
         child: SafeArea(
           child: Obx(() {
             if (_executionQueue.isEmpty) {
@@ -207,14 +208,16 @@ OverlayEntry? _overlayEntry;
             
             return Material(
               color: Colors.transparent,
-              child: Container(
-                constraints: BoxConstraints(
-                  maxWidth: Get.width * 0.7,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: _executionQueue.map((item) => _buildExecutionItem(item)).toList(),
+              child: Center(
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxWidth: Get.width * 0.7,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: _executionQueue.map((item) => _buildExecutionItem(item)).toList(),
+                  ),
                 ),
               ),
             );
