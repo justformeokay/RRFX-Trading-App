@@ -275,7 +275,7 @@ class ChartControllers extends GetxController {
     _stopDataPolling();
 
     // Polling setiap 10 detik
-    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    _pollingTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
       // Panggil fungsi yang hanya memuat ulang data chart
       loadChartData();
     });

@@ -651,6 +651,31 @@ class TradingController extends GetxController {
     }
   }
 
+  Future<Map<String, dynamic>> modifyPosition({
+    required String login,
+    required String ticket,
+    required double stopLoss,
+    required double takeProfit,
+    bool isPending = false,
+  }) async {
+    try {
+      Map<String, dynamic> result = await authService.post(
+        'market/execution/modify',
+        {
+          'login': login,
+          'ticket': ticket,
+          'tp': takeProfit.toString(),
+          'sl': stopLoss.toString(),
+          'is_pending': isPending ? '1' : '0',
+        },
+      );
+      return result;
+    } catch (e) {
+      isLoading(false);
+      throw Exception("modifyPosition error: $e");
+    }
+  }
+
   Future<bool> getAllTradingAccount() async {
     try {
       isLoading(true);

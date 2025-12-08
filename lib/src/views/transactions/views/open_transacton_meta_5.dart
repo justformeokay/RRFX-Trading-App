@@ -272,16 +272,21 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          Text("$label:", style: GoogleFonts.roboto(
+            fontSize: 14,
+            color: Theme.of(context).textTheme.bodyLarge?.color,
+            fontWeight: FontWeight.w800,
+          )),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Text(
-                '.' * 100,
+                '. ' * 100,
                 maxLines: 1,
                 overflow: TextOverflow.clip,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  letterSpacing: 2,
+                style: GoogleFonts.roboto(
+                  letterSpacing: 1,
+                  fontWeight: FontWeight.w900,
                   color: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.color?.withOpacity(0.3),
@@ -291,10 +296,11 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
           ),
           Text(
             value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.bold,
+            style: GoogleFonts.roboto(
+              fontSize: 14,
               color: color,
-            ),
+              fontWeight: FontWeight.w800,
+            )
           ),
         ],
       ),
@@ -405,7 +411,7 @@ class _PositionTile extends StatelessWidget {
               children: [
                 TextSpan(
                   text: symbol ?? "-",
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.oswald(
                     fontSize: 14.0,
                     fontWeight: FontWeight.w800,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -417,7 +423,7 @@ class _PositionTile extends StatelessWidget {
                       direction != null
                           ? "${direction!.toLowerCase()} ${volume ?? "0.0"}"
                           : "-",
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.oswald(
                     color: buySellColor,
                     fontSize: 12.0,
                     fontWeight: FontWeight.w600,
@@ -429,7 +435,7 @@ class _PositionTile extends StatelessWidget {
 
           subtitle: Text(
             "${openPrice ?? '0.00000'} → ${currentPrice ?? '-'}",
-            style: GoogleFonts.inter(
+            style: GoogleFonts.oswald(
               fontSize: 13.0,
               fontWeight: FontWeight.w700,
               color: Get.theme.textTheme.bodySmall?.color,
@@ -438,10 +444,10 @@ class _PositionTile extends StatelessWidget {
 
           trailing: Text(
             profitText,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.oswald(
               color: profitColor,
               fontWeight: FontWeight.w800,
-              fontSize: 13.0,
+              fontSize: 16.0,
             ),
           ),
 
@@ -467,7 +473,7 @@ class _PositionTile extends StatelessWidget {
                       Expanded(
                         child: Text(
                           "#${positionId ?? "-"}",
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.oswald(
                             fontSize: 13.0,
                             fontWeight: FontWeight.w700,
                             color: Get.theme.textTheme.bodySmall?.color,
@@ -479,7 +485,7 @@ class _PositionTile extends StatelessWidget {
                           children: [
                             Text(
                               "Open: ",
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.oswald(
                                 fontSize: 13.0,
                                 fontWeight: FontWeight.w700,
                                 color: Get.theme.textTheme.bodySmall?.color,
@@ -489,7 +495,7 @@ class _PositionTile extends StatelessWidget {
                               child: Text(
                                 openTime ?? "-",
                                 textAlign: TextAlign.right,
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.oswald(
                                   fontSize: 13.0,
                                   fontWeight: FontWeight.w700,
                                   color: Get.theme.textTheme.bodySmall?.color,
@@ -512,7 +518,7 @@ class _PositionTile extends StatelessWidget {
                           children: [
                             Text(
                               "S / L: ",
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.oswald(
                                 fontSize: 13.0,
                                 fontWeight: FontWeight.w700,
                                 color: Get.theme.textTheme.bodySmall?.color,
@@ -523,7 +529,7 @@ class _PositionTile extends StatelessWidget {
                                 (stopLoss != null && stopLoss != "0")
                                     ? stopLoss!
                                     : "–",
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.oswald(
                                   fontSize: 13.0,
                                   fontWeight: FontWeight.w700,
                                   color: Get.theme.textTheme.bodySmall?.color,
@@ -538,7 +544,7 @@ class _PositionTile extends StatelessWidget {
                           children: [
                             Text(
                               "Swap: ",
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.oswald(
                                 fontSize: 13.0,
                                 fontWeight: FontWeight.w700,
                                 color: Get.theme.textTheme.bodySmall?.color,
@@ -548,7 +554,7 @@ class _PositionTile extends StatelessWidget {
                               child: Text(
                                 swap ?? "0.00",
                                 textAlign: TextAlign.right,
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.oswald(
                                   fontSize: 13.0,
                                   fontWeight: FontWeight.w700,
                                   color: Get.theme.textTheme.bodySmall?.color,
@@ -568,7 +574,7 @@ class _PositionTile extends StatelessWidget {
                     children: [
                       Text(
                         "T / P: ",
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.oswald(
                           fontSize: 13.0,
                           fontWeight: FontWeight.w700,
                           color: Get.theme.textTheme.bodySmall?.color,
@@ -578,7 +584,7 @@ class _PositionTile extends StatelessWidget {
                         (takeProfit != null && takeProfit != "0")
                             ? takeProfit!
                             : "–",
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.oswald(
                           fontSize: 13.0,
                           fontWeight: FontWeight.w700,
                           color: Get.theme.textTheme.bodySmall?.color,
@@ -649,6 +655,13 @@ class _PositionTile extends StatelessWidget {
 
   void _onEditPosition(BuildContext context) async {
     final tradingController = Get.put(TradingController());
+    final accountController = Get.put(AccountController());
+
+    String? loginID = accountController.selectedAccount.value?.login;
+    if (loginID == null) {
+      AppSnackbar.error("Gagal mendapatkan Login ID akun trading.");
+      return;
+    }
 
     // Get current price observable that updates from tradingController
     final currentPriceObs = (double.tryParse(currentPrice ?? "0") ?? 0.0).obs;
@@ -683,12 +696,47 @@ class _PositionTile extends StatelessWidget {
       currentPriceObservable: currentPriceObs,
       onModify: (sl, tp) async {
         worker.dispose();
-        AppSnackbar.success("Position modified: SL=$sl, TP=$tp");
-        // Reload positions
-        final accountController = Get.find<AccountController>();
-        final loginID = accountController.selectedAccount.value?.login;
-        if (loginID != null) {
-          await tradingController.openOrder(login: loginID);
+        
+        try {
+          // Show loading
+          Get.dialog(
+            Center(
+              child: CircularProgressIndicator(),
+            ),
+            barrierDismissible: false,
+          );
+          
+          // Call modify API
+          final result = await tradingController.modifyPosition(
+            login: loginID,
+            ticket: positionId ?? '',
+            stopLoss: sl,
+            takeProfit: tp,
+            isPending: false,
+          );
+          
+          // Close loading dialog
+          Get.back();
+          
+          if (result['status'] == true) {
+            AppSnackbar.success(
+              result['message'] ?? "Position berhasil dimodifikasi: SL=$sl, TP=$tp",
+            );
+            
+            // Reload positions to get updated data
+            await tradingController.openOrder(login: loginID);
+          } else {
+            AppSnackbar.error(
+              result['message'] ?? "Gagal memodifikasi position",
+            );
+          }
+        } catch (e) {
+          // Close loading dialog if still open
+          if (Get.isDialogOpen ?? false) {
+            Get.back();
+          }
+          
+          AppSnackbar.error("Error: ${e.toString()}");
         }
       },
     );

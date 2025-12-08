@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:icons_plus/icons_plus.dart';
+import 'package:intl/intl.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
+import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/containers/no_account.dart';
 import 'package:rrfx/src/controllers/trading.dart';
 import 'package:shimmer/shimmer.dart';
@@ -18,6 +21,14 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
   final TradingController tradingController = Get.put(TradingController());
   final AccountController controller = Get.put(AccountController());
   RxBool isLoading = false.obs;
+  
+  // Filter & Sort state
+  String selectedSymbol = 'All';
+  String sortBy = 'closeTime'; // ticket, type, volume, openTime, closeTime, profit
+  bool sortAscending = false;
+  String filterPeriod = 'All'; // All, Today, Last Week, Last Month, Last 3 Months, Custom
+  DateTime? customStartDate;
+  DateTime? customEndDate;
 
   @override
   void initState() {
@@ -54,6 +65,11 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
       return Scaffold(
         body: CustomScrollView(
           slivers: [
+            // Filter & Sort Bar
+            SliverToBoxAdapter(
+              child: _buildFilterBar(context, closed),
+            ),
+
             SliverPersistentHeader(
               pinned: true,
               delegate: _BalanceHeaderDelegate(),
@@ -82,31 +98,451 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
 
             SliverList(
               delegate: SliverChildBuilderDelegate((context, index) {
+                final filteredAndSorted = _getFilteredAndSortedOrders(closed);
+                if (index >= filteredAndSorted.length) return null;
+                
+                final order = filteredAndSorted[index];
                 return _PositionTile(
                   index: index,
-                  positionId: "${closed[index].ticket}",
+                  positionId: "${order.ticket}",
                   swap: "-",
-                  stopLoss: "${closed[index].stopLoss}",
-                  openTime: "${closed[index].openTime}",
-                  closeTime: "${closed[index].closeTime}",
-                  takeProfit: "${closed[index].takeProfit}",
+                  stopLoss: "${order.stopLoss}",
+                  openTime: "${order.openTime}",
+                  closeTime: "${order.closeTime}",
+                  takeProfit: "${order.takeProfit}",
                   doubleProfit: -0.10 * index,
                   profit:
-                      closed[index].profit != null
-                          ? "${closed[index].profit}"
+                      order.profit != null
+                          ? "${order.profit}"
                           : "0.00",
-                  symbol: "${closed[index].symbol}",
-                  direction: "${closed[index].orderType}",
-                  volume: _formatLot(closed[index].lot),
-                  openPrice: "${closed[index].openPrice}",
-                  closePrice: "${closed[index].closePrice}",
+                  symbol: "${order.symbol}",
+                  direction: "${order.orderType}",
+                  volume: _formatLot(order.lot),
+                  openPrice: "${order.openPrice}",
+                  closePrice: "${order.closePrice}",
                 );
-              }, childCount: closed.length),
+              }, childCount: _getFilteredAndSortedOrders(closed).length),
             ),
           ],
         ),
       );
     });
+  }
+
+  // Filter dan Sort Logic
+  List<dynamic> _getFilteredAndSortedOrders(List<dynamic> orders) {
+    if (orders.isEmpty) return [];
+    
+    var filtered = orders.where((order) {
+      // Filter by symbol
+      if (selectedSymbol != 'All' && order.symbol != selectedSymbol) {
+        return false;
+      }
+      
+      // Filter by period
+      if (filterPeriod != 'All') {
+        final closeTime = _parseDateTime(order.closeTime);
+        if (closeTime == null) return false;
+        
+        final now = DateTime.now();
+        DateTime startDate;
+        
+        switch (filterPeriod) {
+          case 'Today':
+            startDate = DateTime(now.year, now.month, now.day);
+            break;
+          case 'Last Week':
+            startDate = now.subtract(const Duration(days: 7));
+            break;
+          case 'Last Month':
+            startDate = now.subtract(const Duration(days: 30));
+            break;
+          case 'Last 3 Months':
+            startDate = now.subtract(const Duration(days: 90));
+            break;
+          case 'Custom':
+            if (customStartDate != null && customEndDate != null) {
+              if (closeTime.isBefore(customStartDate!) || closeTime.isAfter(customEndDate!)) {
+                return false;
+              }
+            }
+            return true;
+          default:
+            return true;
+        }
+        
+        if (closeTime.isBefore(startDate)) {
+          return false;
+        }
+      }
+      
+      return true;
+    }).toList();
+    
+    // Sort
+    filtered.sort((a, b) {
+      int result = 0;
+      
+      switch (sortBy) {
+        case 'ticket':
+          result = (a.ticket ?? 0).compareTo(b.ticket ?? 0);
+          break;
+        case 'type':
+          result = (a.orderType ?? '').compareTo(b.orderType ?? '');
+          break;
+        case 'volume':
+          final aVol = double.tryParse(a.lot?.toString() ?? '0') ?? 0;
+          final bVol = double.tryParse(b.lot?.toString() ?? '0') ?? 0;
+          result = aVol.compareTo(bVol);
+          break;
+        case 'openTime':
+          final aTime = _parseDateTime(a.openTime);
+          final bTime = _parseDateTime(b.openTime);
+          if (aTime != null && bTime != null) {
+            result = aTime.compareTo(bTime);
+          }
+          break;
+        case 'closeTime':
+          final aTime = _parseDateTime(a.closeTime);
+          final bTime = _parseDateTime(b.closeTime);
+          if (aTime != null && bTime != null) {
+            result = aTime.compareTo(bTime);
+          }
+          break;
+        case 'profit':
+          final aProfit = double.tryParse(a.profit?.toString() ?? '0') ?? 0;
+          final bProfit = double.tryParse(b.profit?.toString() ?? '0') ?? 0;
+          result = aProfit.compareTo(bProfit);
+          break;
+      }
+      
+      return sortAscending ? result : -result;
+    });
+    
+    return filtered;
+  }
+  
+  DateTime? _parseDateTime(dynamic dateStr) {
+    if (dateStr == null) return null;
+    try {
+      return DateTime.parse(dateStr.toString());
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  List<String> _getUniqueSymbols(List<dynamic> orders) {
+    final symbols = orders.map((o) => o.symbol?.toString() ?? '').where((s) => s.isNotEmpty).toSet().toList();
+    symbols.sort();
+    return ['All', ...symbols];
+  }
+
+  Widget _buildFilterBar(BuildContext context, List<dynamic> orders) {
+    final theme = Theme.of(context);
+    final symbols = _getUniqueSymbols(orders);
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.withOpacity(0.2)),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Row 1: Symbol Filter
+          Row(
+            children: [
+              Icon(Iconsax.chart_outline, size: 18, color: CustomColor.secondaryColor),
+              const SizedBox(width: 8),
+              Text(
+                'Symbol:',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: theme.textTheme.bodyMedium?.color,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SizedBox(
+                  height: 35,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: symbols.length,
+                    itemBuilder: (context, index) {
+                      final symbol = symbols[index];
+                      final isSelected = selectedSymbol == symbol;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: ChoiceChip(
+                          label: Text(
+                            symbol,
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isSelected ? Colors.black : theme.textTheme.bodyMedium?.color,
+                            ),
+                          ),
+                          selected: isSelected,
+                          selectedColor: CustomColor.secondaryColor,
+                          backgroundColor: theme.cardColor,
+                          side: BorderSide(
+                            color: isSelected ? CustomColor.secondaryColor : Colors.grey.withOpacity(0.3),
+                          ),
+                          onSelected: (selected) {
+                            setState(() {
+                              selectedSymbol = symbol;
+                            });
+                          },
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          labelPadding: EdgeInsets.zero,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 8),
+          
+          // Row 2: Sort By
+          Row(
+            children: [
+              Icon(Iconsax.sort_outline, size: 18, color: CustomColor.secondaryColor),
+              const SizedBox(width: 8),
+              Text(
+                'Sort:',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: theme.textTheme.bodyMedium?.color,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildSortChip(context, 'Ticket', 'ticket'),
+                      _buildSortChip(context, 'Type', 'type'),
+                      _buildSortChip(context, 'Volume', 'volume'),
+                      _buildSortChip(context, 'Open Time', 'openTime'),
+                      _buildSortChip(context, 'Close Time', 'closeTime'),
+                      _buildSortChip(context, 'Profit', 'profit'),
+                    ],
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: Icon(
+                  sortAscending ? Iconsax.arrow_up_3_outline : Iconsax.arrow_down_outline,
+                  size: 20,
+                  color: CustomColor.secondaryColor,
+                ),
+                onPressed: () {
+                  setState(() {
+                    sortAscending = !sortAscending;
+                  });
+                },
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 8),
+          
+          // Row 3: Period Filter
+          Row(
+            children: [
+              Icon(Iconsax.calendar_outline, size: 18, color: CustomColor.secondaryColor),
+              const SizedBox(width: 8),
+              Text(
+                'Period:',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: theme.textTheme.bodyMedium?.color,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildPeriodChip(context, 'All'),
+                      _buildPeriodChip(context, 'Today'),
+                      _buildPeriodChip(context, 'Last Week'),
+                      _buildPeriodChip(context, 'Last Month'),
+                      _buildPeriodChip(context, 'Last 3 Months'),
+                      _buildPeriodChip(context, 'Custom'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          // Custom Date Range (if Custom selected)
+          if (filterPeriod == 'Custom') ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildDateButton(
+                    context,
+                    customStartDate != null
+                        ? DateFormat('dd/MM/yy').format(customStartDate!)
+                        : 'Start Date',
+                    () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: customStartDate ?? DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                      );
+                      if (date != null) {
+                        setState(() {
+                          customStartDate = date;
+                        });
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildDateButton(
+                    context,
+                    customEndDate != null
+                        ? DateFormat('dd/MM/yy').format(customEndDate!)
+                        : 'End Date',
+                    () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: customEndDate ?? DateTime.now(),
+                        firstDate: customStartDate ?? DateTime(2020),
+                        lastDate: DateTime.now(),
+                      );
+                      if (date != null) {
+                        setState(() {
+                          customEndDate = date;
+                        });
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildSortChip(BuildContext context, String label, String value) {
+    final isSelected = sortBy == value;
+    final theme = Theme.of(context);
+    
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: ChoiceChip(
+        label: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? Colors.black : theme.textTheme.bodyMedium?.color,
+          ),
+        ),
+        selected: isSelected,
+        selectedColor: CustomColor.secondaryColor,
+        backgroundColor: theme.cardColor,
+        side: BorderSide(
+          color: isSelected ? CustomColor.secondaryColor : Colors.grey.withOpacity(0.3),
+        ),
+        onSelected: (selected) {
+          setState(() {
+            sortBy = value;
+          });
+        },
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        labelPadding: EdgeInsets.zero,
+      ),
+    );
+  }
+  
+  Widget _buildPeriodChip(BuildContext context, String period) {
+    final isSelected = filterPeriod == period;
+    final theme = Theme.of(context);
+    
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: ChoiceChip(
+        label: Text(
+          period,
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? Colors.black : theme.textTheme.bodyMedium?.color,
+          ),
+        ),
+        selected: isSelected,
+        selectedColor: CustomColor.secondaryColor,
+        backgroundColor: theme.cardColor,
+        side: BorderSide(
+          color: isSelected ? CustomColor.secondaryColor : Colors.grey.withOpacity(0.3),
+        ),
+        onSelected: (selected) {
+          setState(() {
+            filterPeriod = period;
+            if (period != 'Custom') {
+              customStartDate = null;
+              customEndDate = null;
+            }
+          });
+        },
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        labelPadding: EdgeInsets.zero,
+      ),
+    );
+  }
+  
+  Widget _buildDateButton(BuildContext context, String label, VoidCallback onTap) {
+    final theme = Theme.of(context);
+    
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: CustomColor.secondaryColor),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Iconsax.calendar_1_outline, size: 16, color: CustomColor.secondaryColor),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: theme.textTheme.bodyMedium?.color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   String _formatLot(dynamic lot) {
@@ -186,7 +622,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
             ),
           ),
           _balanceRow("Swap", "-", context),
-          _balanceRow("Commision", "-", context),
+          _balanceRow("Commission", "-", context),
           Obx(
             () => _balanceRow(
               "Balance",
@@ -205,16 +641,21 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          Text(label, style: GoogleFonts.roboto(
+            fontSize: 14,
+            color: Theme.of(context).textTheme.bodyLarge?.color,
+            fontWeight: FontWeight.w800,
+          )),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Text(
-                '.' * 100,
+                '. ' * 100,
                 maxLines: 1,
                 overflow: TextOverflow.clip,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  letterSpacing: 2,
+                style: GoogleFonts.roboto(
+                  letterSpacing: 1,
+                  fontWeight: FontWeight.w900,
                   color: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.color?.withOpacity(0.3),
@@ -224,9 +665,11 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
           ),
           Text(
             value,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+            style: GoogleFonts.roboto(
+              fontSize: 14,
+              color: Get.textTheme.bodyLarge?.color,
+              fontWeight: FontWeight.w800,
+            )
           ),
         ],
       ),
@@ -308,9 +751,9 @@ class _PositionTile extends StatelessWidget {
               children: [
                 TextSpan(
                   text: symbol ?? "-",
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.oswald(
                     fontSize: 14.0,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
@@ -320,7 +763,7 @@ class _PositionTile extends StatelessWidget {
                       direction != null
                           ? "${direction!.toLowerCase()} ${volume ?? "0.0"}"
                           : "-",
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.oswald(
                     color: buySellColor,
                     fontSize: 12.0,
                     fontWeight: FontWeight.w600,
@@ -332,7 +775,7 @@ class _PositionTile extends StatelessWidget {
 
           subtitle: Text(
             "${openPrice ?? '0.00000'} → ${closePrice == "null" || closePrice == null || closePrice == "" ? '0' : closePrice}",
-            style: GoogleFonts.inter(
+            style: GoogleFonts.oswald(
               fontSize: 13.0,
               fontWeight: FontWeight.w700,
               color: Get.theme.textTheme.bodySmall?.color,
@@ -344,7 +787,7 @@ class _PositionTile extends StatelessWidget {
             children: [
               Text(
                 "$closeTime",
-                style: GoogleFonts.inter(
+                style: GoogleFonts.oswald(
                   color: Get.theme.textTheme.bodySmall?.color,
                   fontWeight: FontWeight.w600,
                   fontSize: 11.0,
@@ -353,9 +796,9 @@ class _PositionTile extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 profitText,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.oswald(
                   color: profitColor,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   fontSize: 13.0,
                 ),
               ),
@@ -384,7 +827,7 @@ class _PositionTile extends StatelessWidget {
                       Expanded(
                         child: Text(
                           "#${positionId ?? "-"}",
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.oswald(
                             fontSize: 13.0,
                             fontWeight: FontWeight.w700,
                             color: Get.theme.textTheme.bodySmall?.color,
@@ -396,7 +839,7 @@ class _PositionTile extends StatelessWidget {
                           children: [
                             Text(
                               "Open: ",
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.oswald(
                                 fontSize: 13.0,
                                 fontWeight: FontWeight.w700,
                                 color: Get.theme.textTheme.bodySmall?.color,
@@ -406,7 +849,7 @@ class _PositionTile extends StatelessWidget {
                               child: Text(
                                 openTime ?? "-",
                                 textAlign: TextAlign.right,
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.oswald(
                                   fontSize: 13.0,
                                   fontWeight: FontWeight.w700,
                                   color: Get.theme.textTheme.bodySmall?.color,
@@ -429,7 +872,7 @@ class _PositionTile extends StatelessWidget {
                           children: [
                             Text(
                               "S / L: ",
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.oswald(
                                 fontSize: 13.0,
                                 fontWeight: FontWeight.w700,
                                 color: Get.theme.textTheme.bodySmall?.color,
@@ -440,7 +883,7 @@ class _PositionTile extends StatelessWidget {
                                 (stopLoss != null && stopLoss != "0")
                                     ? stopLoss!
                                     : "–",
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.oswald(
                                   fontSize: 13.0,
                                   fontWeight: FontWeight.w700,
                                   color: Get.theme.textTheme.bodySmall?.color,
@@ -455,7 +898,7 @@ class _PositionTile extends StatelessWidget {
                           children: [
                             Text(
                               "Swap: ",
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.oswald(
                                 fontSize: 13.0,
                                 fontWeight: FontWeight.w700,
                                 color: Get.theme.textTheme.bodySmall?.color,
@@ -465,7 +908,7 @@ class _PositionTile extends StatelessWidget {
                               child: Text(
                                 swap ?? "0.00",
                                 textAlign: TextAlign.right,
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.oswald(
                                   fontSize: 13.0,
                                   fontWeight: FontWeight.w700,
                                   color: Get.theme.textTheme.bodySmall?.color,
@@ -485,7 +928,7 @@ class _PositionTile extends StatelessWidget {
                     children: [
                       Text(
                         "T / P: ",
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.oswald(
                           fontSize: 13.0,
                           fontWeight: FontWeight.w700,
                           color: Get.theme.textTheme.bodySmall?.color,
@@ -495,7 +938,7 @@ class _PositionTile extends StatelessWidget {
                         (takeProfit != null && takeProfit != "0")
                             ? takeProfit!
                             : "–",
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.oswald(
                           fontSize: 13.0,
                           fontWeight: FontWeight.w700,
                           color: Get.theme.textTheme.bodySmall?.color,

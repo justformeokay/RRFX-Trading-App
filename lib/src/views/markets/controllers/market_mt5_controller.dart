@@ -12,6 +12,8 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
   final String _wsUrl = 'ws://207.148.119.106:9003';
   // Status koneksi
   final RxBool isConnected = false.obs;
+  final RxBool hasConnectionError = false.obs;
+  final RxBool isReconnecting = false.obs;
   late WebSocketChannel _channel;
 
   @override
@@ -54,21 +56,36 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
     if (isConnected.value) return; // Hindari koneksi ganda
 
     try {
+      isReconnecting.value = true;
+      hasConnectionError.value = false;
+      
       _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
       isConnected.value = true;
+      isReconnecting.value = false;
       print('WebSocket TERSAMBUNG ke $_wsUrl');
       
       _channel.stream.listen(
         (data) {
           _handleNewData(data.toString());
+          // Reset error jika data diterima
+          if (hasConnectionError.value) {
+            hasConnectionError.value = false;
+          }
         },
         onError: (error) {
           print('WebSocket Error: $error');
           isConnected.value = false;
+          hasConnectionError.value = true;
+          isReconnecting.value = false;
         },
         onDone: () {
           print('WebSocket TERPUTUS');
           isConnected.value = false;
+          isReconnecting.value = false;
+          // Jika belum ada error sebelumnya, set error
+          if (!hasConnectionError.value) {
+            hasConnectionError.value = true;
+          }
           // Implementasi re-koneksi otomatis singkat saat terputus
           // Jika Anda ingin mencoba re-koneksi saat masih di foreground:
           // Future.delayed(Duration(seconds: 5), () => connectWebSocket());
@@ -77,6 +94,15 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
     } catch (e) {
       print('Gagal menyambung ke WebSocket: $e');
       isConnected.value = false;
+      hasConnectionError.value = true;
+      isReconnecting.value = false;
+    }
+  }
+
+  // Method untuk retry koneksi manual
+  void retryConnection() {
+    if (!isReconnecting.value) {
+      connectWebSocket();
     }
   }
 

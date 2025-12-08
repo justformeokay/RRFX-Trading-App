@@ -3,10 +3,13 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
+import 'package:rrfx/src/components/colors/default.dart';
 // Asumsikan path import ini sudah benar di project Anda
 import 'package:rrfx/src/views/markets/controllers/market_mt5_controller.dart'; 
 import 'package:rrfx/src/views/markets/models/market_mt5_model.dart';
+import 'package:rrfx/src/views/markets/components/empty_market_state.dart';
 import 'package:rrfx/src/views/trade/deriv_chart_page.dart';
+import 'package:rrfx/src/helpers/handlers/holiday.dart';
 
 // Definisi warna trading (tetap)
 const Color _upColor = Colors.blue;
@@ -27,16 +30,54 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
   Widget build(BuildContext context) {
     // Inisialisasi controller
     Get.put(MarketMt5Controller());
-    
-    // Tentukan warna latar belakang dan teks berdasarkan tema sistem
-    final isDarkMode = Get.isDarkMode;
-    final fgColor = isDarkMode ? Colors.white : Colors.black;
-    final secondaryTextColor = isDarkMode ? Colors.grey[600] : Colors.grey[400];
+    RxBool isLoading = false.obs;
     
     return Scaffold(
       body: SafeArea(
         child: Obx(
           () {
+            if(isLoading.value) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: CustomColor.secondaryColor,
+                  strokeWidth: 1.0,
+                ),
+              );
+            }
+            // Tentukan warna latar belakang dan teks berdasarkan tema sistem
+            final isDarkMode = Get.isDarkMode;
+            final fgColor = isDarkMode ? Colors.white : Colors.black;
+            final secondaryTextColor = isDarkMode ? Colors.grey[600] : Colors.grey[400];
+            
+            // Cek apakah market sedang tutup (weekend/holiday)
+            final now = DateTime.now();
+            final isMarketClosed = isForexHoliday(now);
+            
+            // Priority 1: Cek jika market tutup
+            if (isMarketClosed) {
+              return EmptyMarketState(
+                reason: MarketEmptyReason.marketClosed,
+              );
+            }
+            
+            // Priority 2: Cek error koneksi
+            if (controller.hasConnectionError.value && controller.marketData.isEmpty) {
+              return EmptyMarketState(
+                reason: MarketEmptyReason.disconnected,
+                onRetry: controller.retryConnection,
+                isRetrying: controller.isReconnecting.value,
+              );
+            }
+            
+            // Priority 3: Cek data kosong
+            if (controller.marketData.isEmpty) {
+              // Jika sedang connecting, tampilkan empty state no data
+              return EmptyMarketState(
+                reason: MarketEmptyReason.noData,
+              );
+            }
+            
+            // Data tersedia, tampilkan list
             final symbols = controller.marketData.keys.toList();
             
             return ListView.builder(
