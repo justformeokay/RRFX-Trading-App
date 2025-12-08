@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 // Asumsi ini adalah import untuk dialog Anda
 import 'package:rrfx/src/components/alerts/popup.dart'; 
@@ -169,26 +170,190 @@ class _TradingChartViewState extends State<TradingChartView> {
 
     return Scaffold(
       backgroundColor: scaffoldBgColor, 
-      appBar: AppBar(
-        elevation: 0,
-        title: Text(
-          "Trade",
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-      ),
       body: SafeArea(
         child: Column(
           children: [
             Expanded(
               child: WebViewWidget(controller: _controller),
             ),
-             _buildTradingControls(isDarkMode),
+             _buildButton()
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildButton(){
+    final isDark = Get.isDarkMode;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey.shade900 : Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+            width: 1,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            // SELL button
+            Expanded(
+              flex: 3,
+              child: GestureDetector(
+                onTap: (){
+                  AuthDirectionPopup.show();
+                },
+                child: Container(
+                  height: 38,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.red.shade400,
+                        Colors.red.shade500,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(8),
+                      bottomLeft: Radius.circular(8),
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'SELL',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            
+            // Lot selector in the middle
+            Expanded(
+              flex: 3,
+              child: Container(
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade900 : Colors.white,
+                  border: Border.all(
+                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                    width: 2,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    // Decrement button
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          '-',
+                          style: GoogleFonts.inter(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    // Lot display
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: (){
+                          AuthDirectionPopup.show();
+                        },
+                        child: Container(
+                          color: Colors.transparent,
+                          child: Center(
+                            child: Text(
+                              _lotSize.toStringAsFixed(2),
+                              style: GoogleFonts.inter(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? Colors.white : Colors.black,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    // Increment button
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          '+',
+                          style: GoogleFonts.inter(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // BUY button
+            Expanded(
+              flex: 3,
+              child: GestureDetector(
+                onTap: (){
+                  AuthDirectionPopup.show();
+                },
+                child: Container(
+                  height: 38,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.green.shade400,
+                        Colors.green.shade500,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(8),
+                      bottomRight: Radius.circular(8),
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'BUY',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        )
       ),
     );
   }
