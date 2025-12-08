@@ -8,7 +8,7 @@ import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/views/markets/controllers/market_mt5_controller.dart'; 
 import 'package:rrfx/src/views/markets/models/market_mt5_model.dart';
 import 'package:rrfx/src/views/markets/components/empty_market_state.dart';
-import 'package:rrfx/src/views/trade/deriv_chart_page.dart';
+import 'package:rrfx/src/views/advance_charts/webview_chart_view_from_tile.dart';
 import 'package:rrfx/src/helpers/handlers/holiday.dart';
 
 // Definisi warna trading (tetap)
@@ -134,10 +134,10 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
     final spreadInt = calcSpread(model.symbol, model.spread);
 
     void goToChart() {
-      Get.to(() => DerivChartPage(
+      Get.to(() => WebViewChartViewFromTile(
         login: int.tryParse(accountController.selectedAccount.value?.login ?? "0") ?? 0,
         marketName: model.symbol,
-        balance: accountController.selectedAccount.value?.balance,
+        balance: double.tryParse(accountController.selectedAccount.value?.balance ?? "0"),
       ));
     }
 

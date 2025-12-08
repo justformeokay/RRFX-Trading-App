@@ -8,6 +8,7 @@ import 'package:rrfx/src/controllers/network_controller.dart';
 import 'package:rrfx/src/controllers/theme_controller.dart';
 import 'package:rrfx/src/controllers/trading_account_controller.dart';
 import 'package:rrfx/src/service/auth_service.dart';
+import 'package:rrfx/src/views/advance_charts/webview_chart_view.dart';
 import 'package:rrfx/src/views/chart/views/chart_tab.dart';
 import 'package:rrfx/src/views/beranda/index_v2.dart';
 import 'package:rrfx/src/views/markets/views/markets_meta_5.dart';
@@ -32,7 +33,8 @@ class _MainpageState extends State<Mainpage> {
   static final List<Widget> _widgetOptions = <Widget>[
     const IndexV2(),
     const MarketsMeta5View(),
-    const ChartTab(),
+    // const ChartTab(),
+    const WebViewChartView(),
     const TransactionTab(),
     const Settings(),
   ];

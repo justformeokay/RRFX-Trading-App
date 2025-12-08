@@ -199,6 +199,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
               "Account ID",
               accountController.selectedAccount.value?.login ?? "N/A",
               context,
+              color: Get.textTheme.bodyLarge?.color
             ),
           ),
           // Only show Profit if there are open positions
@@ -214,7 +215,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
               "Profit",
               _formatProfit(accountWS.profit.value),
               context,
-              color: accountWS.profit.value >= 0 ? Colors.blue : Colors.red,
+              color: accountWS.profit.value >= 0 ? Colors.blue : Colors.red.shade400,
             );
           }),
           Obx(
@@ -222,6 +223,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
               "Balance",
               _formatNumber(accountController.selectedAccount.value?.balance),
               context,
+              color: Get.textTheme.bodyLarge?.color
             ),
           ),
           Obx(
@@ -229,6 +231,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
               "Equity",
               _formatNumber(accountController.selectedAccount.value?.equity),
               context,
+              color: Get.textTheme.bodyLarge?.color
             ),
           ),
           Obx(
@@ -236,6 +239,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
               "Margin",
               _formatNumber(accountController.selectedAccount.value?.margin),
               context,
+              color: Get.textTheme.bodyLarge?.color
             ),
           ),
           Obx(
@@ -245,6 +249,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
                 accountController.selectedAccount.value?.marginFree,
               ),
               context,
+              color: Get.textTheme.bodyLarge?.color
             ),
           ),
           Obx(
@@ -254,6 +259,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
                   ? "${accountController.selectedAccount.value?.marginFreePercent}"
                   : "N/A",
               context,
+              color: Get.textTheme.bodyLarge?.color
             ),
           ),
         ],
@@ -299,7 +305,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
             style: GoogleFonts.roboto(
               fontSize: 14,
               color: color,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w900,
             )
           ),
         ],

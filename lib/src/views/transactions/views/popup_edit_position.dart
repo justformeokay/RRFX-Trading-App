@@ -318,34 +318,44 @@ Future<void> showEditPositionDialog({
               const SizedBox(height: 24),
 
               // MODIFY BUTTON
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Get.back();
-                    onModify(
-                      controller.stopLoss.value,
-                      controller.takeProfit.value,
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primary,
-                    foregroundColor: Colors.black,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
+              Obx(() {
+                final isSLSet = controller.stopLoss.value != 0.0;
+                final isTPSet = controller.takeProfit.value != 0.0;
+                final isEnabled = isSLSet && isTPSet;
+
+                return SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: isEnabled
+                        ? () {
+                            Get.back();
+                            onModify(
+                              controller.stopLoss.value,
+                              controller.takeProfit.value,
+                            );
+                          }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primary,
+                      foregroundColor: Colors.black,
+                      disabledBackgroundColor: onSurface.withOpacity(0.12),
+                      disabledForegroundColor: onSurface.withOpacity(0.38),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                    child: Text(
+                      "Modify Position",
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                  child: Text(
-                    "Modify Position",
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
+                );
+              }),
 
               const SizedBox(height: 8),
             ],
