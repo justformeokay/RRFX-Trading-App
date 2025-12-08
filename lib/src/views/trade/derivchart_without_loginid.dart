@@ -34,27 +34,23 @@ class _TradingChartViewState extends State<TradingChartView> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..enableZoom(false)
-      // Tambahkan listener untuk komunikasi dari JavaScript
-      ..addJavaScriptChannel(
-        'FlutterChannel',
-        onMessageReceived: (JavaScriptMessage message) {
-          if (message.message == 'chart_ready') {
-            setState(() {
-              _isChartLoaded = true;
-            });
-            debugPrint("TradingView Widget siap digunakan.");
-          }
-        },
-      );
+      ..loadRequest(Uri.parse(_buildChartUrl()));
+  }
+
+  String _buildChartUrl() {
+    // Pastikan marketName memiliki suffix .db
+    String symbol = widget.marketName.trim();
+    if (!symbol.toLowerCase().endsWith('.db')) {
+      symbol = '$symbol.db';
+    }
+    
+    return 'http://207.148.119.106/rrfx/chart.php?symbol=$symbol&server=demo';
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Memuat chart di sini setelah context tersedia
-    if (!_isChartLoaded) {
-      _loadChart(context);
-    }
+    // Tidak perlu load chart lagi karena sudah di initState
   }
 
   @override
@@ -63,17 +59,8 @@ class _TradingChartViewState extends State<TradingChartView> {
     
     // Cek jika marketName berubah
     if (oldWidget.marketName != widget.marketName) {
-      final newSymbol = normalizeSymbol(widget.marketName);
-      
-      if (_isChartLoaded) {
-        // OPTIMASI: Jika chart sudah dimuat, cukup panggil fungsi setSymbol dari JS
-        _controller.runJavaScript("window.tvWidget.setSymbol('$newSymbol');");
-        debugPrint("Market diubah ke $newSymbol menggunakan JS API.");
-      } else {
-        // Fallback: Jika belum dimuat (walaupun jarang terjadi), muat ulang HTML
-        _loadChart(context); 
-        debugPrint("Market diubah ke $newSymbol dengan full reload.");
-      }
+      _controller.loadRequest(Uri.parse(_buildChartUrl()));
+      debugPrint("Market diubah ke ${widget.marketName}");
     }
   }
 
@@ -82,68 +69,6 @@ class _TradingChartViewState extends State<TradingChartView> {
       return marketName.split(".")[0];
     }
     return marketName;
-  }
-
-  // Menerima BuildContext untuk mengakses tema
-  void _loadChart(BuildContext context) {
-    final symbol = normalizeSymbol(widget.marketName);
-    
-    // --- PENYESUAIAN TEMA DINAMIS ---
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
-    final themeName = isDarkMode ? "dark" : "light";
-    final backgroundColor = isDarkMode ? "#1C2023" : "#FCFDFF"; 
-
-    final html = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <!-- Hapus maximum-scale agar zoom di WebView berfungsi -->
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-        html, body {
-          margin:0;
-          padding:0;
-          height:100%;
-          background:$backgroundColor;
-          overflow:hidden;
-        }
-        #tvchart {
-          width:100%;
-          height:100%;
-        }
-      </style>
-    </head>
-    <body>
-      <div id="tvchart"></div>
-      <script src="https://s3.tradingview.com/tv.js"></script>
-      <script>
-        function loadTradingView() {
-          // 1. Simpan instance widget secara global di window
-          window.tvWidget = new TradingView.widget({
-            "width": "100%",
-            "height": "100%",
-            "symbol": "$symbol",
-            "interval": "60",
-            "timezone": "Etc/UTC",
-            "theme": "$themeName",
-            "style": "1",
-            "backgroundColor": "$backgroundColor",
-            "hide_volume": true,
-            "container_id": "tvchart",
-            "locale": "id"
-          });
-          
-          // 2. Beri tahu Flutter bahwa widget sudah siap
-          window.FlutterChannel.postMessage('chart_ready');
-        }
-        window.onload = loadTradingView;
-      </script>
-    </body>
-    </html>
-    """;
-
-    _controller.loadHtmlString(html);
   }
 
   void _updateLot(double delta) {

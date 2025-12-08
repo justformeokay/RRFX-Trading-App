@@ -17,8 +17,15 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
   // --- Helper: Menentukan apakah sebuah simbol harus 0 desimal ---
   bool _isZeroDecimalPair(String symbol) {
     // List simbol yang harga Bid/Ask/Low/High-nya harus integer
-    const zeroDecimalSymbols = ['UNK.DB', 'UPK.DB', 'JPK.DB'];
+    const zeroDecimalSymbols = ['JPK.DB'];
     return zeroDecimalSymbols.contains(symbol.toUpperCase());
+  }
+
+  // --- Helper: Menentukan apakah sebuah simbol harus 2 desimal ---
+  bool _isTwoDecimalPair(String symbol) {
+    // List simbol yang harus menampilkan 2 desimal (UNK, UPK, CLSK, XAUUSD, dll)
+    const twoDecimalSymbols = ['UNK.DB', 'UPK.DB', 'CLSK.DB', 'XAUUSD.DB'];
+    return twoDecimalSymbols.contains(symbol.toUpperCase());
   }
 
   @override
@@ -42,12 +49,14 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
               itemBuilder: (context, index) {
                 final model = controller.marketData[symbols[index]]!;
                 final bool isZeroDecimal = _isZeroDecimalPair(model.symbol);
+                final bool isTwoDecimal = _isTwoDecimalPair(model.symbol);
                 
                 return _buildMarketTile(
                   model, 
                   fgColor, 
                   secondaryTextColor!, 
-                  isZeroDecimal
+                  isZeroDecimal,
+                  isTwoDecimal
                 ); 
               },
             );
@@ -83,9 +92,10 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
     Color primaryTextColor, 
     Color secondaryTextColor,
     bool isZeroDecimal,
+    bool isTwoDecimal,
   ) {
     final DateTime time = DateTime.fromMillisecondsSinceEpoch(model.datetimeMsc);
-    final int decimalPlaces = isZeroDecimal ? 0 : model.digits;
+    final int decimalPlaces = isZeroDecimal ? 0 : (isTwoDecimal ? 2 : model.digits);
     final spreadInt = calcSpread(model.symbol, model.spread); 
     final String marketForTradingView = model.symbol.contains('.')
         ? model.symbol.split('.').first
@@ -144,27 +154,36 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
                 // Kolom kanan price
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Row(
-                      children: [
-                        _buildPriceText(model.bid, model.previousBid, decimalPlaces, isZeroDecimal),
-                        const SizedBox(width: 16),
-                        _buildPriceText(model.ask, model.previousAsk, decimalPlaces, isZeroDecimal),
-                      ],
+                    Container(
+                      width: 85, // Fixed width untuk alignment
+                      height: 28, // Fixed height untuk alignment
+                      alignment: Alignment.centerRight,
+                      child: _buildPriceText(model.bid, model.previousBid, decimalPlaces, isZeroDecimal, isTwoDecimal),
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(
-                          'L: ${model.bidLow.toStringAsFixed(decimalPlaces)}',
-                          style: TextStyle(color: secondaryTextColor, fontSize: 10),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'H: ${model.askHigh.toStringAsFixed(decimalPlaces)}',
-                          style: TextStyle(color: secondaryTextColor, fontSize: 10),
-                        ),
-                      ],
+                    const SizedBox(height: 2),
+                    Text(
+                      'L: ${model.bidLow.toStringAsFixed(decimalPlaces)}',
+                      style: TextStyle(color: secondaryTextColor, fontSize: 10),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 85, // Fixed width untuk alignment
+                      height: 28, // Fixed height untuk alignment
+                      alignment: Alignment.centerRight,
+                      child: _buildPriceText(model.ask, model.previousAsk, decimalPlaces, isZeroDecimal, isTwoDecimal),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'H: ${model.askHigh.toStringAsFixed(decimalPlaces)}',
+                      style: TextStyle(color: secondaryTextColor, fontSize: 10),
                     ),
                   ],
                 ),
@@ -189,6 +208,7 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
     double previousPrice,
     int decimalDigits, // Jumlah desimal total (berasal dari model.digits atau 0)
     bool isZeroDecimal,
+    bool isTwoDecimal,
   ) {
     // 1. Tentukan Warna
     Color color;
@@ -203,15 +223,55 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
     String priceStr = currentPrice.toStringAsFixed(decimalDigits);
     
     // Tampilan sederhana jika:
-    // 1. UNK/UPK/JPK (0 desimal)
-    // 2. Pair dengan 1 atau 2 desimal (misalnya XAUUSD dengan digits: 2)
-    if (isZeroDecimal || decimalDigits <= 2) {
+    // 1. JPK (0 desimal)
+    // 2. Pair dengan 1 desimal
+    if (isZeroDecimal || decimalDigits == 1) {
         return Text(
           priceStr, 
           style: TextStyle(
               color: color, 
               fontSize: 20, 
               fontWeight: FontWeight.bold
+          ),
+        );
+    }
+
+    // Tampilan RichText untuk 2 desimal (UNK, UPK, CLSK, XAUUSD)
+    if (isTwoDecimal || decimalDigits == 2) {
+        final dotIndex = priceStr.indexOf('.');
+        if (dotIndex == -1) {
+            return Text(
+              priceStr, 
+              style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold)
+            );
+        }
+        
+        // Split: integer part + dot dan 2 decimal digits
+        String integerPart = priceStr.substring(0, dotIndex + 1); // "2432."
+        String decimalPart = priceStr.substring(dotIndex + 1); // "43"
+        
+        return RichText(
+          text: TextSpan(
+            children: <InlineSpan>[
+              // Integer + dot (ukuran normal)
+              TextSpan(
+                text: integerPart,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
+              // 2 decimal digits (ukuran besar)
+              TextSpan(
+                text: decimalPart,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 22,
+                ),
+              ),
+            ],
           ),
         );
     }

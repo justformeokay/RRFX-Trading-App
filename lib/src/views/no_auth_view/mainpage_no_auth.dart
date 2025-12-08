@@ -26,7 +26,7 @@ class _MainpageWithoutLoginState extends State<MainpageWithoutLogin> {
     const ExploreNoAuth(),
     // const MarketsNoAuth(),
     const MarketsMeta5NoAuth(),
-    const TradingChartView(marketName: "EURUSD"),
+    const TradingChartView(marketName: "XAUUSD"),
     const HistoryNoAuth(),
     const SettingsNoAuth(),
   ];

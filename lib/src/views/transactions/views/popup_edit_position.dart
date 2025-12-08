@@ -90,6 +90,16 @@ class EditPositionController extends GetxController {
     _tpInitialized.value = false;
   }
 
+  void setSL(double value) {
+    stopLoss.value = double.parse(value.toStringAsFixed(digits));
+    _slInitialized.value = true;
+  }
+
+  void setTP(double value) {
+    takeProfit.value = double.parse(value.toStringAsFixed(digits));
+    _tpInitialized.value = true;
+  }
+
   String formatPrice(double price) {
     if (price == 0.0) return "Not Set";
     return price.toStringAsFixed(digits);
@@ -321,7 +331,7 @@ Future<void> showEditPositionDialog({
               Obx(() {
                 final isSLSet = controller.stopLoss.value != 0.0;
                 final isTPSet = controller.takeProfit.value != 0.0;
-                final isEnabled = isSLSet && isTPSet;
+                final isEnabled = isSLSet || isTPSet; // Enable if at least one is set
 
                 return SizedBox(
                   width: double.infinity,
@@ -330,6 +340,7 @@ Future<void> showEditPositionDialog({
                     onPressed: isEnabled
                         ? () {
                             Get.back();
+                            // Send 0 for unset values
                             onModify(
                               controller.stopLoss.value,
                               controller.takeProfit.value,
@@ -452,22 +463,30 @@ Widget _buildPriceControl({
             Expanded(
               child: Obx(() {
                 final value = valueObservable.value;
-                return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: BoxDecoration(
-                    color: CustomColor.secondaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+                return GestureDetector(
+                  onTap: () => _showPriceInputDialog(
+                    context: context,
+                    controller: controller,
+                    isStopLoss: isStopLoss,
+                    label: label,
                   ),
-                  child: Text(
-                    controller.formatPrice(value),
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color:
-                          value == 0.0
-                              ? onSurface.withOpacity(0.4)
-                              : CustomColor.secondaryColor,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: CustomColor.secondaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      controller.formatPrice(value),
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color:
+                            value == 0.0
+                                ? onSurface.withOpacity(0.4)
+                                : CustomColor.secondaryColor,
+                      ),
                     ),
                   ),
                 );
@@ -483,6 +502,145 @@ Widget _buildPriceControl({
           ],
         ),
       ],
+    ),
+  );
+}
+
+void _showPriceInputDialog({
+  required BuildContext context,
+  required EditPositionController controller,
+  required bool isStopLoss,
+  required String label,
+}) {
+  final TextEditingController priceController = TextEditingController(
+    text: isStopLoss
+        ? (controller.stopLoss.value == 0.0 ? '' : controller.stopLoss.value.toStringAsFixed(controller.digits))
+        : (controller.takeProfit.value == 0.0 ? '' : controller.takeProfit.value.toStringAsFixed(controller.digits)),
+  );
+  final RxBool isValid = true.obs;
+  final RxDouble inputValue = 0.0.obs;
+
+  Get.dialog(
+    Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Set $label',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Get.isDarkMode ? Colors.white : Colors.black,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Obx(() => TextField(
+              controller: priceController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              autofocus: true,
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Get.isDarkMode ? Colors.white : Colors.black,
+              ),
+              decoration: InputDecoration(
+                labelText: label,
+                hintText: 'Enter price (${controller.digits} decimals)',
+                suffixText: 'Price',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                errorText: !isValid.value ? 'Invalid price format' : null,
+              ),
+              onChanged: (value) {
+                final price = double.tryParse(value);
+                if (price != null && price > 0) {
+                  inputValue.value = price;
+                  isValid.value = true;
+                } else {
+                  isValid.value = value.isEmpty; // Empty is valid (will be 0)
+                }
+              },
+            )),
+            const SizedBox(height: 8),
+            Text(
+              'Current: ${controller.formatPrice(controller.currentPrice.value)}',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Get.back(),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Obx(() => ElevatedButton(
+                  onPressed: isValid.value
+                    ? () {
+                        final text = priceController.text.trim();
+                        if (text.isEmpty) {
+                          // Reset to 0
+                          if (isStopLoss) {
+                            controller.resetSL();
+                          } else {
+                            controller.resetTP();
+                          }
+                        } else {
+                          final price = double.tryParse(text);
+                          if (price != null && price > 0) {
+                            if (isStopLoss) {
+                              controller.setSL(price);
+                            } else {
+                              controller.setTP(price);
+                            }
+                          }
+                        }
+                        Get.back();
+                      }
+                    : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: CustomColor.secondaryColor,
+                    disabledBackgroundColor: Colors.grey.shade300,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                  ),
+                  child: Text(
+                    'Set',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: isValid.value ? Colors.black : Colors.grey.shade500,
+                    ),
+                  ),
+                )),
+              ],
+            ),
+          ],
+        ),
+      ),
     ),
   );
 }

@@ -31,7 +31,10 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   final RxList<Map<String, dynamic>> _executionQueue = <Map<String, dynamic>>[].obs;
   bool _isProcessingQueue = false;
   
-OverlayEntry? _overlayEntry;
+  OverlayEntry? _overlayEntry;
+  
+  // Global variable untuk lot step increment/decrement
+  static const double LOT_STEP = 0.10;
 
    @override
   void dispose() {
@@ -69,6 +72,131 @@ OverlayEntry? _overlayEntry;
   void _stopDecrementTimer() {
     _decrementTimer?.cancel();
     _decrementTimer = null;
+  }
+
+  // Validasi apakah lot adalah kelipatan dari LOT_STEP
+  bool _isValidLot(double lot) {
+    if (lot <= 0) return false;
+    // Cek apakah lot adalah kelipatan dari LOT_STEP
+    final remainder = (lot / LOT_STEP) % 1;
+    return remainder < 0.001 || remainder > 0.999; // Toleransi untuk floating point
+  }
+
+  void _showEditLotDialog() {
+    final TextEditingController lotController = TextEditingController(
+      text: executionController.lot.value.toStringAsFixed(1),
+    );
+    final RxBool isValid = true.obs;
+    final RxDouble inputValue = executionController.lot.value.obs;
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Set Lot Size',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Get.isDarkMode ? Colors.white : Colors.black,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Obx(() => TextField(
+                controller: lotController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                autofocus: true,
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Get.isDarkMode ? Colors.white : Colors.black,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'Lot',
+                  hintText: 'Enter lot size (multiples of ${LOT_STEP.toStringAsFixed(2)})',
+                  suffixText: 'Lot',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  errorText: !isValid.value 
+                    ? 'Must be multiple of ${LOT_STEP.toStringAsFixed(2)}' 
+                    : null,
+                ),
+                onChanged: (value) {
+                  final lot = double.tryParse(value);
+                  if (lot != null) {
+                    inputValue.value = lot;
+                    isValid.value = _isValidLot(lot);
+                  } else {
+                    isValid.value = false;
+                  }
+                },
+              )),
+              const SizedBox(height: 8),
+              Text(
+                'Increment step: ${LOT_STEP.toStringAsFixed(2)}',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Get.back(),
+                    child: Text(
+                      'Cancel',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Obx(() => ElevatedButton(
+                    onPressed: isValid.value
+                      ? () {
+                          executionController.lot.value = inputValue.value;
+                          Get.back();
+                        }
+                      : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      disabledBackgroundColor: Colors.grey.shade300,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                    ),
+                    child: Text(
+                      'Set',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: isValid.value ? Colors.white : Colors.grey.shade500,
+                      ),
+                    ),
+                  )),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildExecutionItem(Map<String, dynamic> item) {
@@ -408,13 +536,19 @@ OverlayEntry? _overlayEntry;
                     
                     // Lot display
                     Expanded(
-                      child: Center(
-                        child: Text(
-                          executionController.lot.value.toStringAsFixed(1),
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : Colors.black,
+                      child: GestureDetector(
+                        onTap: _showEditLotDialog,
+                        child: Container(
+                          color: Colors.transparent,
+                          child: Center(
+                            child: Text(
+                              executionController.lot.value.toStringAsFixed(1),
+                              style: GoogleFonts.inter(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? Colors.white : Colors.black,
+                              ),
+                            ),
                           ),
                         ),
                       ),
