@@ -33,16 +33,55 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
     return twoDecimalSymbols.contains(symbol.toUpperCase());
   }
 
+  // Filter markets based on search query
+  List<String> _filterMarkets(Map<String, MarketMt5Model> marketData, String query) {
+    if (query.isEmpty) {
+      return marketData.keys.toList();
+    }
+    
+    final lowerQuery = query.toLowerCase();
+    return marketData.keys.where((symbol) {
+      return symbol.toLowerCase().contains(lowerQuery);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     // Inisialisasi controller
     Get.put(MarketMt5Controller());
     RxBool isLoading = false.obs;
+    final RxString searchQuery = ''.obs;
+    final TextEditingController searchController = TextEditingController();
+    final RxBool isSearching = false.obs;
     
     return Scaffold(
       appBar: AppBar(
         forceMaterialTransparency: true,
         title: Obx(() {
+          if (isSearching.value) {
+            return TextField(
+              controller: searchController,
+              autofocus: true,
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Get.isDarkMode ? Colors.white : Colors.black,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Search market...',
+                hintStyle: GoogleFonts.inter(
+                  fontSize: 16,
+                  color: Get.isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+              onChanged: (value) {
+                searchQuery.value = value;
+              },
+            );
+          }
+          
           final isDark = Get.isDarkMode;
           return Row(
             children: [
@@ -68,29 +107,49 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
             ],
           );
         }),
-        // actions: [
-        //   Obx(() => IconButton(
-        //     onPressed: controller.isReconnecting.value 
-        //       ? null 
-        //       : () {
-        //           controller.retryConnection();
-        //         },
-        //     icon: controller.isReconnecting.value
-        //       ? SizedBox(
-        //           width: 20,
-        //           height: 20,
-        //           child: CircularProgressIndicator(
-        //             strokeWidth: 2,
-        //             color: CustomColor.secondaryColor,
-        //           ),
-        //         )
-        //       : Icon(
-        //           Iconsax.refresh_outline,
-        //           color: CustomColor.secondaryColor,
-        //         ),
-        //     tooltip: 'Reconnect',
-        //   )),
-        // ],
+        actions: [
+          Obx(() => isSearching.value
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (searchQuery.value.isNotEmpty)
+                    IconButton(
+                      icon: Icon(
+                        Iconsax.close_circle_outline,
+                        color: Get.isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                      ),
+                      onPressed: () {
+                        searchController.clear();
+                        searchQuery.value = '';
+                      },
+                      tooltip: 'Clear',
+                    ),
+                  IconButton(
+                    icon: Icon(
+                      Iconsax.close_square_outline,
+                      color: CustomColor.secondaryColor,
+                    ),
+                    onPressed: () {
+                      searchController.clear();
+                      searchQuery.value = '';
+                      isSearching.value = false;
+                    },
+                    tooltip: 'Close Search',
+                  ),
+                ],
+              )
+            : IconButton(
+                icon: Icon(
+                  Iconsax.search_normal_outline,
+                  color: CustomColor.secondaryColor,
+                ),
+                onPressed: () {
+                  isSearching.value = true;
+                },
+                tooltip: 'Search Market',
+              ),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Obx(
@@ -136,24 +195,115 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
               );
             }
             
-            // Data tersedia, tampilkan list
-            final symbols = controller.marketData.keys.toList();
+            // Filter markets based on search query
+            final allSymbols = controller.marketData.keys.toList();
+            final filteredSymbols = _filterMarkets(controller.marketData, searchQuery.value);
             
-            return ListView.builder(
-              itemCount: symbols.length,
-              itemBuilder: (context, index) {
-                final model = controller.marketData[symbols[index]]!;
-                final bool isZeroDecimal = _isZeroDecimalPair(model.symbol);
-                final bool isTwoDecimal = _isTwoDecimalPair(model.symbol);
+            // Show "no results" if search query doesn't match any market
+            if (searchQuery.value.isNotEmpty && filteredSymbols.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: CustomColor.secondaryColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Iconsax.search_status_outline,
+                        size: 64,
+                        color: CustomColor.secondaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'No Markets Found',
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        'No markets match "${searchQuery.value}".\nTry a different search term.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          height: 1.5,
+                          color: isDarkMode ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+            
+            // Data tersedia, tampilkan list
+            return Column(
+              children: [
+                // Search result info (only show when searching)
+                if (searchQuery.value.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: CustomColor.secondaryColor.withOpacity(0.1),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: isDarkMode 
+                            ? Colors.grey.shade800 
+                            : Colors.grey.shade200,
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Iconsax.search_status_1_outline,
+                          size: 16,
+                          color: CustomColor.secondaryColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${filteredSymbols.length} of ${allSymbols.length} markets',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: CustomColor.secondaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 
-                return _buildMarketTile(
-                  model, 
-                  fgColor, 
-                  secondaryTextColor!, 
-                  isZeroDecimal,
-                  isTwoDecimal
-                ); 
-              },
+                // Market list
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: filteredSymbols.length,
+                    itemBuilder: (context, index) {
+                      final model = controller.marketData[filteredSymbols[index]]!;
+                      final bool isZeroDecimal = _isZeroDecimalPair(model.symbol);
+                      final bool isTwoDecimal = _isTwoDecimalPair(model.symbol);
+                      
+                      return _buildMarketTile(
+                        model, 
+                        fgColor, 
+                        secondaryTextColor!, 
+                        isZeroDecimal,
+                        isTwoDecimal,
+                        searchQuery.value, // Pass search query for highlighting
+                      ); 
+                    },
+                  ),
+                ),
+              ],
             );
           },
         ),
@@ -188,6 +338,7 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
     Color secondaryTextColor,
     bool isZeroDecimal,
     bool isTwoDecimal,
+    [String searchQuery = ''] // Optional search query for highlighting
   ) {
     final accountController = Get.put(AccountController());
 
@@ -201,6 +352,71 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
         marketName: model.symbol,
         balance: double.tryParse(accountController.selectedAccount.value?.balance ?? "0"),
       ));
+    }
+
+    // Highlight matching text in symbol name
+    Widget buildHighlightedSymbol() {
+      if (searchQuery.isEmpty) {
+        return Text(
+          model.symbol,
+          style: GoogleFonts.inter(
+            color: primaryTextColor,
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+          ),
+        );
+      }
+
+      final lowerSymbol = model.symbol.toLowerCase();
+      final lowerQuery = searchQuery.toLowerCase();
+      final index = lowerSymbol.indexOf(lowerQuery);
+
+      if (index == -1) {
+        return Text(
+          model.symbol,
+          style: GoogleFonts.inter(
+            color: primaryTextColor,
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+          ),
+        );
+      }
+
+      final before = model.symbol.substring(0, index);
+      final match = model.symbol.substring(index, index + searchQuery.length);
+      final after = model.symbol.substring(index + searchQuery.length);
+
+      return RichText(
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: before,
+              style: GoogleFonts.inter(
+                color: primaryTextColor,
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
+            ),
+            TextSpan(
+              text: match,
+              style: GoogleFonts.inter(
+                color: CustomColor.secondaryColor,
+                fontWeight: FontWeight.w900,
+                fontSize: 16,
+                backgroundColor: CustomColor.secondaryColor.withOpacity(0.2),
+              ),
+            ),
+            TextSpan(
+              text: after,
+              style: GoogleFonts.inter(
+                color: primaryTextColor,
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     return Dismissible(
@@ -229,14 +445,7 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        model.symbol,
-                        style: GoogleFonts.inter(
-                          color: primaryTextColor,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                        ),
-                      ),
+                      buildHighlightedSymbol(),
                       const SizedBox(height: 4),
                       Text(
                         '${time.hour}:${time.minute}:${time.second} | Spread: $spreadInt',
@@ -460,8 +669,8 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
                 pipetteDigit,
                 style: TextStyle(
                   color: color,
-                  fontSize: 12, // Ukuran terkecil
-                  fontWeight: FontWeight.bold,
+                  fontSize: 11, // Ukuran terkecil
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),

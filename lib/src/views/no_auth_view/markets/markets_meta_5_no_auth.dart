@@ -362,8 +362,8 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
                 pipetteDigit,
                 style: TextStyle(
                   color: color,
-                  fontSize: 12, // Ukuran terkecil
-                  fontWeight: FontWeight.bold,
+                  fontSize: 10, // Ukuran terkecil
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),

@@ -43,7 +43,14 @@ class _WebViewChartViewState extends State<WebViewChartView> {
   void initState() {
     super.initState();
     _previousTheme = Get.isDarkMode;
-    _currentSymbol = widget.symbol ?? chartController.selectedMarket.value;
+    
+    // Use symbol from widget parameter if provided, otherwise use chartController's saved value
+    if (widget.symbol != null && widget.symbol!.isNotEmpty) {
+      _currentSymbol = widget.symbol;
+      chartController.selectedMarket.value = widget.symbol!;
+    } else {
+      _currentSymbol = chartController.selectedMarket.value;
+    }
   }
 
   @override
@@ -90,6 +97,8 @@ class _WebViewChartViewState extends State<WebViewChartView> {
           setState(() {
             _currentSymbol = symbol.symbol;
           });
+          // Save to controller so it persists across page rebuilds
+          chartController.selectedMarket.value = symbol.symbol;
           _reloadChart();
         },
       ),
