@@ -529,10 +529,8 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
 
     String priceStr = currentPrice.toStringAsFixed(decimalDigits);
     
-    // Tampilan sederhana jika:
-    // 1. JPK (0 desimal)
-    // 2. Pair dengan 1 desimal
-    if (isZeroDecimal || decimalDigits == 1) {
+    // Tampilan sederhana jika digits < 2
+    if (decimalDigits < 2) {
         return Text(
           priceStr, 
           style: TextStyle(
@@ -543,20 +541,35 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
         );
     }
 
-    // Tampilan RichText untuk 2 desimal (UNK, UPK, CLSK, XAUUSD)
-    if (isTwoDecimal || decimalDigits == 2) {
-        final dotIndex = priceStr.indexOf('.');
-        if (dotIndex == -1) {
-            return Text(
-              priceStr, 
-              style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold)
-            );
-        }
-        
-        // Split: integer part + dot dan 2 decimal digits
-        String integerPart = priceStr.substring(0, dotIndex + 1); // "2432."
-        String decimalPart = priceStr.substring(dotIndex + 1); // "43"
-        
+    final dotIndex = priceStr.indexOf('.');
+    
+    if (dotIndex == -1) {
+        // Fallback jika tidak ada titik desimal
+        return Text(
+          priceStr, 
+          style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold)
+        );
+    }
+
+    // Ambil bagian desimal
+    final decimalPart = priceStr.substring(dotIndex + 1);
+    final integerPart = priceStr.substring(0, dotIndex + 1); // Include dot
+    
+    // Validasi panjang desimal
+    if (decimalPart.length < decimalDigits) {
+        return Text(
+          priceStr, 
+          style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold)
+        );
+    }
+
+    // Logic berdasarkan digits (hitung dari belakang):
+    // digits 2 = angka ke-2 sampai ke-1 besar
+    // digits 3, 4, 5 = angka ke-3 sampai ke-2 besar, angka ke-1 kecil di atas
+
+    if (decimalDigits == 2) {
+        // digits 2: semua desimal besar
+        // Contoh: 2432.43 -> "2432." (16px) + "43" (22px bold)
         return RichText(
           text: TextSpan(
             children: <InlineSpan>[
@@ -581,102 +594,67 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
             ],
           ),
         );
-    }
-
-    // --- Logika RichText (Hanya untuk Pair dengan 3 atau lebih desimal) ---
-    final dotIndex = priceStr.indexOf('.');
-    
-    if (dotIndex == -1 || decimalDigits < 3) {
-        // Fallback jika format tidak sesuai
-        return Text(
-          priceStr, 
-          style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold)
-        );
-    }
-    
-    // Tentukan aturan pemisahan berdasarkan jumlah digit desimal total
-    int prefixDecimals; // Jumlah digit desimal untuk Prefix (ukuran sedang)
-    int majorPipDigits; // Jumlah digit desimal untuk Major Pip (ukuran besar)
-
-    if (decimalDigits == 3) {
-        // EURJPY, XAGUSD: 1 desimal Prefix, 1 digit Major Pip, 1 digit Pipette.
-        // Contoh: 180.725 -> 180.7 | 2 | 5
-        prefixDecimals = 1; 
-        majorPipDigits = 1;
-    } else if (decimalDigits >= 4) { 
-        // AUDUSD, EURUSD: 2 desimal Prefix, 2 digit Major Pip, 1 digit Pipette.
-        // Contoh: 0.65757 -> 0.65 | 75 | 7
-        prefixDecimals = 2; 
-        majorPipDigits = 2;
-    } else {
-       // Should not happen, but serves as a safeguard
-       return Text(priceStr, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold));
-    }
-    
-    // Hitung posisi pemotongan
-    // Posisi 1: Prefix (Semua sebelum desimal, ditambah '.' dan prefixDecimals)
-    final int endPrefix = dotIndex + 1 + prefixDecimals; 
-    
-    // Posisi 2: Major Pip (Prefix + majorPipDigits)
-    final int endMajorPip = endPrefix + majorPipDigits; 
-
-    // Posisi 3: Pipette (Digit terakhir)
-    final int endPipette = priceStr.length;
-
-    // Pastikan posisi pemotongan valid (untuk menghindari error substring out of range)
-    if (endMajorPip >= endPipette || endPrefix >= endMajorPip) {
-       // Fallback jika string tidak cukup panjang untuk pembagian 3 bagian
-       return Text(
-          priceStr, 
-          style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold)
-        );
-    }
-
-    // Pemotongan String
-    String prefixPart = priceStr.substring(0, endPrefix);      
-    String majorPipPart = priceStr.substring(endPrefix, endMajorPip); 
-    String pipetteDigit = priceStr.substring(endMajorPip, endPipette); 
-
-    // 3. Implementasi RichText untuk 3+ desimal: prefix, major pip, dan pipette
-    return RichText(
-      text: TextSpan(
-        children: <InlineSpan>[ 
-          // Bagian 1: Prefix (Sedang/Normal)
-          TextSpan(
-            text: prefixPart,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: 18, // Ukuran sedang
-            ),
-          ),
-          // Bagian 2: Major Pip (Besar/Tebal)
-          TextSpan(
-            text: majorPipPart,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w900, // Sangat tebal
-              fontSize: 24, // Ukuran besar
-            ),
-          ),
-          // Bagian 3: Pipette (Terkecil/Superscript)
-          WidgetSpan(
-            alignment: PlaceholderAlignment.top,
-            child: Transform.translate(
-              // Geser sedikit ke atas dan sesuaikan ukuran
-              offset: const Offset(0, -6),
-              child: Text(
-                pipetteDigit,
+    } else if (decimalDigits >= 3 && decimalDigits <= 5) {
+        // digits 3, 4, 5: dari belakang
+        // - 1 digit terakhir = kecil di atas (superscript)
+        // - 2 digit sebelumnya = besar
+        // - sisanya = normal
+        
+        // Contoh digits 5: 0.65757
+        // - Digit ke-1 dari belakang: "7" (superscript)
+        // - Digit ke-3 sampai ke-2 dari belakang: "75" (besar)
+        // - Sisanya: "0.65" (normal)
+        
+        // Ambil dari belakang
+        final lastDigit = decimalPart[decimalPart.length - 1]; // digit ke-1 dari belakang
+        final majorPips = decimalPart.substring(decimalPart.length - 3, decimalPart.length - 1); // digit ke-3 sampai ke-2 dari belakang
+        final prefixDecimals = decimalPart.substring(0, decimalPart.length - 3); // sisanya
+        
+        return RichText(
+          text: TextSpan(
+            children: <InlineSpan>[
+              // Bagian 1: Integer + dot + prefix decimals (ukuran normal)
+              TextSpan(
+                text: integerPart + prefixDecimals,
                 style: TextStyle(
                   color: color,
-                  fontSize: 11, // Ukuran terkecil
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
                 ),
               ),
-            ),
+              // Bagian 2: Major pips - 2 digit sebelum terakhir (ukuran besar)
+              TextSpan(
+                text: majorPips,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 24,
+                ),
+              ),
+              // Bagian 3: Last digit - pipette (superscript kecil)
+              WidgetSpan(
+                alignment: PlaceholderAlignment.top,
+                child: Transform.translate(
+                  offset: const Offset(0, -6),
+                  child: Text(
+                    lastDigit,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+    }
+
+    // Fallback untuk digits > 5 atau kondisi lainnya
+    return Text(
+      priceStr, 
+      style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold)
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
+import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/views/markets/controllers/market_mt5_controller.dart'; 
 import 'package:rrfx/src/views/markets/models/market_mt5_model.dart';
 import 'package:rrfx/src/views/trade/derivchart_without_loginid.dart';
@@ -28,10 +29,26 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
     return twoDecimalSymbols.contains(symbol.toUpperCase());
   }
 
+  // Filter markets based on search query
+  List<String> _filterMarkets(Map<String, MarketMt5Model> marketData, String query) {
+    if (query.isEmpty) {
+      return marketData.keys.toList();
+    }
+    
+    final lowerQuery = query.toLowerCase();
+    return marketData.keys.where((symbol) {
+      return symbol.toLowerCase().contains(lowerQuery);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     // Inisialisasi controller
     Get.put(MarketMt5Controller());
+    
+    final RxString searchQuery = ''.obs;
+    final TextEditingController searchController = TextEditingController();
+    final RxBool isSearching = false.obs;
     
     // Tentukan warna latar belakang dan teks berdasarkan tema sistem
     final isDarkMode = Get.isDarkMode;
@@ -39,26 +56,197 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
     final secondaryTextColor = isDarkMode ? Colors.grey[600] : Colors.grey[400];
     
     return Scaffold(
+      appBar: AppBar(
+        centerTitle: false,
+        forceMaterialTransparency: true,
+        title: Obx(() {
+          if (isSearching.value) {
+            return TextField(
+              controller: searchController,
+              autofocus: true,
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Get.isDarkMode ? Colors.white : Colors.black,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Search market...',
+                hintStyle: GoogleFonts.inter(
+                  fontSize: 16,
+                  color: Get.isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+              onChanged: (value) {
+                searchQuery.value = value;
+              },
+            );
+          }
+          
+          return Text(
+            'Live Markets',
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: isDarkMode ? Colors.white : Colors.black,
+            ),
+          );
+        }),
+        actions: [
+          Obx(() => isSearching.value
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (searchQuery.value.isNotEmpty)
+                    IconButton(
+                      icon: Icon(
+                        Iconsax.close_circle_outline,
+                        color: CustomColor.secondaryColor,
+                      ),
+                      onPressed: () {
+                        searchController.clear();
+                        searchQuery.value = '';
+                      },
+                      tooltip: 'Clear',
+                    ),
+                  IconButton(
+                    icon: Icon(
+                      Iconsax.close_square_outline,
+                      color: CustomColor.secondaryColor,
+                    ),
+                    onPressed: () {
+                      searchController.clear();
+                      searchQuery.value = '';
+                      isSearching.value = false;
+                    },
+                    tooltip: 'Close Search',
+                  ),
+                ],
+              )
+            : IconButton(
+                icon: Icon(
+                  Iconsax.search_normal_outline,
+                  color: Colors.blue,
+                ),
+                onPressed: () {
+                  isSearching.value = true;
+                },
+                tooltip: 'Search Market',
+              ),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Obx(
           () {
-            final symbols = controller.marketData.keys.toList();
+            final allSymbols = controller.marketData.keys.toList();
+            final filteredSymbols = _filterMarkets(controller.marketData, searchQuery.value);
             
-            return ListView.builder(
-              itemCount: symbols.length,
-              itemBuilder: (context, index) {
-                final model = controller.marketData[symbols[index]]!;
-                final bool isZeroDecimal = _isZeroDecimalPair(model.symbol);
-                final bool isTwoDecimal = _isTwoDecimalPair(model.symbol);
+            // Show "no results" if search query doesn't match any market
+            if (searchQuery.value.isNotEmpty && filteredSymbols.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Iconsax.search_status_outline,
+                        size: 64,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'No Markets Found',
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        'No markets match "${searchQuery.value}".\nTry a different search term.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          height: 1.5,
+                          color: isDarkMode ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+            
+            return Column(
+              children: [
+                // Search result info (only show when searching)
+                if (searchQuery.value.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: isDarkMode 
+                            ? Colors.grey.shade800 
+                            : Colors.grey.shade200,
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Iconsax.search_status_1_outline,
+                          size: 16,
+                          color: Colors.blue,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${filteredSymbols.length} of ${allSymbols.length} markets',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 
-                return _buildMarketTile(
-                  model, 
-                  fgColor, 
-                  secondaryTextColor!, 
-                  isZeroDecimal,
-                  isTwoDecimal
-                ); 
-              },
+                // Market list
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: filteredSymbols.length,
+                    itemBuilder: (context, index) {
+                      final model = controller.marketData[filteredSymbols[index]]!;
+                      final bool isZeroDecimal = _isZeroDecimalPair(model.symbol);
+                      final bool isTwoDecimal = _isTwoDecimalPair(model.symbol);
+                      
+                      return _buildMarketTile(
+                        model, 
+                        fgColor, 
+                        secondaryTextColor!, 
+                        isZeroDecimal,
+                        isTwoDecimal,
+                        searchQuery.value,
+                      ); 
+                    },
+                  ),
+                ),
+              ],
             );
           },
         ),
@@ -93,6 +281,7 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
     Color secondaryTextColor,
     bool isZeroDecimal,
     bool isTwoDecimal,
+    [String searchQuery = '']
   ) {
     final DateTime time = DateTime.fromMillisecondsSinceEpoch(model.datetimeMsc);
     final int decimalPlaces = isZeroDecimal ? 0 : (isTwoDecimal ? 2 : model.digits);
@@ -103,6 +292,71 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
 
     void goToChart() {
       Get.to(() => TradingChartView(marketName: marketForTradingView));
+    }
+
+    // Highlight matching text in symbol name
+    Widget buildHighlightedSymbol() {
+      if (searchQuery.isEmpty) {
+        return Text(
+          model.symbol,
+          style: GoogleFonts.inter(
+            color: primaryTextColor,
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+          ),
+        );
+      }
+
+      final lowerSymbol = model.symbol.toLowerCase();
+      final lowerQuery = searchQuery.toLowerCase();
+      final index = lowerSymbol.indexOf(lowerQuery);
+
+      if (index == -1) {
+        return Text(
+          model.symbol,
+          style: GoogleFonts.inter(
+            color: primaryTextColor,
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+          ),
+        );
+      }
+
+      final before = model.symbol.substring(0, index);
+      final match = model.symbol.substring(index, index + searchQuery.length);
+      final after = model.symbol.substring(index + searchQuery.length);
+
+      return RichText(
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: before,
+              style: GoogleFonts.inter(
+                color: primaryTextColor,
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
+            ),
+            TextSpan(
+              text: match,
+              style: GoogleFonts.inter(
+                color: Colors.blue,
+                fontWeight: FontWeight.w900,
+                fontSize: 16,
+                backgroundColor: Colors.blue.withOpacity(0.2),
+              ),
+            ),
+            TextSpan(
+              text: after,
+              style: GoogleFonts.inter(
+                color: primaryTextColor,
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     return Dismissible(
@@ -131,14 +385,7 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        model.symbol,
-                        style: GoogleFonts.inter(
-                          color: primaryTextColor,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                        ),
-                      ),
+                      buildHighlightedSymbol(),
                       const SizedBox(height: 4),
                       Text(
                         '${time.hour}:${time.minute}:${time.second} | Spread: $spreadInt',
@@ -222,10 +469,8 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
 
     String priceStr = currentPrice.toStringAsFixed(decimalDigits);
     
-    // Tampilan sederhana jika:
-    // 1. JPK (0 desimal)
-    // 2. Pair dengan 1 desimal
-    if (isZeroDecimal || decimalDigits == 1) {
+    // Tampilan sederhana jika digits < 2
+    if (decimalDigits < 2) {
         return Text(
           priceStr, 
           style: TextStyle(
@@ -236,20 +481,35 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
         );
     }
 
-    // Tampilan RichText untuk 2 desimal (UNK, UPK, CLSK, XAUUSD)
-    if (isTwoDecimal || decimalDigits == 2) {
-        final dotIndex = priceStr.indexOf('.');
-        if (dotIndex == -1) {
-            return Text(
-              priceStr, 
-              style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold)
-            );
-        }
-        
-        // Split: integer part + dot dan 2 decimal digits
-        String integerPart = priceStr.substring(0, dotIndex + 1); // "2432."
-        String decimalPart = priceStr.substring(dotIndex + 1); // "43"
-        
+    final dotIndex = priceStr.indexOf('.');
+    
+    if (dotIndex == -1) {
+        // Fallback jika tidak ada titik desimal
+        return Text(
+          priceStr, 
+          style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold)
+        );
+    }
+
+    // Ambil bagian desimal
+    final decimalPart = priceStr.substring(dotIndex + 1);
+    final integerPart = priceStr.substring(0, dotIndex + 1); // Include dot
+    
+    // Validasi panjang desimal
+    if (decimalPart.length < decimalDigits) {
+        return Text(
+          priceStr, 
+          style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold)
+        );
+    }
+
+    // Logic berdasarkan digits (hitung dari belakang):
+    // digits 2 = angka ke-2 sampai ke-1 besar
+    // digits 3, 4, 5 = angka ke-3 sampai ke-2 besar, angka ke-1 kecil di atas
+
+    if (decimalDigits == 2) {
+        // digits 2: semua desimal besar
+        // Contoh: 2432.43 -> "2432." (16px) + "43" (22px bold)
         return RichText(
           text: TextSpan(
             children: <InlineSpan>[
@@ -274,102 +534,62 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
             ],
           ),
         );
-    }
-
-    // --- Logika RichText (Hanya untuk Pair dengan 3 atau lebih desimal) ---
-    final dotIndex = priceStr.indexOf('.');
-    
-    if (dotIndex == -1 || decimalDigits < 3) {
-        // Fallback jika format tidak sesuai
-        return Text(
-          priceStr, 
-          style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold)
-        );
-    }
-    
-    // Tentukan aturan pemisahan berdasarkan jumlah digit desimal total
-    int prefixDecimals; // Jumlah digit desimal untuk Prefix (ukuran sedang)
-    int majorPipDigits; // Jumlah digit desimal untuk Major Pip (ukuran besar)
-
-    if (decimalDigits == 3) {
-        // EURJPY, XAGUSD: 1 desimal Prefix, 1 digit Major Pip, 1 digit Pipette.
-        // Contoh: 180.725 -> 180.7 | 2 | 5
-        prefixDecimals = 1; 
-        majorPipDigits = 1;
-    } else if (decimalDigits >= 4) { 
-        // AUDUSD, EURUSD: 2 desimal Prefix, 2 digit Major Pip, 1 digit Pipette.
-        // Contoh: 0.65757 -> 0.65 | 75 | 7
-        prefixDecimals = 2; 
-        majorPipDigits = 2;
-    } else {
-       // Should not happen, but serves as a safeguard
-       return Text(priceStr, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold));
-    }
-    
-    // Hitung posisi pemotongan
-    // Posisi 1: Prefix (Semua sebelum desimal, ditambah '.' dan prefixDecimals)
-    final int endPrefix = dotIndex + 1 + prefixDecimals; 
-    
-    // Posisi 2: Major Pip (Prefix + majorPipDigits)
-    final int endMajorPip = endPrefix + majorPipDigits; 
-
-    // Posisi 3: Pipette (Digit terakhir)
-    final int endPipette = priceStr.length;
-
-    // Pastikan posisi pemotongan valid (untuk menghindari error substring out of range)
-    if (endMajorPip >= endPipette || endPrefix >= endMajorPip) {
-       // Fallback jika string tidak cukup panjang untuk pembagian 3 bagian
-       return Text(
-          priceStr, 
-          style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold)
-        );
-    }
-
-    // Pemotongan String
-    String prefixPart = priceStr.substring(0, endPrefix);      
-    String majorPipPart = priceStr.substring(endPrefix, endMajorPip); 
-    String pipetteDigit = priceStr.substring(endMajorPip, endPipette); 
-
-    // 3. Implementasi RichText 
-    return RichText(
-      text: TextSpan(
-        children: <InlineSpan>[ 
-          // Bagian 1: Prefix (Sedang/Normal)
-          TextSpan(
-            text: prefixPart,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: 18, // Ukuran sedang
-            ),
-          ),
-          // Bagian 2: Major Pip (Besar/Tebal)
-          TextSpan(
-            text: majorPipPart,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w900, // Sangat tebal
-              fontSize: 24, // Ukuran besar
-            ),
-          ),
-          // Bagian 3: Pipette (Terkecil/Superscript)
-          WidgetSpan(
-            alignment: PlaceholderAlignment.top,
-            child: Transform.translate(
-              // Geser sedikit ke atas dan sesuaikan ukuran
-              offset: const Offset(0, -6),
-              child: Text(
-                pipetteDigit,
+    } else if (decimalDigits >= 3 && decimalDigits <= 5) {
+        // digits 3, 4, 5: dari belakang
+        // - 1 digit terakhir = kecil di atas (superscript)
+        // - 2 digit sebelumnya = besar
+        // - sisanya = normal
+        
+        // Ambil dari belakang
+        final lastDigit = decimalPart[decimalPart.length - 1]; // digit ke-1 dari belakang
+        final majorPips = decimalPart.substring(decimalPart.length - 3, decimalPart.length - 1); // digit ke-3 sampai ke-2 dari belakang
+        final prefixDecimals = decimalPart.substring(0, decimalPart.length - 3); // sisanya
+        
+        return RichText(
+          text: TextSpan(
+            children: <InlineSpan>[
+              // Bagian 1: Integer + dot + prefix decimals (ukuran normal)
+              TextSpan(
+                text: integerPart + prefixDecimals,
                 style: TextStyle(
                   color: color,
-                  fontSize: 10, // Ukuran terkecil
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
                 ),
               ),
-            ),
+              // Bagian 2: Major pips - 2 digit sebelum terakhir (ukuran besar)
+              TextSpan(
+                text: majorPips,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 24,
+                ),
+              ),
+              // Bagian 3: Last digit - pipette (superscript kecil)
+              WidgetSpan(
+                alignment: PlaceholderAlignment.top,
+                child: Transform.translate(
+                  offset: const Offset(0, -6),
+                  child: Text(
+                    lastDigit,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+    }
+
+    // Fallback untuk digits > 5 atau kondisi lainnya
+    return Text(
+      priceStr, 
+      style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold)
     );
   }
 }
