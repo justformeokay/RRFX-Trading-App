@@ -239,160 +239,162 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
 
   Widget _buildFilterBar(BuildContext context, List<dynamic> orders) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final symbols = _getUniqueSymbols(orders);
     
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.withOpacity(0.2)),
-        ),
+        color: isDark ? Colors.grey.shade900 : Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: Symbol Filter
+          // Header
           Row(
             children: [
-              Icon(Iconsax.chart_outline, size: 18, color: CustomColor.secondaryColor),
-              const SizedBox(width: 8),
-              Text(
-                'Symbol:',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: theme.textTheme.bodyMedium?.color,
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: CustomColor.secondaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: SizedBox(
-                  height: 35,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: symbols.length,
-                    itemBuilder: (context, index) {
-                      final symbol = symbols[index];
-                      final isSelected = selectedSymbol == symbol;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: ChoiceChip(
-                          label: Text(
-                            symbol,
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: isSelected ? Colors.black : theme.textTheme.bodyMedium?.color,
-                            ),
-                          ),
-                          selected: isSelected,
-                          selectedColor: CustomColor.secondaryColor,
-                          backgroundColor: theme.cardColor,
-                          side: BorderSide(
-                            color: isSelected ? CustomColor.secondaryColor : Colors.grey.withOpacity(0.3),
-                          ),
-                          onSelected: (selected) {
-                            setState(() {
-                              selectedSymbol = symbol;
-                            });
-                          },
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          labelPadding: EdgeInsets.zero,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 8),
-          
-          // Row 2: Sort By
-          Row(
-            children: [
-              Icon(Iconsax.sort_outline, size: 18, color: CustomColor.secondaryColor),
-              const SizedBox(width: 8),
-              Text(
-                'Sort:',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: theme.textTheme.bodyMedium?.color,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildSortChip(context, 'Ticket', 'ticket'),
-                      _buildSortChip(context, 'Type', 'type'),
-                      _buildSortChip(context, 'Volume', 'volume'),
-                      _buildSortChip(context, 'Open Time', 'openTime'),
-                      _buildSortChip(context, 'Close Time', 'closeTime'),
-                      _buildSortChip(context, 'Profit', 'profit'),
-                    ],
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: Icon(
-                  sortAscending ? Iconsax.arrow_up_3_outline : Iconsax.arrow_down_outline,
+                child: Icon(
+                  Iconsax.filter_outline,
                   size: 20,
                   color: CustomColor.secondaryColor,
                 ),
-                onPressed: () {
-                  setState(() {
-                    sortAscending = !sortAscending;
-                  });
-                },
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
               ),
+              const SizedBox(width: 12),
+              Text(
+                'Filter & Sort',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: theme.textTheme.bodyLarge?.color,
+                ),
+              ),
+              const Spacer(),
+              if (selectedSymbol != 'All' || sortBy != 'closeTime' || filterPeriod != 'All')
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      selectedSymbol = 'All';
+                      sortBy = 'closeTime';
+                      sortAscending = false;
+                      filterPeriod = 'All';
+                      customStartDate = null;
+                      customEndDate = null;
+                    });
+                  },
+                  icon: const Icon(Iconsax.refresh_outline, size: 16),
+                  label: Text(
+                    'Reset',
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: CustomColor.secondaryColor,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  ),
+                ),
             ],
           ),
           
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           
-          // Row 3: Period Filter
+          // Icon Dropdown Row
           Row(
             children: [
-              Icon(Iconsax.calendar_outline, size: 18, color: CustomColor.secondaryColor),
-              const SizedBox(width: 8),
-              Text(
-                'Period:',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: theme.textTheme.bodyMedium?.color,
+              // Symbol Dropdown (Icon Only)
+              Expanded(
+                child: _buildIconDropdown(
+                  context: context,
+                  icon: Iconsax.chart_outline,
+                  tooltip: 'Symbol',
+                  value: selectedSymbol,
+                  items: symbols,
+                  onChanged: (value) {
+                    setState(() {
+                      selectedSymbol = value!;
+                    });
+                  },
                 ),
               ),
-              const SizedBox(width: 8),
+              
+              const SizedBox(width: 12),
+              
+              // Sort By Dropdown (Icon Only)
               Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildPeriodChip(context, 'All'),
-                      _buildPeriodChip(context, 'Today'),
-                      _buildPeriodChip(context, 'Last Week'),
-                      _buildPeriodChip(context, 'Last Month'),
-                      _buildPeriodChip(context, 'Last 3 Months'),
-                      _buildPeriodChip(context, 'Custom'),
-                    ],
+                child: _buildIconDropdown(
+                  context: context,
+                  icon: Iconsax.sort_outline,
+                  tooltip: 'Sort By',
+                  value: sortBy,
+                  items: const ['ticket', 'type', 'volume', 'openTime', 'closeTime', 'profit'],
+                  itemLabels: const {
+                    'ticket': 'Ticket',
+                    'type': 'Type',
+                    'volume': 'Volume',
+                    'openTime': 'Open Time',
+                    'closeTime': 'Close Time',
+                    'profit': 'Profit',
+                  },
+                  onChanged: (value) {
+                    setState(() {
+                      sortBy = value!;
+                    });
+                  },
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      sortAscending ? Iconsax.arrow_up_3_outline : Iconsax.arrow_down_outline,
+                      size: 16,
+                      color: CustomColor.secondaryColor,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        sortAscending = !sortAscending;
+                      });
+                    },
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
                 ),
               ),
+              
+              const SizedBox(width: 12),
+              
+              // Period Dropdown (Icon Only)
+              Expanded(
+                child: _buildIconDropdown(
+                  context: context,
+                  icon: Iconsax.calendar_outline,
+                  tooltip: 'Period',
+                  value: filterPeriod,
+                  items: const ['All', 'Today', 'Last Week', 'Last Month', 'Last 3 Months', 'Custom'],
+                  onChanged: (value) {
+                    setState(() {
+                      filterPeriod = value!;
+                      if (value != 'Custom') {
+                        customStartDate = null;
+                        customEndDate = null;
+                      }
+                    });
+                  },
+                ),
+              ),
             ],
           ),
           
-          // Custom Date Range (if Custom selected)
+          // Custom Date Range
           if (filterPeriod == 'Custom') ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -416,7 +418,7 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                     },
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 Expanded(
                   child: _buildDateButton(
                     context,
@@ -446,95 +448,148 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
     );
   }
   
-  Widget _buildSortChip(BuildContext context, String label, String value) {
-    final isSelected = sortBy == value;
+  Widget _buildIconDropdown({
+    required BuildContext context,
+    required IconData icon,
+    required String tooltip,
+    required String value,
+    required List<String> items,
+    Map<String, String>? itemLabels,
+    required ValueChanged<String?> onChanged,
+    Widget? suffixIcon,
+  }) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     
-    return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: ChoiceChip(
-        label: Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: isSelected ? Colors.black : theme.textTheme.bodyMedium?.color,
+    // Get display value
+    String getDisplayValue() {
+      if (itemLabels != null && itemLabels.containsKey(value)) {
+        return itemLabels[value]!;
+      }
+      return value;
+    }
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+          width: 1,
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: ButtonTheme(
+          alignedDropdown: true,
+          child: DropdownButton<String>(
+            value: value,
+            isExpanded: true,
+            icon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (suffixIcon != null) suffixIcon,
+                Icon(
+                  Iconsax.arrow_down_1_outline,
+                  size: 16,
+                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                ),
+              ],
+            ),
+            selectedItemBuilder: (BuildContext context) {
+              return items.map<Widget>((String item) {
+                return Center(
+                  child: Icon(
+                    icon,
+                    size: 22,
+                    color: CustomColor.secondaryColor,
+                  ),
+                );
+              }).toList();
+            },
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: theme.textTheme.bodyLarge?.color,
+            ),
+            dropdownColor: isDark ? Colors.grey.shade800 : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            items: items.map((String item) {
+              final displayLabel = itemLabels?[item] ?? item;
+              final isSelected = value == item;
+              
+              return DropdownMenuItem<String>(
+                value: item,
+                child: Row(
+                  children: [
+                    Icon(
+                      icon,
+                      size: 18,
+                      color: isSelected 
+                        ? CustomColor.secondaryColor 
+                        : theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        displayLabel,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected 
+                            ? CustomColor.secondaryColor 
+                            : theme.textTheme.bodyMedium?.color,
+                        ),
+                      ),
+                    ),
+                    if (isSelected)
+                      Icon(
+                        Iconsax.tick_circle_bold,
+                        size: 18,
+                        color: CustomColor.secondaryColor,
+                      ),
+                  ],
+                ),
+              );
+            }).toList(),
+            onChanged: onChanged,
           ),
         ),
-        selected: isSelected,
-        selectedColor: CustomColor.secondaryColor,
-        backgroundColor: theme.cardColor,
-        side: BorderSide(
-          color: isSelected ? CustomColor.secondaryColor : Colors.grey.withOpacity(0.3),
-        ),
-        onSelected: (selected) {
-          setState(() {
-            sortBy = value;
-          });
-        },
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        labelPadding: EdgeInsets.zero,
       ),
     );
   }
   
-  Widget _buildPeriodChip(BuildContext context, String period) {
-    final isSelected = filterPeriod == period;
-    final theme = Theme.of(context);
-    
-    return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: ChoiceChip(
-        label: Text(
-          period,
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: isSelected ? Colors.black : theme.textTheme.bodyMedium?.color,
-          ),
-        ),
-        selected: isSelected,
-        selectedColor: CustomColor.secondaryColor,
-        backgroundColor: theme.cardColor,
-        side: BorderSide(
-          color: isSelected ? CustomColor.secondaryColor : Colors.grey.withOpacity(0.3),
-        ),
-        onSelected: (selected) {
-          setState(() {
-            filterPeriod = period;
-            if (period != 'Custom') {
-              customStartDate = null;
-              customEndDate = null;
-            }
-          });
-        },
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        labelPadding: EdgeInsets.zero,
-      ),
-    );
-  }
   
   Widget _buildDateButton(BuildContext context, String label, VoidCallback onTap) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          border: Border.all(color: CustomColor.secondaryColor),
-          borderRadius: BorderRadius.circular(8),
+          color: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+          border: Border.all(
+            color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+            width: 1,
+          ),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Iconsax.calendar_1_outline, size: 16, color: CustomColor.secondaryColor),
-            const SizedBox(width: 6),
+            Icon(
+              Iconsax.calendar_1_outline, 
+              size: 16, 
+              color: CustomColor.secondaryColor,
+            ),
+            const SizedBox(width: 8),
             Text(
               label,
               style: GoogleFonts.inter(
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: theme.textTheme.bodyMedium?.color,
               ),
