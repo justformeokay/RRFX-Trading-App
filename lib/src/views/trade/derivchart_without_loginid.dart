@@ -169,6 +169,14 @@ class _TradingChartViewState extends State<TradingChartView> {
     final scaffoldBgColor = isDarkMode ? Colors.black : Colors.white;
 
     return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Chart ${normalizeSymbol(widget.marketName)}',
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
       backgroundColor: scaffoldBgColor, 
       body: SafeArea(
         child: Column(

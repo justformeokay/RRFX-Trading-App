@@ -1,5 +1,9 @@
+import 'dart:convert';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rrfx/src/helpers/formatters/deposit_withdraw_prefix.dart';
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/models/settings/admin_bank_model.dart';
 import 'package:rrfx/src/models/settings/user_bank_model.dart';
 import 'package:rrfx/src/models/utilities/list_bank_user.dart';
@@ -208,7 +212,7 @@ class SettingController extends GetxController{
     }
   }
 
-  // Pernataan Pailit
+  // Withdrawal dengan http langsung
   Future<bool> withdrawal({
     String? bankUserID,
     String? tradingID,
@@ -218,22 +222,78 @@ class SettingController extends GetxController{
   }) async {
     try {
       isLoading(true);
-      Map<String, dynamic> result = await authService.post("transaction/withdrawal", {
-        'account': tradingID,
-        'amount': amount,
-        'bank_user': bankUserID,
-        'otp' : otp,
-        'key': key
-      });
-      isLoading(false);
-      responseMessage(result['message']);
-      if (result['status'] != true) {
+      
+      // Get access token from SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? accessToken = prefs.getString('accessToken');
+      
+      if (accessToken == null || accessToken.isEmpty) {
+        responseMessage('Token tidak ditemukan. Silakan login kembali.');
+        isLoading(false);
         return false;
       }
-      return true;
+      
+      print("=== Withdrawal HTTP Direct ===");
+      print("URL: ${GlobalVariable.mainURL}/transaction/withdrawal");
+      print("Token: $accessToken");
+      
+      // Buat multipart request seperti di Postman
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${GlobalVariable.mainURL}/transaction/withdrawal'),
+      );
+      
+      // Tambahkan headers
+      request.headers['Authorization'] = 'Bearer $accessToken';
+      
+      // Tambahkan fields dengan quotes seperti di curl Postman
+      request.fields['account'] = tradingID ?? '';
+      request.fields['amount'] = amount ?? '';
+      request.fields['bank_user'] = bankUserID ?? '';
+      request.fields['otp'] = otp ?? '';
+      request.fields['key'] = key ?? '';
+      
+      print("Fields: ${request.fields}");
+      print("Headers: ${request.headers}");
+      
+      // Kirim request
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+      
+      print("=== Response ===");
+      print("Status Code: ${response.statusCode}");
+      print("Body: ${response.body}");
+      
+      // Cek jika response kosong
+      if (response.body.trim().isEmpty) {
+        isLoading(false);
+        responseMessage('Server error: Response kosong (Status ${response.statusCode})');
+        return false;
+      }
+      
+      // Parse response
+      Map<String, dynamic> result;
+      try {
+        result = jsonDecode(response.body);
+      } catch (e) {
+        print("JSON Parse Error: $e");
+        isLoading(false);
+        responseMessage('Server error: Invalid JSON response');
+        return false;
+      }
+      
+      isLoading(false);
+      responseMessage(result['message']?.toString() ?? 'Unknown error');
+      
+      if (result['status'] == true) {
+        return true;
+      }
+      return false;
+      
     } catch (e) {
       isLoading(false);
-      responseMessage(e.toString());
+      print("Withdrawal Exception: $e");
+      responseMessage('Terjadi kesalahan: ${e.toString()}');
       return false;
     }
   }

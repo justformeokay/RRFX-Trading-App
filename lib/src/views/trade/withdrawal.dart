@@ -88,10 +88,10 @@ class _WithdrawalState extends State<Withdrawal> {
       });
       settingController.getUserBank().then((resultGetMyBank){
         if(!resultGetMyBank){
-          CustomAlert.alertError(context, message: settingController.responseMessage.value);
+          AppSnackbar.error("Gagal mendapatkan data bank pengguna: ${settingController.responseMessage.value}");
           return;
         }
-        selectedBankUserID(settingController.userBankModel.value?.response?[0].id);
+        selectedBankUserID(settingController.userBankModel.value?.response?[0].id?.toString() ?? "");
         myBankName.text = settingController.userBankModel.value?.response?[0].name ?? "";
         myBankNumber.text = settingController.userBankModel.value?.response?[0].account ?? "";
       });
@@ -136,7 +136,6 @@ class _WithdrawalState extends State<Withdrawal> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    print("ID Login: ${widget.idLogin}");
     return GestureDetector(
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       child: Scaffold(
@@ -160,13 +159,13 @@ class _WithdrawalState extends State<Withdrawal> {
                       Obx(
                         () => VoidTextField(requiredField: true, controller: myBankName, readOnly: false, fieldName: "Nama Bank", hintText: "Nama Bank", labelText: "Nama Bank", onPressed: settingController.isLoading.value ? null : () async {
                           CustomMaterialBottomSheets.defaultBottomSheet(context, size: size, title: "Pilih bank yang anda miliki", children: List.generate(settingController.userBankModel.value?.response?.length ?? 0, (i){
-                            return ListTile(
-                              leading: Icon(Icons.account_balance, color: CustomColor.defaultColor),
-                              onTap: (){
-                                Navigator.pop(context);
-                                selectedBankUserID(settingController.userBankModel.value?.response?[i].id);
-                                myBankName.text = settingController.userBankModel.value?.response?[i].name ?? "";
-                                myBankNumber.text = settingController.userBankModel.value?.response?[i].account ?? "";
+                          return ListTile(
+                            leading: Icon(Icons.account_balance, color: CustomColor.defaultColor),
+                            onTap: (){
+                              Navigator.pop(context);
+                              selectedBankUserID(settingController.userBankModel.value?.response?[i].id?.toString() ?? "");
+                              myBankName.text = settingController.userBankModel.value?.response?[i].name ?? "";
+                              myBankNumber.text = settingController.userBankModel.value?.response?[i].account ?? "";
                               },
                               title: Text(settingController.userBankModel.value?.response?[i].name ?? "", style: GoogleFonts.inter()),
                             );
@@ -366,6 +365,12 @@ class _WithdrawalState extends State<Withdrawal> {
                             tradingID: selectedTradingLogin.value,
                             key: randomKey,
                           );
+                          print("Result Withdrawal: $result");
+                          print("Generated Key: $randomKey");
+                          print("Selected Trading Login: ${selectedTradingLogin.value}");
+                          print("Selected Bank User ID: ${selectedBankUserID.value}");
+                          print("Amount: ${cleanCurrency(myAmount.text)}");
+                          print("OTP: ${otpController.text}");
 
                           if (result) {
                             CustomAlert.alertDialogCustomSuccess(
@@ -377,10 +382,8 @@ class _WithdrawalState extends State<Withdrawal> {
                               },
                             );
                           } else {
-                            CustomAlert.alertError(
-                              context,
-                              message: settingController.responseMessage.value,
-                            );
+                            Get.log("Withdrawal failed: ${settingController.responseMessage.value}");
+                            AppSnackbar.error("Gagal melakukan withdrawal karena ${settingController.responseMessage.value}.");
                           }
                         } catch (e) {
                           AppSnackbar.error("Terjadi kesalahan: ${e.toString()}");

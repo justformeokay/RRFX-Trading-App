@@ -104,7 +104,7 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
       backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
         title: Text(
-          _currentSymbol?.replaceAll('.db', '') ?? widget.marketName.replaceAll('.db', ''),
+          _currentSymbol ?? widget.marketName,
           style: GoogleFonts.inter(
             fontWeight: FontWeight.w700,
           ),

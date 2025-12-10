@@ -74,9 +74,8 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
     super.initState();
     Future.delayed(Duration.zero, () {
       getAndSetAccountTrading();
-      userController.historyWithdrawAndDeposit().then((result) async {
-        await userController.internalTransferHistory(loginID: allAccountTrading[0].login.toString());
-      });
+      userController.historyWithdrawAndDeposit();
+      userController.getInternalTransferHistory();
     });
   }
 
@@ -112,7 +111,7 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
                     return ListTile(
                       onTap: (){
                         selectedIndex.value = i;
-                        userController.internalTransferHistory(loginID: allAccountTrading[selectedIndex.value].login.toString());
+                        // userController.internalTransferHistory(loginID: allAccountTrading[selectedIndex.value].login.toString());
                         Get.back();
                       },
                       leading: Container(
@@ -149,6 +148,8 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
 
   Widget buildInternalTransfer(BuildContext context, Size size){
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Obx((){
       if(userController.isLoading.value){
         return SizedBox(
@@ -157,111 +158,407 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Lottie.asset('assets/json/loader.json'),
+              Lottie.asset('assets/json/loader.json', width: 200, height: 200),
             ],
           ),
         );
       }
 
-      if(userController.internalTransfer.value?.response.isEmpty == true){
+      if(userController.internalTransferHistory.value?.response.isEmpty == true){
         return SizedBox(
           width: size.width,
           height: size.height / 1.2,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Lottie.asset('assets/json/cat.json'),
+              Lottie.asset('assets/json/cat.json', width: 200, height: 200),
               const SizedBox(height: 16),
-              const Text("Tidak ada riwayat Internal Transfer"),
-              CustomButtons.buildOutlinedButton(text: "Refresh", onPressed: () async {
-                await userController.internalTransferHistory(loginID: allAccountTrading[selectedIndex.value].login.toString());
-              })
+              Text(
+                "Tidak ada riwayat Internal Transfer",
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: theme.textTheme.bodyMedium?.color,
+                ),
+              ),
+              const SizedBox(height: 16),
+              CustomButtons.buildOutlinedButton(
+                text: "Refresh", 
+                onPressed: () async {
+                  await userController.getInternalTransferHistory();
+                }
+              )
             ],
           ),
         );
       }
 
-      final result = userController.internalTransfer.value?.response;
-      Color color = Colors.grey;
+      final result = userController.internalTransferHistory.value?.response;
+      
       return RefreshIndicator(
         color: CustomColor.secondaryColor,
         onRefresh: () async {
-          userController.internalTransferHistory(loginID: allAccountTrading[selectedIndex.value].login.toString());
+          await userController.getInternalTransferHistory();
         },
         child: ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           itemCount: result?.length ?? 0,
           itemBuilder: (context, index) {
-            switch (result?[index].status) {
-              case "pending":
-                color = Colors.blue.shade400;
-                break;
-              case "success":
-                color = Colors.green.shade400;
-                break;
-              case "reject":
-                color = Colors.red.shade400;
-                break;
-              default:
-                color = Colors.grey.shade400;
-            }
-            return ListTile(
-              onTap: () {
-                
-              },
-              leading: CircleAvatar(
-                radius: 25,
-                backgroundColor: Colors.lightBlue,
-                child: const Icon(BoxIcons.bx_transfer, color: Colors.white),
-              ),
-              title: Row(
-                children: [
-                  Text(
-                    "${result?[index].login}",
-                    style: GoogleFonts.inter(
-                      color: theme.textTheme.bodyLarge?.color,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
+            final item = result![index];
+            
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey.shade900 : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark 
+                      ? Colors.black.withOpacity(0.2) 
+                      : Colors.grey.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Amount: ${result?[index].amount}",
-                    style: GoogleFonts.inter(color: theme.textTheme.bodyMedium?.color, fontSize: 10),
-                  ),
-                  Text(
-                    "Received: ${result?[index].amountReceived}",
-                    style: GoogleFonts.inter(color: theme.textTheme.bodyMedium?.color, fontSize: 10),
-                  ),
-                ],
-              ),
-              trailing: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(20),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
+                    _showTransferDetail(context, item);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        // Header: Code & DateTime
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: CustomColor.secondaryColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    BoxIcons.bx_transfer_alt,
+                                    color: CustomColor.secondaryColor,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "#${item.code ?? '-'}",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: theme.textTheme.bodyLarge?.color,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      item.datetime ?? '-',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        color: theme.textTheme.bodySmall?.color,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.green.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Text(
+                                item.amount ?? '\$0',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.green,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        // Divider
+                        Container(
+                          height: 1,
+                          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        // Transfer Details: From → To
+                        Row(
+                          children: [
+                            // FROM
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.05),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.red.withOpacity(0.2),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.arrow_upward_rounded,
+                                          size: 14,
+                                          color: Colors.red,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          "FROM",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.red,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      item.from ?? '-',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        color: theme.textTheme.bodyLarge?.color,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "Ticket: ${item.ticketFrom ?? '-'}",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        color: theme.textTheme.bodySmall?.color,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            
+                            // Arrow Icon
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              child: Icon(
+                                Icons.arrow_forward_rounded,
+                                color: CustomColor.secondaryColor,
+                                size: 24,
+                              ),
+                            ),
+                            
+                            // TO
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withOpacity(0.05),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.blue.withOpacity(0.2),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.arrow_downward_rounded,
+                                          size: 14,
+                                          color: Colors.blue,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          "TO",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.blue,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      item.to ?? '-',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        color: theme.textTheme.bodyLarge?.color,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "Ticket: ${item.ticketTo ?? '-'}",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        color: theme.textTheme.bodySmall?.color,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    child: Text(
-                      result?[index].status != null ? result![index].status!.capitalize! : "",
-                      style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
                   ),
-                  const SizedBox(height: 5.0),
-                  Text(result?[index].datetime ?? '', style: TextStyle(fontSize: 9))
-                ],
+                ),
               ),
             );
           },
         ), 
       );
     });
+  }
+
+  void _showTransferDetail(BuildContext context, dynamic item) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Drag Handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              
+              // Title
+              Text(
+                "Transfer Details",
+                style: GoogleFonts.inter(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: theme.textTheme.bodyLarge?.color,
+                ),
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Details
+              _detailRow("Transaction Code", item.code ?? '-', theme),
+              _detailRow("Amount", item.amount ?? '\$0', theme, isAmount: true),
+              _detailRow("From Account", item.from ?? '-', theme),
+              _detailRow("From Ticket", item.ticketFrom ?? '-', theme),
+              _detailRow("To Account", item.to ?? '-', theme),
+              _detailRow("To Ticket", item.ticketTo ?? '-', theme),
+              _detailRow("Date & Time", item.datetime ?? '-', theme),
+              
+              const SizedBox(height: 24),
+              
+              // Close Button
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: CustomColor.secondaryColor,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    "Close",
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _detailRow(String label, String value, ThemeData theme, {bool isAmount = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: theme.textTheme.bodyMedium?.color,
+            ),
+          ),
+          Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: isAmount ? FontWeight.w800 : FontWeight.w600,
+              color: isAmount 
+                ? Colors.green 
+                : theme.textTheme.bodyLarge?.color,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget buildDepositHistory(BuildContext context, Size size) {

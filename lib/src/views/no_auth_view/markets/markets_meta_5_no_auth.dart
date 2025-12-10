@@ -59,40 +59,54 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
       appBar: AppBar(
         centerTitle: false,
         forceMaterialTransparency: true,
-        title: Obx(() {
-          if (isSearching.value) {
-            return TextField(
-              controller: searchController,
-              autofocus: true,
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Get.isDarkMode ? Colors.white : Colors.black,
-              ),
-              decoration: InputDecoration(
-                hintText: 'Search market...',
-                hintStyle: GoogleFonts.inter(
-                  fontSize: 16,
-                  color: Get.isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+        title: Row(
+          children: [
+            Obx(() {
+              if (isSearching.value) {
+                return Expanded(
+                  child: TextField(
+                    controller: searchController,
+                    autofocus: true,
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Get.isDarkMode ? Colors.white : Colors.black,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Search market...',
+                      hintStyle: GoogleFonts.inter(
+                        fontSize: 16,
+                        color: Get.isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    onChanged: (value) {
+                      searchQuery.value = value;
+                    },
+                  ),
+                );
+              }
+              
+              return Expanded(
+                child: Row(
+                  children: [
+                    Text(
+                      'Live Markets',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildConnectionIndicator(),
+                  ],
                 ),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-              ),
-              onChanged: (value) {
-                searchQuery.value = value;
-              },
-            );
-          }
-          
-          return Text(
-            'Live Markets',
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: isDarkMode ? Colors.white : Colors.black,
-            ),
-          );
-        }),
+              );
+            }),
+          ],
+        ),
         actions: [
           Obx(() => isSearching.value
             ? Row(
@@ -140,6 +154,19 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
       body: SafeArea(
         child: Obx(
           () {
+            // WebSocket Status Handling
+            if (controller.isReconnecting.value) {
+              return _buildConnectingState();
+            }
+            
+            if (controller.hasConnectionError.value) {
+              return _buildErrorState();
+            }
+            
+            if (!controller.isConnected.value) {
+              return _buildDisconnectedState();
+            }
+            
             final allSymbols = controller.marketData.keys.toList();
             final filteredSymbols = _filterMarkets(controller.marketData, searchQuery.value);
             
@@ -590,6 +617,314 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
     return Text(
       priceStr, 
       style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold)
+    );
+  }
+
+  // Connection Status Indicator (in AppBar)
+  Widget _buildConnectionIndicator() {
+    return Obx(() {
+      if (controller.isReconnecting.value) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.orange.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.orange.withOpacity(0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 10,
+                height: 10,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Connecting',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.orange,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+      
+      if (controller.hasConnectionError.value || !controller.isConnected.value) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.red.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.red.withOpacity(0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Offline',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+      
+      // Connected
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.green.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.green.withOpacity(0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.green.withOpacity(0.5),
+                    blurRadius: 4,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Live',
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Colors.green,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  // Connecting State
+  Widget _buildConnectingState() {
+    final isDarkMode = Get.isDarkMode;
+    
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Animated Loading Circle
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 80,
+                height: 80,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                ),
+              ),
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Iconsax.chart_outline,
+                  size: 32,
+                  color: Colors.blue,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          Text(
+            'Connecting to Market',
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: isDarkMode ? Colors.white : Colors.black,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 48),
+            child: Text(
+              'Please wait while we establish connection\nto the live market data server',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                height: 1.5,
+                color: isDarkMode ? Colors.white70 : Colors.black54,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Disconnected State
+  Widget _buildDisconnectedState() {
+    final isDarkMode = Get.isDarkMode;
+    
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.grey.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Iconsax.wifi_square_outline,
+              size: 64,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Disconnected',
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: isDarkMode ? Colors.white : Colors.black,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 48),
+            child: Text(
+              'No connection to market data server.\nTap the button below to reconnect.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                height: 1.5,
+                color: isDarkMode ? Colors.white70 : Colors.black54,
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton.icon(
+            onPressed: () => controller.connectWebSocket(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 2,
+            ),
+            icon: Icon(Iconsax.refresh_outline, size: 20),
+            label: Text(
+              'Reconnect',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Error State
+  Widget _buildErrorState() {
+    final isDarkMode = Get.isDarkMode;
+    
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Iconsax.close_circle_outline,
+              size: 64,
+              color: Colors.red,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Connection Failed',
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: isDarkMode ? Colors.white : Colors.black,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 48),
+            child: Text(
+              'Unable to connect to market data server.\nPlease check your internet connection.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                height: 1.5,
+                color: isDarkMode ? Colors.white70 : Colors.black54,
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton.icon(
+            onPressed: () => controller.connectWebSocket(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 2,
+            ),
+            icon: Icon(Iconsax.refresh_outline, size: 20),
+            label: Text(
+              'Try Again',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
