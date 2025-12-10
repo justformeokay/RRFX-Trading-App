@@ -195,9 +195,30 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
 
       final transfers = userController.internalTransferHistory.value?.response ?? [];
       
+      // Remove duplicates based on transaction code
+      final uniqueTransfers = <String, dynamic>{};
+      for (var transfer in transfers) {
+        final key = transfer.code ?? transfer.datetime ?? '';
+        if (key.isNotEmpty && !uniqueTransfers.containsKey(key)) {
+          uniqueTransfers[key] = transfer;
+        }
+      }
+      
+      // Sort transfers by date descending (newest first)
+      final sortedTransfers = uniqueTransfers.values.toList()..sort((a, b) {
+        try {
+          if (a.datetime == null && b.datetime == null) return 0;
+          if (a.datetime == null) return 1;
+          if (b.datetime == null) return -1;
+          return DateTime.parse(b.datetime!).compareTo(DateTime.parse(a.datetime!));
+        } catch (e) {
+          return 0;
+        }
+      });
+      
       // Group by month
       Map<String, List<dynamic>> groupedTransfers = {};
-      for (var transfer in transfers) {
+      for (var transfer in sortedTransfers) {
         try {
           if(transfer.datetime == null) continue; // Skip if datetime is null
           final dateTime = DateTime.parse(transfer.datetime!);
@@ -220,12 +241,16 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
         onRefresh: () async {
           await userController.getInternalTransferHistory();
         },
-        child: ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          itemCount: groupedTransfers.length,
-          itemBuilder: (context, groupIndex) {
-            final monthKey = groupedTransfers.keys.elementAt(groupIndex);
-            final monthTransfers = groupedTransfers[monthKey]!;
+        child: Scrollbar(
+          thumbVisibility: true,
+          thickness: 4.0,
+          radius: const Radius.circular(10),
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            itemCount: groupedTransfers.length,
+            itemBuilder: (context, groupIndex) {
+              final monthKey = groupedTransfers.keys.elementAt(groupIndex);
+              final monthTransfers = groupedTransfers[monthKey]!;
             
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -510,6 +535,7 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
               ],
             );
           },
+        ),
         ), 
       );
     });
@@ -716,12 +742,16 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
           onRefresh: () async {
             await userController.historyWithdrawAndDeposit();
           },
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            itemCount: groupedDeposits.length,
-            itemBuilder: (context, groupIndex) {
-              final monthKey = groupedDeposits.keys.elementAt(groupIndex);
-              final monthDeposits = groupedDeposits[monthKey]!;
+          child: Scrollbar(
+            thumbVisibility: true,
+            thickness: 4.0,
+            radius: const Radius.circular(10),
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              itemCount: groupedDeposits.length,
+              itemBuilder: (context, groupIndex) {
+                final monthKey = groupedDeposits.keys.elementAt(groupIndex);
+                final monthDeposits = groupedDeposits[monthKey]!;
               
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -943,6 +973,7 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
               );
             },
           ),
+          ),
         );
       }
     );
@@ -1039,12 +1070,16 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
           onRefresh: () async {
             await userController.historyWithdrawAndDeposit();
           },
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            itemCount: groupedWithdrawals.length,
-            itemBuilder: (context, groupIndex) {
-              final monthKey = groupedWithdrawals.keys.elementAt(groupIndex);
-              final monthWithdrawals = groupedWithdrawals[monthKey]!;
+          child: Scrollbar(
+            thumbVisibility: true,
+            thickness: 4.0,
+            radius: const Radius.circular(10),
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              itemCount: groupedWithdrawals.length,
+              itemBuilder: (context, groupIndex) {
+                final monthKey = groupedWithdrawals.keys.elementAt(groupIndex);
+                final monthWithdrawals = groupedWithdrawals[monthKey]!;
               
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1265,6 +1300,7 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
                 ],
               );
             },
+          ),
           ),
         );
 

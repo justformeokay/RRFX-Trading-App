@@ -621,6 +621,7 @@ class _InternalTransferState extends State<InternalTransfer> {
                     "Konfirmasi Transfer",
                     style: GoogleFonts.inter(
                       fontSize: 16,
+                      color: Colors.black,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
