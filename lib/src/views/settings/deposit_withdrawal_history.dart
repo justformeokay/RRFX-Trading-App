@@ -193,7 +193,27 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
         );
       }
 
-      final result = userController.internalTransferHistory.value?.response;
+      final transfers = userController.internalTransferHistory.value?.response ?? [];
+      
+      // Group by month
+      Map<String, List<dynamic>> groupedTransfers = {};
+      for (var transfer in transfers) {
+        try {
+          if(transfer.datetime == null) continue; // Skip if datetime is null
+          final dateTime = DateTime.parse(transfer.datetime!);
+          final monthKey = "${_getMonthName(dateTime.month)} ${dateTime.year}";
+          if (!groupedTransfers.containsKey(monthKey)) {
+            groupedTransfers[monthKey] = [];
+          }
+          groupedTransfers[monthKey]!.add(transfer);
+        } catch (e) {
+          // If date parsing fails, group under "Unknown"
+          if (!groupedTransfers.containsKey("Unknown")) {
+            groupedTransfers["Unknown"] = [];
+          }
+          groupedTransfers["Unknown"]!.add(transfer);
+        }
+      }
       
       return RefreshIndicator(
         color: CustomColor.secondaryColor,
@@ -202,248 +222,292 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
         },
         child: ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          itemCount: result?.length ?? 0,
-          itemBuilder: (context, index) {
-            final item = result![index];
+          itemCount: groupedTransfers.length,
+          itemBuilder: (context, groupIndex) {
+            final monthKey = groupedTransfers.keys.elementAt(groupIndex);
+            final monthTransfers = groupedTransfers[monthKey]!;
             
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                color: isDark ? Colors.grey.shade900 : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: isDark 
-                      ? Colors.black.withOpacity(0.2) 
-                      : Colors.grey.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () {
-                    _showTransferDetail(context, item);
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        // Header: Code & DateTime
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: CustomColor.secondaryColor.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    BoxIcons.bx_transfer_alt,
-                                    color: CustomColor.secondaryColor,
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "#${item.code ?? '-'}",
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700,
-                                        color: theme.textTheme.bodyLarge?.color,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      item.datetime ?? '-',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11,
-                                        color: theme.textTheme.bodySmall?.color,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: Colors.green.withOpacity(0.3),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Text(
-                                item.amount ?? '\$0',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.green,
-                                ),
-                              ),
-                            ),
-                          ],
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Month Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: CustomColor.secondaryColor,
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        
-                        const SizedBox(height: 16),
-                        
-                        // Divider
-                        Container(
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        monthKey,
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: theme.textTheme.bodyLarge?.color,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Container(
                           height: 1,
-                          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                          color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
                         ),
-                        
-                        const SizedBox(height: 16),
-                        
-                        // Transfer Details: From → To
-                        Row(
-                          children: [
-                            // FROM
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withOpacity(0.05),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Colors.red.withOpacity(0.2),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.arrow_upward_rounded,
-                                          size: 14,
-                                          color: Colors.red,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          "FROM",
-                                          style: GoogleFonts.inter(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.red,
-                                            letterSpacing: 0.5,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      item.from ?? '-',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w800,
-                                        color: theme.textTheme.bodyLarge?.color,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "Ticket: ${item.ticketFrom ?? '-'}",
-                                      style: GoogleFonts.inter(
-                                        fontSize: 10,
-                                        color: theme.textTheme.bodySmall?.color,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            
-                            // Arrow Icon
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              child: Icon(
-                                Icons.arrow_forward_rounded,
-                                color: CustomColor.secondaryColor,
-                                size: 24,
-                              ),
-                            ),
-                            
-                            // TO
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.withOpacity(0.05),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Colors.blue.withOpacity(0.2),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.arrow_downward_rounded,
-                                          size: 14,
-                                          color: Colors.blue,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          "TO",
-                                          style: GoogleFonts.inter(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.blue,
-                                            letterSpacing: 0.5,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      item.to ?? '-',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w800,
-                                        color: theme.textTheme.bodyLarge?.color,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "Ticket: ${item.ticketTo ?? '-'}",
-                                      style: GoogleFonts.inter(
-                                        fontSize: 10,
-                                        color: theme.textTheme.bodySmall?.color,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Month Items
+                ...List.generate(monthTransfers.length, (i) {
+                  final item = monthTransfers[i];
+                  
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey.shade900 : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: isDark 
+                            ? Colors.black.withOpacity(0.2) 
+                            : Colors.grey.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
-                  ),
-                ),
-              ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () {
+                          _showTransferDetail(context, item);
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            children: [
+                              // Header: Code & DateTime
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: CustomColor.secondaryColor.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Icon(
+                                          BoxIcons.bx_transfer_alt,
+                                          color: CustomColor.secondaryColor,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "#${item.code ?? '-'}",
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                              color: theme.textTheme.bodyLarge?.color,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            _formatDateTime(item.datetime ?? '-'),
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              color: theme.textTheme.bodySmall?.color,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: Colors.green.withOpacity(0.3),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      item.amount ?? '\$0',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.green,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              
+                              const SizedBox(height: 16),
+                              
+                              // Divider
+                              Container(
+                                height: 1,
+                                color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                              ),
+                              
+                              const SizedBox(height: 16),
+                              
+                              // Transfer Details: From → To
+                              Row(
+                                children: [
+                                  // FROM
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.withOpacity(0.05),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Colors.red.withOpacity(0.2),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.arrow_upward_rounded,
+                                                size: 14,
+                                                color: Colors.red,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                "FROM",
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.red,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            item.from ?? '-',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w800,
+                                              color: theme.textTheme.bodyLarge?.color,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            "Ticket: ${item.ticketFrom ?? '-'}",
+                                            style: GoogleFonts.inter(
+                                              fontSize: 10,
+                                              color: theme.textTheme.bodySmall?.color,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  
+                                  // Arrow Icon
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    child: Icon(
+                                      Icons.arrow_forward_rounded,
+                                      color: CustomColor.secondaryColor,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  
+                                  // TO
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.withOpacity(0.05),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Colors.blue.withOpacity(0.2),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.arrow_downward_rounded,
+                                                size: 14,
+                                                color: Colors.blue,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                "TO",
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.blue,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            item.to ?? '-',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w800,
+                                              color: theme.textTheme.bodyLarge?.color,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            "Ticket: ${item.ticketTo ?? '-'}",
+                                            style: GoogleFonts.inter(
+                                              fontSize: 10,
+                                              color: theme.textTheme.bodySmall?.color,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
             );
           },
         ), 
@@ -563,6 +627,8 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
 
   Widget buildDepositHistory(BuildContext context, Size size) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Obx(
       () {
         if(userController.isLoading.value){
@@ -572,11 +638,12 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Lottie.asset('assets/json/loader.json'),
+                Lottie.asset('assets/json/loader.json', width: 200, height: 200),
               ],
             ),
           );
         }
+        
         if(userController.historyDepoWd.value?.response.isEmpty == true){
           return SizedBox(
             width: size.width,
@@ -584,14 +651,24 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Lottie.asset('assets/json/cat.json'),
+                Lottie.asset('assets/json/cat.json', width: 200, height: 200),
                 const SizedBox(height: 16),
-                const Text("Tidak ada riwayat Deposit"),
+                Text(
+                  "Tidak ada riwayat Deposit",
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: theme.textTheme.bodyMedium?.color,
+                  ),
+                ),
               ],
             ),
           );
         }
-        final deposits = userController.historyDepoWd.value?.response.where((res) => res.type == "Deposit" || res.type == "Deposit New Account").toList() ?? [];
+        
+        final deposits = userController.historyDepoWd.value?.response
+            .where((res) => res.type == "Deposit" || res.type == "Deposit New Account")
+            .toList() ?? [];
 
         if (deposits.isEmpty) {
           return SizedBox(
@@ -600,79 +677,271 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Lottie.asset('assets/json/cat.json'),
+                Lottie.asset('assets/json/cat.json', width: 200, height: 200),
                 const SizedBox(height: 16),
-                const Text("Tidak ada riwayat Deposit"),
+                Text(
+                  "Tidak ada riwayat Deposit",
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: theme.textTheme.bodyMedium?.color,
+                  ),
+                ),
               ],
             ),
           );
         }
+        
+        // Group by month
+        Map<String, List<dynamic>> groupedDeposits = {};
+        for (var deposit in deposits) {
+          try {
+            final dateTime = DateTime.parse(deposit.datetime);
+            final monthKey = "${_getMonthName(dateTime.month)} ${dateTime.year}";
+            if (!groupedDeposits.containsKey(monthKey)) {
+              groupedDeposits[monthKey] = [];
+            }
+            groupedDeposits[monthKey]!.add(deposit);
+          } catch (e) {
+            // If date parsing fails, group under "Unknown"
+            if (!groupedDeposits.containsKey("Unknown")) {
+              groupedDeposits["Unknown"] = [];
+            }
+            groupedDeposits["Unknown"]!.add(deposit);
+          }
+        }
+        
         return RefreshIndicator(
           color: CustomColor.secondaryColor,
           onRefresh: () async {
             await userController.historyWithdrawAndDeposit();
           },
-          child: ListView(
-            children: List.generate(deposits.length, (i) {
-              final result = deposits[i];
-          
-              Color color = Colors.grey;
-              switch (result.status) {
-                case "pending":
-                  color = Colors.blue.shade400;
-                  break;
-                case "success":
-                  color = Colors.green.shade400;
-                  break;
-                case "reject":
-                  color = Colors.red.shade400;
-                  break;
-                default:
-                  color = Colors.grey.shade400;
-              }
-          
-              return ListTile(
-                onTap: () {
-                  Get.to(() => TransactionDetailView(id: result.id));
-                },
-                leading: CircleAvatar(
-                  radius: 25,
-                  backgroundColor: Colors.green,
-                  child: const Icon(AntDesign.arrow_down_outline, color: Colors.white),
-                ),
-                title: Text(
-                  "${result.type} - ID ${result.login}",
-                  style: GoogleFonts.inter(
-                    color: theme.textTheme.bodyLarge?.color,
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                subtitle: Text(
-                  result.amount,
-                  style: GoogleFonts.inter(color: theme.textTheme.bodyMedium?.color),
-                ),
-                trailing: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        result.status != "" ? result.status.capitalize! : "",
-                        style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            itemCount: groupedDeposits.length,
+            itemBuilder: (context, groupIndex) {
+              final monthKey = groupedDeposits.keys.elementAt(groupIndex);
+              final monthDeposits = groupedDeposits[monthKey]!;
+              
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Month Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 4,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: CustomColor.secondaryColor,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          monthKey,
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: theme.textTheme.bodyLarge?.color,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Container(
+                            height: 1,
+                            color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 5.0),
-                    Text(result.datetime, style: TextStyle(fontSize: 9))
-                  ],
-                ),
+                  ),
+                  
+                  // Month Items
+                  ...List.generate(monthDeposits.length, (i) {
+                    final result = monthDeposits[i];
+                    
+                    Color statusColor = Colors.grey;
+                    IconData statusIcon = Icons.pending;
+                    
+                    switch (result.status) {
+                      case "pending":
+                        statusColor = Colors.orange.shade400;
+                        statusIcon = Icons.pending;
+                        break;
+                      case "success":
+                        statusColor = Colors.green.shade400;
+                        statusIcon = Icons.check_circle;
+                        break;
+                      case "reject":
+                        statusColor = Colors.red.shade400;
+                        statusIcon = Icons.cancel;
+                        break;
+                      default:
+                        statusColor = Colors.grey.shade400;
+                        statusIcon = Icons.help;
+                    }
+                    
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.grey.shade900 : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: isDark 
+                              ? Colors.black.withOpacity(0.2) 
+                              : Colors.grey.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () {
+                            Get.to(() => TransactionDetailView(id: result.id));
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                // Icon
+                                Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    AntDesign.arrow_down_outline,
+                                    color: Colors.green,
+                                    size: 24,
+                                  ),
+                                ),
+                                
+                                const SizedBox(width: 16),
+                                
+                                // Content
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        result.type ?? "Deposit",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                          color: theme.textTheme.bodyLarge?.color,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.account_circle,
+                                            size: 14,
+                                            color: theme.textTheme.bodySmall?.color,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            "ID ${result.login ?? '-'}",
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              color: theme.textTheme.bodySmall?.color,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.access_time,
+                                            size: 12,
+                                            color: theme.textTheme.bodySmall?.color,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            _formatDateTime(result.datetime),
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              color: theme.textTheme.bodySmall?.color,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                
+                                // Amount & Status
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      result.amount ?? '\$0',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.green,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: statusColor.withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: statusColor.withOpacity(0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            statusIcon,
+                                            size: 12,
+                                            color: statusColor,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            result.status ?? '',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: statusColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ],
               );
-            }),
+            },
           ),
         );
       }
@@ -681,6 +950,7 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
 
   Widget buildWithdrawHistory(BuildContext context, Size size) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Obx(
       () {
@@ -691,7 +961,7 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Lottie.asset('assets/json/loader.json'),
+                Lottie.asset('assets/json/loader.json', width: 200, height: 200),
               ],
             ),
           );
@@ -704,15 +974,24 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Lottie.asset('assets/json/cat.json'),
+                Lottie.asset('assets/json/cat.json', width: 200, height: 200),
                 const SizedBox(height: 16),
-                const Text("Tidak ada riwayat Withdrawal"),
+                Text(
+                  "Tidak ada riwayat Withdrawal",
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: theme.textTheme.bodyMedium?.color,
+                  ),
+                ),
               ],
             ),
           );
         }
 
-        final withdrawals = userController.historyDepoWd.value?.response.where((res) => res.type == "Withdrawal").toList() ?? [];
+        final withdrawals = userController.historyDepoWd.value?.response
+            .where((res) => res.type == "Withdrawal")
+            .toList() ?? [];
 
         if (withdrawals.isEmpty) {
           return SizedBox(
@@ -721,12 +1000,38 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Lottie.asset('assets/json/cat.json'),
+                Lottie.asset('assets/json/cat.json', width: 200, height: 200),
                 const SizedBox(height: 16),
-                const Text("Tidak ada riwayat Withdrawal"),
+                Text(
+                  "Tidak ada riwayat Withdrawal",
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: theme.textTheme.bodyMedium?.color,
+                  ),
+                ),
               ],
             ),
           );
+        }
+
+        // Group by month
+        Map<String, List<dynamic>> groupedWithdrawals = {};
+        for (var withdrawal in withdrawals) {
+          try {
+            final dateTime = DateTime.parse(withdrawal.datetime);
+            final monthKey = "${_getMonthName(dateTime.month)} ${dateTime.year}";
+            if (!groupedWithdrawals.containsKey(monthKey)) {
+              groupedWithdrawals[monthKey] = [];
+            }
+            groupedWithdrawals[monthKey]!.add(withdrawal);
+          } catch (e) {
+            // If date parsing fails, group under "Unknown"
+            if (!groupedWithdrawals.containsKey("Unknown")) {
+              groupedWithdrawals["Unknown"] = [];
+            }
+            groupedWithdrawals["Unknown"]!.add(withdrawal);
+          }
         }
 
         return RefreshIndicator(
@@ -734,71 +1039,263 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
           onRefresh: () async {
             await userController.historyWithdrawAndDeposit();
           },
-          child: ListView(
-            children: List.generate(withdrawals.length, (i) {
-              final result = withdrawals[i];
-          
-              Color color = Colors.grey;
-              switch (result.status) {
-                case "pending":
-                  color = Colors.blue.shade400;
-                  break;
-                case "success":
-                  color = Colors.green.shade400;
-                  break;
-                case "reject":
-                  color = Colors.red.shade400;
-                  break;
-                default:
-                  color = Colors.grey.shade400;
-              }
-          
-              return ListTile(
-                onTap: () {
-                  Get.to(() => TransactionDetailView(id: result.id));
-                },
-                leading: CircleAvatar(
-                  radius: 25,
-                  backgroundColor: Colors.orangeAccent,
-                  child: const Icon(AntDesign.arrow_up_outline, color: Colors.white),
-                ),
-                title: Text(
-                  "${result.type} - ID ${result.login}",
-                  style: GoogleFonts.inter(
-                    color: theme.textTheme.bodyLarge?.color,
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                subtitle: Text(
-                  result.amount,
-                  style: GoogleFonts.inter(color: theme.textTheme.bodyMedium?.color),
-                ),
-                trailing: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        result.status != "" ? result.status.capitalize! : "",
-                        style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            itemCount: groupedWithdrawals.length,
+            itemBuilder: (context, groupIndex) {
+              final monthKey = groupedWithdrawals.keys.elementAt(groupIndex);
+              final monthWithdrawals = groupedWithdrawals[monthKey]!;
+              
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Month Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 4,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: CustomColor.secondaryColor,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          monthKey,
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: theme.textTheme.bodyLarge?.color,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Container(
+                            height: 1,
+                            color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 5.0),
-                    Text(result.datetime, style: TextStyle(fontSize: 9))
-                  ],
-                ),
+                  ),
+                  
+                  // Month Items
+                  ...List.generate(monthWithdrawals.length, (i) {
+                    final result = monthWithdrawals[i];
+                    
+                    Color statusColor = Colors.grey;
+                    IconData statusIcon = Icons.pending;
+                    
+                    switch (result.status) {
+                      case "pending":
+                        statusColor = Colors.orange.shade400;
+                        statusIcon = Icons.pending;
+                        break;
+                      case "success":
+                        statusColor = Colors.green.shade400;
+                        statusIcon = Icons.check_circle;
+                        break;
+                      case "reject":
+                        statusColor = Colors.red.shade400;
+                        statusIcon = Icons.cancel;
+                        break;
+                      default:
+                        statusColor = Colors.grey.shade400;
+                        statusIcon = Icons.help;
+                    }
+                    
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.grey.shade900 : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: isDark 
+                              ? Colors.black.withOpacity(0.2) 
+                              : Colors.grey.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () {
+                            Get.to(() => TransactionDetailView(id: result.id));
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                // Icon
+                                Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    AntDesign.arrow_up_outline,
+                                    color: Colors.orange,
+                                    size: 24,
+                                  ),
+                                ),
+                                
+                                const SizedBox(width: 16),
+                                
+                                // Content
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        result.type ?? "Withdrawal",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                          color: theme.textTheme.bodyLarge?.color,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.account_circle,
+                                            size: 14,
+                                            color: theme.textTheme.bodySmall?.color,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            "ID ${result.login ?? '-'}",
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              color: theme.textTheme.bodySmall?.color,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.access_time,
+                                            size: 12,
+                                            color: theme.textTheme.bodySmall?.color,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            _formatDateTime(result.datetime),
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              color: theme.textTheme.bodySmall?.color,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                
+                                // Amount & Status
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      result.amount ?? '\$0',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.orange,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: statusColor.withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: statusColor.withOpacity(0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            statusIcon,
+                                            size: 12,
+                                            color: statusColor,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            result.status ?? '',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: statusColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ],
               );
-            }),
+            },
           ),
         );
 
       }
     );
+  }
+
+  String _getMonthName(int month) {
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return monthNames[month - 1];
+  }
+
+  String _formatDateTime(String datetime) {
+    try {
+      final dt = DateTime.parse(datetime);
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final dateToCheck = DateTime(dt.year, dt.month, dt.day);
+      
+      if (dateToCheck == today) {
+        return "Today, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+      } else if (dateToCheck == today.subtract(const Duration(days: 1))) {
+        return "Yesterday, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+      } else {
+        return "${dt.day}/${dt.month}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+      }
+    } catch (e) {
+      return datetime;
+    }
   }
 }
