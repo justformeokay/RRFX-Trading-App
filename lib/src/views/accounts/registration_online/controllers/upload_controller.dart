@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:get/get.dart';
 import 'package:rrfx/src/helpers/handlers/image_picker.dart';
 
@@ -29,6 +30,8 @@ class UploadController extends GetxController {
 class MultiUploadController extends GetxController {
   var photoList = <String>[].obs;
   var isOnlineList = <bool>[].obs;
+  var fileSizeList = <String>[].obs; // List untuk menyimpan ukuran file
+  
   final List<String> photoTitles = [
     "NPWP / Rekening Koran / Rekening Listrik / Tagihan Kartu Kredit *",
     "Foto KTP *",
@@ -37,9 +40,23 @@ class MultiUploadController extends GetxController {
     "Dokumen Lainnya 2 (Opsional)",
   ];
 
+  // Helper function to get file size in KB
+  String _getFileSizeInKB(String filePath) {
+    if (filePath.isEmpty) return "";
+    try {
+      final file = File(filePath);
+      final bytes = file.lengthSync();
+      final kb = (bytes / 1024).toStringAsFixed(2);
+      return kb;
+    } catch (e) {
+      return "";
+    }
+  }
+
   void initFromApi(Map<String, dynamic> apiData) {
     photoList.clear();
     isOnlineList.clear();
+    fileSizeList.clear();
 
     List<String?> apiUrls = [
       apiData['appFotoImage1'], // NPWP / Rekening Koran / Rekening Listrik
@@ -53,9 +70,11 @@ class MultiUploadController extends GetxController {
       if (url != null && url.isNotEmpty) {
         photoList.add(url);
         isOnlineList.add(true);
+        fileSizeList.add(""); // Tidak ada size untuk online image
       } else {
         photoList.add('');
         isOnlineList.add(false);
+        fileSizeList.add("");
       }
     }
   }
@@ -66,8 +85,10 @@ class MultiUploadController extends GetxController {
     if (newImagePath.isNotEmpty) {
       photoList[index] = newImagePath;
       isOnlineList[index] = false;
+      fileSizeList[index] = _getFileSizeInKB(newImagePath); // Hitung ukuran file
       photoList.refresh();
       isOnlineList.refresh();
+      fileSizeList.refresh();
     }
   }
 }

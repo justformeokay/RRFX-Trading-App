@@ -73,31 +73,19 @@ class UtilitiesWidget {
     String? urlPhoto,
     String? ukuranFile,
     Function()? onPressed,
+    Function(bool useCamera)? onImageSourceSelected,
     bool? isImageOnline,
   }) {
+    // Parse file size and check if it exceeds 2MB (2048 KB)
+    final fileSizeKB = ukuranFile != null ? double.tryParse(ukuranFile) ?? 0 : 0;
+    final isFileTooLarge = fileSizeKB > 2048; // 2MB = 2048 KB
+    
     return GestureDetector(
-      onTap: onPressed,
+      onTap: onImageSourceSelected != null 
+          ? () => _showImageSourceBottomSheet(context, onImageSourceSelected, title)
+          : onPressed,
       child: Stack(
         children: [
-          if (ukuranFile != null)
-            Positioned(
-              top: 8,
-              right: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '$ukuranFile KB',
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 12.0,
-                  ),
-                ),
-              ),
-            ),
           Container(
             margin: const EdgeInsets.only(bottom: 15.0),
             width: double.infinity,
@@ -125,6 +113,62 @@ class UtilitiesWidget {
                   : buildPlaceholder(context, title),
             ),
           ),
+          // Badge ukuran file - HARUS DI POSISI TERAKHIR AGAR DI ATAS GAMBAR
+          if (ukuranFile != null && ukuranFile.isNotEmpty)
+            Positioned(
+              top: 10,
+              right: 10,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isFileTooLarge 
+                        ? [Colors.red.shade700, Colors.red.shade900]
+                        : fileSizeKB > 1024 // > 1MB
+                            ? [Colors.orange.shade600, Colors.orange.shade800]
+                            : [Colors.green.shade600, Colors.green.shade800],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.white,
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isFileTooLarge 
+                          ? Icons.warning_rounded 
+                          : Icons.check_circle_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      fileSizeKB >= 1024 
+                          ? '${(fileSizeKB / 1024).toStringAsFixed(2)} MB'
+                          : '$ukuranFile KB',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 13.0,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -161,4 +205,158 @@ class UtilitiesWidget {
     );
   }
 
+  static void _showImageSourceBottomSheet(
+    BuildContext context,
+    Function(bool useCamera) onImageSourceSelected,
+    String? title,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(25),
+              topRight: Radius.circular(25),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                "Pilih Sumber ${title ?? "Foto"}",
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Pilih metode untuk mengambil gambar",
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 25),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildSourceOption(
+                        context: context,
+                        icon: Icons.camera_alt_rounded,
+                        label: "Kamera",
+                        gradient: LinearGradient(
+                          colors: [
+                            CustomColor.secondaryColor.withValues(alpha: 0.8),
+                            CustomColor.secondaryColor,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          onImageSourceSelected(true);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: _buildSourceOption(
+                        context: context,
+                        icon: Icons.photo_library_rounded,
+                        label: "Galeri",
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.blue.shade600,
+                            Colors.blue.shade800,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          onImageSourceSelected(false);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 30),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  static Widget _buildSourceOption({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required Gradient gradient,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 40,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 }
+

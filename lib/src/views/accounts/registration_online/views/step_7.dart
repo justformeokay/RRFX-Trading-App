@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -138,6 +139,23 @@ class _Step7State extends State<Step7> {
   RxBool isLoading = false.obs;
   RxBool selectedStatement = true.obs;
   RxBool imageLoaded = false.obs;
+
+  // File size variables
+  RxString coverBukuTabungan1Size = "".obs;
+  RxString coverBukuTabungan2Size = "".obs;
+
+  // Helper function to get file size in KB
+  String getFileSizeInKB(String filePath) {
+    if (filePath.isEmpty) return "";
+    try {
+      final file = File(filePath);
+      final bytes = file.lengthSync();
+      final kb = (bytes / 1024).toStringAsFixed(2);
+      return kb;
+    } catch (e) {
+      return "";
+    }
+  }
 
   @override
   void initState() {
@@ -1178,10 +1196,18 @@ class _Step7State extends State<Step7> {
                   const SizedBox(height: 5.0),
                   Obx(
                     () => !isLoading.value ? Obx(
-                      () => UtilitiesWidget.uploadPhotoV2(context, isImageOnline: imageLoaded.value, title: "Buku Rekening Bank", urlPhoto: coverBukuTabungan1.value, onPressed: () async {
-                        coverBukuTabungan1.value = await CustomImagePicker.pickImageFromCameraAndReturnUrl(useCamera: false);
-                        imageLoaded.value = false;
-                      }),
+                      () => UtilitiesWidget.uploadPhotoV2(
+                        context, 
+                        isImageOnline: imageLoaded.value, 
+                        title: "Buku Rekening Bank", 
+                        urlPhoto: coverBukuTabungan1.value, 
+                        ukuranFile: coverBukuTabungan1.value.isNotEmpty ? getFileSizeInKB(coverBukuTabungan1.value) : null,
+                        onImageSourceSelected: (useCamera) async {
+                          coverBukuTabungan1.value = await CustomImagePicker.pickImageFromCameraAndReturnUrl(useCamera: useCamera);
+                          imageLoaded.value = false;
+                          coverBukuTabungan1Size.value = getFileSizeInKB(coverBukuTabungan1.value);
+                        },
+                      ),
                     ) : const SizedBox()
                   ),
 
@@ -1222,21 +1248,22 @@ class _Step7State extends State<Step7> {
                   ) : const SizedBox()),
                   Text("Cover Buku Rekening 2 (Opsional)", style: Get.textTheme.labelLarge),
                   const SizedBox(height: 5.0),
-                  Obx(() => showBank2.value ? UtilitiesWidget.uploadPhotoV2(context, isImageOnline: imageLoaded.value, title: "Buku Rekening Bank", urlPhoto: coverBukuTabungan2.value, onPressed: () async {
-                    coverBukuTabungan2.value = await CustomImagePicker.pickImageFromCameraAndReturnUrl(useCamera: false);
-                    imageLoaded.value = false;
-                  }) : const SizedBox())
+                  Obx(() => showBank2.value ? UtilitiesWidget.uploadPhotoV2(
+                    context, 
+                    isImageOnline: imageLoaded.value, 
+                    title: "Buku Rekening Bank", 
+                    urlPhoto: coverBukuTabungan2.value, 
+                    ukuranFile: coverBukuTabungan2.value.isNotEmpty ? getFileSizeInKB(coverBukuTabungan2.value) : null,
+                    onImageSourceSelected: (useCamera) async {
+                      coverBukuTabungan2.value = await CustomImagePicker.pickImageFromCameraAndReturnUrl(useCamera: useCamera);
+                      imageLoaded.value = false;
+                      coverBukuTabungan2Size.value = getFileSizeInKB(coverBukuTabungan2.value);
+                    },
+                  ) : const SizedBox())
                 ]),
                 SmoothExpansionTile(title: "DOKUMEN YANG DILAMPIRKAN", children: [
                   Obx(() => Column(
                     children: List.generate(multipleController.photoList.length, (index) {
-                      bool useCamera = false;
-                      if(index == 1){
-                        useCamera = true;
-                      }
-                      if(index == 2){
-                        useCamera = true;
-                      }
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1247,7 +1274,10 @@ class _Step7State extends State<Step7> {
                             title: multipleController.photoTitles[index],
                             urlPhoto: multipleController.photoList[index],
                             isImageOnline: multipleController.isOnlineList[index],
-                            onPressed: () => multipleController.pickNewImage(index, useCamera: useCamera),
+                            ukuranFile: multipleController.photoList[index].isNotEmpty && multipleController.fileSizeList.length > index
+                                ? multipleController.fileSizeList[index]
+                                : null,
+                            onImageSourceSelected: (useCamera) => multipleController.pickNewImage(index, useCamera: useCamera),
                           ),
                         ],
                       );

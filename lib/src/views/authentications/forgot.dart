@@ -60,7 +60,8 @@ class _ForgotState extends State<Forgot> {
                         child: EmailTextField(
                           fieldName: LanguageGlobalVar.EMAIL_ADDRESS.tr,
                           controller: emailController,
-                          useValidator: true,
+                          requiredField: true,
+                          useValidator: false,
                           hintText: LanguageGlobalVar.INPUT_YOUR_EMAIL_ADDRESS.tr,
                         )
                       ),
@@ -78,10 +79,10 @@ class _ForgotState extends State<Forgot> {
                 if(_formKey.currentState!.validate()){
                   authController.forgotPassword(email: emailController.text).then((result){
                     if(result){
-                      CustomScaffoldMessanger.showAppSnackBar(context, message: authController.responseMessage.value, type: SnackBarType.success);
+                      AppSnackbar.success(authController.responseMessage.value);
                       Get.back();
                     }else{
-                      CustomScaffoldMessanger.showAppSnackBar(context, message: authController.responseMessage.value, type: SnackBarType.error);
+                      AppSnackbar.error(authController.responseMessage.value);
                     }
                   });
                 }

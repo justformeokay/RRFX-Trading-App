@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
@@ -10,7 +11,7 @@ class CustomImagePicker {
       final ImagePicker picker = ImagePicker();
       final XFile? imagePicked = await picker.pickImage(
         source: useCamera ? ImageSource.camera : ImageSource.gallery,
-        imageQuality: 10,
+        imageQuality: 100, // Ambil kualitas tinggi dulu, nanti di-compress
       );
       
       if(imagePicked == null) {
@@ -22,11 +23,81 @@ class CustomImagePicker {
         throw Exception("Gambar tidak ditemukan di path: ${imagePicked.path}");
       }
 
-      return imageFile.path;
+      // Auto-compress semua gambar menjadi 50% dari ukuran asli
+      return await _compressImage(imageFile.path);
      
     } catch (e) {
       // Jika user cancel atau error, return empty string bukan error message
       return '';
+    }
+  }
+
+  /// Compress image otomatis dengan target 50% dari ukuran asli
+  static Future<String> _compressImage(String originalPath) async {
+    try {
+      final File originalFile = File(originalPath);
+      final int originalSize = await originalFile.length();
+      
+      // Jika ukuran sudah kecil (< 500 KB), skip compress
+      if (originalSize < 500 * 1024) {
+        return originalPath;
+      }
+
+      final dir = await getTemporaryDirectory();
+      final targetPath = path.join(
+        dir.path,
+        "compressed_${DateTime.now().millisecondsSinceEpoch}.jpg",
+      );
+
+      // Mulai dengan quality 50 untuk target 50% size reduction
+      int quality = 50;
+      XFile? compressedFile;
+
+      // Coba compress dengan quality 50
+      compressedFile = await FlutterImageCompress.compressAndGetFile(
+        originalFile.absolute.path,
+        targetPath,
+        quality: quality,
+      );
+
+      if (compressedFile == null) {
+        // Jika gagal compress, return original
+        return originalPath;
+      }
+
+      final int compressedSize = await File(compressedFile.path).length();
+      final double compressionRatio = (compressedSize / originalSize) * 100;
+
+      debugPrint("📸 Image compressed: ${(originalSize / 1024).toStringAsFixed(2)} KB → ${(compressedSize / 1024).toStringAsFixed(2)} KB (${compressionRatio.toStringAsFixed(1)}%)");
+
+      // Jika masih > 2MB, compress lebih agresif
+      if (compressedSize > 2 * 1024 * 1024) {
+        quality = 30;
+        final targetPath2 = path.join(
+          dir.path,
+          "compressed_v2_${DateTime.now().millisecondsSinceEpoch}.jpg",
+        );
+        
+        final compressedFile2 = await FlutterImageCompress.compressAndGetFile(
+          originalFile.absolute.path,
+          targetPath2,
+          quality: quality,
+        );
+
+        if (compressedFile2 != null) {
+          final size2 = await File(compressedFile2.path).length();
+          if (size2 < compressedSize) {
+            debugPrint("📸 Further compressed to: ${(size2 / 1024).toStringAsFixed(2)} KB");
+            return compressedFile2.path;
+          }
+        }
+      }
+
+      return compressedFile.path;
+    } catch (e) {
+      debugPrint("⚠️ Compression error: $e");
+      // Jika error saat compress, return original path
+      return originalPath;
     }
   }
 
@@ -35,7 +106,7 @@ class CustomImagePicker {
       final ImagePicker picker = ImagePicker();
       final XFile? imagePicked = await picker.pickImage(
         source: useCamera ? ImageSource.camera : ImageSource.gallery,
-        imageQuality: 10, // ambil kualitas tinggi dulu, nanti di-compress
+        imageQuality: 100, // Ambil kualitas tinggi dulu, nanti di-compress
       );
 
       if (imagePicked == null) {
@@ -47,36 +118,8 @@ class CustomImagePicker {
         throw Exception("Gambar tidak ditemukan di path: ${imagePicked.path}");
       }
 
-      int fileSize = await imageFile.length();
-      const int maxSize = 2 * 1024 * 1024; // 2 MB
-
-      if (fileSize > maxSize) {
-        // ✅ compress gambar
-        final dir = await getTemporaryDirectory();
-        final targetPath = path.join(
-          dir.path,
-          "compressed_${DateTime.now().millisecondsSinceEpoch}.jpg",
-        );
-
-        final compressedFile = await FlutterImageCompress.compressAndGetFile(
-          imageFile.absolute.path,
-          targetPath,
-          quality: 85, // coba kualitas 85 dulu
-        );
-
-        if (compressedFile == null) {
-          throw Exception("Gagal mengompres gambar.");
-        }
-
-        fileSize = await compressedFile.length();
-        if (fileSize > maxSize) {
-          throw Exception("Ukuran gambar masih terlalu besar setelah kompres (maksimal 2 MB).");
-        }
-
-        return compressedFile.path;
-      }
-
-      return imageFile.path;
+      // Auto-compress semua gambar
+      return await _compressImage(imageFile.path);
 
     } catch (e) {
       return e.toString();

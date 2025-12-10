@@ -132,7 +132,7 @@ class _InternalTransferState extends State<InternalTransfer> {
                       subtitle: "Pastikan jumlah balance anda mencukupi untuk proses internal transfer",
                       children: [
                         Obx(
-                          () => VoidTextField(controller: myAccountTradingSender, fieldName: "Akun Trading Pengirim", hintText: "Akun Trading Pengirim", labelText: "Akun Trading Pengirim", onPressed: settingController.isLoading.value ? null : () async {
+                          () => VoidTextField(controller: myAccountTradingSender, requiredField: true, readOnly: true, fieldName: "Akun Trading Pengirim", hintText: "Akun Trading Pengirim", labelText: "Akun Trading Pengirim", onPressed: settingController.isLoading.value ? null : () async {
                             CustomMaterialBottomSheets.defaultBottomSheet(context, size: size, title: "Pilih Akun Trading Pengirim", children: List.generate(tradingController.tradingAccountModels.value?.response.real?.length ?? 0, (i){
                               return ListTile(
                                 onTap: (){
@@ -165,6 +165,7 @@ class _InternalTransferState extends State<InternalTransfer> {
                       children: [
                         Obx(
                           () => VoidTextField(
+                            requiredField: true,
                             controller: myAccountTradingReceiver,
                             fieldName: "Akun Trading Penerima",
                             hintText: "Akun Trading Penerima",
