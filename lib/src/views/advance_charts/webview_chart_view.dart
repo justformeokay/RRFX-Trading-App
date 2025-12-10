@@ -75,9 +75,9 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                   accountController.selectedAccount.value?.login ?? 
                   '';
     final theme = Get.isDarkMode ? 'dark' : 'light';
-    return "http://207.148.119.106/rrfx/chart-v1.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme";
+    // return "http://207.148.119.106/rrfx/chart-v1.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme";
 
-    // return 'http://207.148.119.106/rrfx/chart.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
+    return 'http://207.148.119.106/rrfx/chart.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
   }
 
   void _reloadChart() {

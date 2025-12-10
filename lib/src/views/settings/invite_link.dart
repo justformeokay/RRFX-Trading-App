@@ -110,7 +110,13 @@ class _InviteLinkState extends State<InviteLink>
         print('🔍 General: ${inviteModel?.data?.general?.length}');
         print('🔍 Specific: ${inviteModel?.data?.spesific?.length}');
 
+        // Show message if user is not a sales (no referral links)
         if (inviteModel == null || inviteModel.data == null) {
+          // Check if the message indicates non-sales account
+          if (utilitiesController.responseMessage.value.toLowerCase().contains('bukan sales') ||
+              utilitiesController.responseMessage.value.toLowerCase().contains('tidak ada refferal')) {
+            return _buildNoSalesState(isDark);
+          }
           return _buildErrorState(isDark);
         }
 
@@ -769,6 +775,80 @@ class _InviteLinkState extends State<InviteLink>
               style: GoogleFonts.inter(
                 fontSize: 14,
                 color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoSalesState(bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: CustomColor.secondaryColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Iconsax.user_outline,
+                size: 60,
+                color: CustomColor.secondaryColor,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Akun Non-Sales',
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : Colors.black,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              utilitiesController.responseMessage.value.isNotEmpty
+                  ? utilitiesController.responseMessage.value
+                  : 'Fitur referral link hanya tersedia untuk akun sales',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Iconsax.info_circle_outline,
+                    size: 20,
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      'Hubungi admin untuk upgrade ke akun sales',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

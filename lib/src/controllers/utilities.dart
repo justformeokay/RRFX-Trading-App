@@ -634,9 +634,21 @@ class UtilitiesController extends GetxController {
       print('📦 Data: ${result['data']}');
 
       if (response.statusCode == 200 && result['status'] == true) {
-        // Check if data is empty
-        if (result['data'] == null || (result['data'] is Map && (result['data']['general'] == null || result['data']['general'].isEmpty) && (result['data']['spesific'] == null || result['data']['spesific'].isEmpty))) {
-          print('⚠️ Data is empty');
+        // Check if data is a List (empty array for non-sales)
+        if (result['data'] is List) {
+          print('⚠️ Data is List (non-sales account)');
+          responseMessage.value = result['message'] ?? "Tidak ada link referral";
+          inviteLinkModel.value = null;
+          isLoading.value = false;
+          return false;
+        }
+        
+        // Check if data is empty Map or null
+        if (result['data'] == null || 
+            (result['data'] is Map && 
+             (result['data']['general'] == null || result['data']['general'].isEmpty) && 
+             (result['data']['spesific'] == null || result['data']['spesific'].isEmpty))) {
+          print('⚠️ Data is empty Map');
           responseMessage.value = result['message'] ?? "Tidak ada link referral";
           inviteLinkModel.value = null;
           isLoading.value = false;
