@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/models/auth/image_login_model.dart';
 import 'package:rrfx/src/models/settings/invite_model.dart';
 import 'package:rrfx/src/models/trades/market_model.dart';
@@ -602,18 +603,64 @@ class UtilitiesController extends GetxController {
 
   Future<bool> getRefferalLinks() async {
     try {
-      Map<String, dynamic> result = await authService.get("refferal/list");
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      isLoading.value = true;
 
-      if (result['status'] != true) {
+      String? token = prefs.getString('accessToken');
+      if (token == null) {
+        isLoading.value = false;
+        responseMessage.value = "Token akses hilang";
         return false;
       }
-      inviteLinkModel.value = InviteLinkModel.fromJson({
-        "data": result["data"],
-      });
-      responseMessage(result['message']);
-      return true;
+
+      print('🔑 Token: ${token.substring(0, 20)}...');
+
+      final response = await http.get(
+        Uri.parse("${GlobalVariable.mainURL}/refferal/list"),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📡 Response Status Code: ${response.statusCode}');
+      print('📊 Response Body: ${response.body}');
+
+      final result = jsonDecode(response.body);
+      
+      print('✅ Decoded Result: $result');
+      print('📦 Status: ${result['status']}');
+      print('📦 Message: ${result['message']}');
+      print('📦 Data: ${result['data']}');
+
+      if (response.statusCode == 200 && result['status'] == true) {
+        // Check if data is empty
+        if (result['data'] == null || (result['data'] is Map && (result['data']['general'] == null || result['data']['general'].isEmpty) && (result['data']['spesific'] == null || result['data']['spesific'].isEmpty))) {
+          print('⚠️ Data is empty');
+          responseMessage.value = result['message'] ?? "Tidak ada link referral";
+          inviteLinkModel.value = null;
+          isLoading.value = false;
+          return false;
+        }
+
+        inviteLinkModel.value = InviteLinkModel.fromJson({
+          "data": result["data"],
+        });
+        
+        print('🎯 Parsed Model - General: ${inviteLinkModel.value?.data?.general?.length}, Specific: ${inviteLinkModel.value?.data?.spesific?.length}');
+        
+        responseMessage.value = result['message'] ?? "Berhasil memuat data";
+        isLoading.value = false;
+        return true;
+      }
+
+      responseMessage.value = result['message'] ?? "Gagal memuat data";
+      isLoading.value = false;
+      return false;
     } catch (e) {
-      responseMessage(e.toString());
+      print('❌ Error in getRefferalLinks: $e');
+      isLoading.value = false;
+      responseMessage.value = e.toString();
       return false;
     }
   }

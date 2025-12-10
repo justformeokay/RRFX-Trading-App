@@ -104,34 +104,34 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
                 Tab(text: 'Internal Transfer'),
               ],
             ),
-            actions: [
-              CupertinoButton(
-                onPressed: (){
-                  CustomMaterialBottomSheets.defaultBottomSheet(context, title: "Pilih Akun Trading", size: size, children: List.generate(allAccountTrading.length, (i){
-                    return ListTile(
-                      onTap: (){
-                        selectedIndex.value = i;
-                        // userController.internalTransferHistory(loginID: allAccountTrading[selectedIndex.value].login.toString());
-                        Get.back();
-                      },
-                      leading: Container(
-                        padding: EdgeInsets.all(4.0),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.grey.shade200
-                        ),
-                        child: Text("${i+1}", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black, fontSize: 18)),
-                      ),
-                      title: Obx(() => Text("${allAccountTrading[i].type != null ? allAccountTrading[i].type.toString().toUpperCase() : ""} - ${allAccountTrading[i].login}", style: TextStyle(fontWeight: FontWeight.bold))),
-                      subtitle: Obx(() => Text("Currency ${allAccountTrading[i].currency}", style: TextStyle(color: Theme.of(context).textTheme.titleSmall?.color))),
-                      trailing: selectedIndex.value == i ? const Icon(Icons.check, color: Colors.green) : null,
-                    );
-                  }));
-                },
-                child: Icon(Icons.person_search, color: CustomColor.secondaryColor)
-              )
+            // actions: [
+            //   CupertinoButton(
+            //     onPressed: (){
+            //       CustomMaterialBottomSheets.defaultBottomSheet(context, title: "Pilih Akun Trading", size: size, children: List.generate(allAccountTrading.length, (i){
+            //         return ListTile(
+            //           onTap: (){
+            //             selectedIndex.value = i;
+            //             // userController.internalTransferHistory(loginID: allAccountTrading[selectedIndex.value].login.toString());
+            //             Get.back();
+            //           },
+            //           leading: Container(
+            //             padding: EdgeInsets.all(4.0),
+            //             decoration: BoxDecoration(
+            //               shape: BoxShape.circle,
+            //               color: Colors.grey.shade200
+            //             ),
+            //             child: Text("${i+1}", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black, fontSize: 18)),
+            //           ),
+            //           title: Obx(() => Text("${allAccountTrading[i].type != null ? allAccountTrading[i].type.toString().toUpperCase() : ""} - ${allAccountTrading[i].login}", style: TextStyle(fontWeight: FontWeight.bold))),
+            //           subtitle: Obx(() => Text("Currency ${allAccountTrading[i].currency}", style: TextStyle(color: Theme.of(context).textTheme.titleSmall?.color))),
+            //           trailing: selectedIndex.value == i ? const Icon(Icons.check, color: Colors.green) : null,
+            //         );
+            //       }));
+            //     },
+            //     child: Icon(Icons.person_search, color: CustomColor.secondaryColor)
+            //   )
               
-            ],
+            // ],
           ),
           body: TabBarView(
               physics: const BouncingScrollPhysics(),
