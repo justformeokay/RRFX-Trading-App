@@ -522,7 +522,7 @@ class _IndexV2State extends State<IndexV2> {
                             print(signal.symbol);
                             Get.to(() => WebViewChartViewFromTile(
                               login: int.parse(controller.selectedAccount.value?.login ?? '0'), 
-                              marketName: "${signal.symbol}", 
+                              marketName: "${signal.symbol}.db", 
                               balance: double.tryParse(controller.selectedAccount.value?.balance ?? "0")
                             ));
                           },

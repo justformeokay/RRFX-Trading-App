@@ -34,11 +34,49 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
     permanent: true,
   );
 
+  Worker? _accountListener;
+  String? _lastLoadedLogin;
+  bool _isLoadingOrders = false;
+
   @override
   void initState() {
     super.initState();
-    _loadOrders();
-    _subscribeToAccountWS();
+    
+    // Setup listener ONCE for account changes
+    _accountListener = ever(controller.selectedAccount, (account) {
+      if (account != null) {
+        final newLogin = account.login;
+        
+        // Only reload if account actually changed
+        if (_lastLoadedLogin != newLogin) {
+          // print('🔄 [OpenTransaction] Account changed: $_lastLoadedLogin → $newLogin');
+          
+          // Clear old data immediately to prevent blinking
+          tradingController.openOrderModel.value = null;
+          accountWS.profit.value = 0.0;
+          
+          // Then load new data
+          _loadOrders();
+          _subscribeToAccountWS();
+          
+          _lastLoadedLogin = newLogin;
+        }
+      }
+    });
+    
+    // Initial load
+    if (controller.selectedAccount.value != null) {
+      _lastLoadedLogin = controller.selectedAccount.value!.login;
+      _loadOrders();
+      _subscribeToAccountWS();
+    }
+  }
+
+  @override
+  void dispose() {
+    // Dispose listener to prevent memory leaks
+    _accountListener?.dispose();
+    super.dispose();
   }
 
   void _subscribeToAccountWS() {
@@ -54,17 +92,33 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
   }
 
   Future<void> _loadOrders() async {
+    // Prevent duplicate API calls
+    if (_isLoadingOrders) {
+      // print('⏸️ [OpenTransaction] Already loading orders, skipping...');
+      return;
+    }
+    
     if (!controller.hasAccounts) {
       Get.log("TIDAK MEMILIKI AKUN TRADING DEMO MAUPUN REAL");
       return;
     }
+    
     String? loginID = controller.selectedAccount.value?.login;
     if (loginID == null) return;
-    await tradingController.openOrder(login: loginID);
+    
+    try {
+      _isLoadingOrders = true;
+      await tradingController.openOrder(login: loginID);
+    } finally {
+      _isLoadingOrders = false;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Force rebuild when account changes to prevent showing old data
+    final currentLogin = controller.selectedAccount.value?.login ?? '';
+    
     return Obx(() {
       if (!controller.hasAccounts) return noAccountDetected();
       var opened = tradingController.openOrderModel.value?.response;
@@ -72,6 +126,7 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
         return _buildShimmerList(context);
       }
       return Scaffold(
+        key: ValueKey(currentLogin), // Force rebuild on account change
         body: CustomScrollView(
           slivers: [
             SliverPersistentHeader(
@@ -617,17 +672,18 @@ class _PositionTile extends StatelessWidget {
       return;
     }
 
-    // Create reactive profit observable that updates from tradingController
-    final realtimeProfit = (profit ?? "0.0").obs;
-
-    // Use ever() to listen to openOrderModel changes and update this position's profit
+    // Create reactive profit observable
+    final realtimeProfit = RxString(profit ?? "0.0");
+    
+    // Listen to position updates from API response (updated by WebSocket indirectly)
     final worker = ever(tradingController.openOrderModel, (model) {
       if (model?.response != null) {
-        final thisPosition = model!.response!.firstWhereOrNull(
-          (pos) => pos.ticket.toString() == positionId,
+        // Find this position in the updated list
+        final position = model!.response!.firstWhereOrNull(
+          (p) => p.ticket.toString() == positionId
         );
-        if (thisPosition != null && thisPosition.profit != null) {
-          realtimeProfit.value = thisPosition.profit.toString();
+        if (position != null && position.profit != null) {
+          realtimeProfit.value = position.profit.toString();
         }
       }
     });
@@ -636,32 +692,48 @@ class _PositionTile extends StatelessWidget {
       context: context,
       symbol: symbol ?? '-',
       lot: volume ?? '0.0',
-      profit: realtimeProfit, // Pass Rx observable
+      profit: realtimeProfit,
       swap: swap.toString(),
       commission: "0.00",
       onConfirm: () async {
-        worker.dispose(); // Dispose worker when closing
-        await tradingController
-            .closingOrder(loginID: loginID, ticketID: positionId ?? '')
-            .then((result) {
-              tradingController.openOrder(login: loginID);
-              AppSnackbar.success("Posisi $positionId berhasil ditutup.");
-            })
-            .whenComplete(() {
-              String? loginID = accountController.selectedAccount.value?.login;
-              if (loginID == null) return;
-              tradingController.openOrder(login: loginID);
-            });
+        // Dispose worker before closing
+        worker.dispose();
+        
+        // Show loading indicator
+        Get.dialog(
+          Center(child: CircularProgressIndicator()),
+          barrierDismissible: false,
+        );
+        
+        try {
+          await tradingController.closingOrder(
+            loginID: loginID, 
+            ticketID: positionId ?? ''
+          );
+          
+          // Close loading
+          if (Get.isDialogOpen ?? false) Get.back();
+          
+          AppSnackbar.success("Posisi $positionId berhasil ditutup.");
+          
+          // Reload positions once
+          await tradingController.openOrder(login: loginID);
+        } catch (e) {
+          // Close loading
+          if (Get.isDialogOpen ?? false) Get.back();
+          AppSnackbar.error("Error: ${e.toString()}");
+        }
       },
     );
-
-    // Dispose worker when dialog closes
+    
+    // Dispose worker after dialog closes (in case user cancels)
     worker.dispose();
   }
 
   void _onEditPosition(BuildContext context) async {
     final tradingController = Get.put(TradingController());
     final accountController = Get.put(AccountController());
+    final marketWS = Get.find<MarketWebSocketController>();
 
     String? loginID = accountController.selectedAccount.value?.login;
     if (loginID == null) {
@@ -669,20 +741,23 @@ class _PositionTile extends StatelessWidget {
       return;
     }
 
-    // Get current price observable that updates from tradingController
-    final currentPriceObs = (double.tryParse(currentPrice ?? "0") ?? 0.0).obs;
-
-    // Listen to openOrderModel changes and update current price for this position
-    final worker = ever(tradingController.openOrderModel, (model) {
-      if (model?.response != null) {
-        final thisPosition = model!.response!.firstWhereOrNull(
-          (pos) => pos.ticket.toString() == positionId,
-        );
-        if (thisPosition != null && thisPosition.currentPrice != null) {
-          currentPriceObs.value =
-              double.tryParse(thisPosition.currentPrice.toString()) ??
-              currentPriceObs.value;
-        }
+    // Get symbol name (remove .db suffix if exists)
+    final cleanSymbol = symbol?.replaceAll('.db', '') ?? '';
+    
+    // Create reactive current price observable that updates from WebSocket
+    final currentPriceObs = Rx<double>(double.tryParse(currentPrice ?? "0") ?? 0.0);
+    
+    // Listen to WebSocket updates for this symbol
+    final worker = ever(marketWS.marketData, (data) {
+      final symbolData = data[cleanSymbol];
+      if (symbolData != null) {
+        // Use bid for sell positions, ask for buy positions
+        final newPrice = direction?.toLowerCase() == 'buy' 
+            ? symbolData.bid 
+            : symbolData.ask;
+        print('📡 WebSocket Update - Symbol: $cleanSymbol, Direction: $direction, New Price: $newPrice');
+        currentPriceObs.value = newPrice;
+        print('✅ currentPriceObs updated: ${currentPriceObs.value}');
       }
     });
 
@@ -691,7 +766,7 @@ class _PositionTile extends StatelessWidget {
 
     await showEditPositionDialog(
       context: context,
-      symbol: symbol?.replaceAll('.db', '') ?? '-',
+      symbol: cleanSymbol,
       positionId: positionId ?? '-',
       direction: direction ?? 'buy',
       openPrice: double.tryParse(openPrice ?? "0") ?? 0.0,
@@ -701,14 +776,10 @@ class _PositionTile extends StatelessWidget {
       digits: symbolDigits,
       currentPriceObservable: currentPriceObs,
       onModify: (sl, tp) async {
-        worker.dispose();
-        
         try {
           // Show loading
           Get.dialog(
-            Center(
-              child: CircularProgressIndicator(),
-            ),
+            Center(child: CircularProgressIndicator()),
             barrierDismissible: false,
           );
           
@@ -722,15 +793,18 @@ class _PositionTile extends StatelessWidget {
           );
           
           // Close loading dialog
-          Get.back();
+          if (Get.isDialogOpen ?? false) Get.back();
           
           if (result['status'] == true) {
             AppSnackbar.success(
-              result['message'] ?? "Position berhasil dimodifikasi: SL=$sl, TP=$tp",
+              result['message'] ?? "Position berhasil dimodifikasi",
             );
             
-            // Reload positions to get updated data
-            await tradingController.openOrder(login: loginID);
+            // WebSocket will auto-update the positions, no need for API call
+            // Only reload if WebSocket is not connected
+            if (Get.find<AccountBalanceWSController>().status.value != AccountWSStatus.connected) {
+              await tradingController.openOrder(login: loginID);
+            }
           } else {
             AppSnackbar.error(
               result['message'] ?? "Gagal memodifikasi position",
@@ -738,16 +812,14 @@ class _PositionTile extends StatelessWidget {
           }
         } catch (e) {
           // Close loading dialog if still open
-          if (Get.isDialogOpen ?? false) {
-            Get.back();
-          }
-          
+          if (Get.isDialogOpen ?? false) Get.back();
           AppSnackbar.error("Error: ${e.toString()}");
         }
       },
-    );
-
-    worker.dispose();
+    ).whenComplete(() {
+      // Dispose worker after dialog closes
+      worker.dispose();
+    });
   }
 
   int _getDigitsForSymbol(String symbol) {

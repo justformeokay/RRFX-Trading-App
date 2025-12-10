@@ -261,7 +261,7 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(3),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: CustomColor.secondaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),

@@ -31,53 +31,144 @@ class EditPositionController extends GetxController {
   // Calculate pip value based on digits
   // digits 2 -> 0.01, digits 3 -> 0.001, digits 5 -> 0.00001
   double get pipValue => 1 / (pow(10, digits));
+  
+  // Minimum distance in points (20 points)
+  double get minDistance => 20 * pipValue;
+  
+  // Calculate minimum TP based on direction
+  double get minTP {
+    if (direction.toLowerCase() == 'buy') {
+      // Buy: TP must be 20 points above current price
+      return currentPrice.value + minDistance;
+    } else {
+      // Sell: TP must be 20 points below current price
+      return currentPrice.value - minDistance;
+    }
+  }
+  
+  // Calculate minimum SL based on direction
+  double get minSL {
+    if (direction.toLowerCase() == 'buy') {
+      // Buy: SL must be 20 points below current price
+      return currentPrice.value - minDistance;
+    } else {
+      // Sell: SL must be 20 points above current price
+      return currentPrice.value + minDistance;
+    }
+  }
 
   void incrementSL() {
-    // First time: set to current price
+    // First time: set to minimum SL
     if (!_slInitialized.value) {
-      stopLoss.value = double.parse(currentPrice.value.toStringAsFixed(digits));
+      stopLoss.value = double.parse(minSL.toStringAsFixed(digits));
       _slInitialized.value = true;
+      return;
     }
+    
     stopLoss.value = double.parse(
       (stopLoss.value + pipValue).toStringAsFixed(digits),
     );
   }
 
   void decrementSL() {
-    // First time: set to current price
+    // First time: set to minimum SL
     if (!_slInitialized.value) {
-      stopLoss.value = double.parse(currentPrice.value.toStringAsFixed(digits));
+      stopLoss.value = double.parse(minSL.toStringAsFixed(digits));
       _slInitialized.value = true;
+      return;
     }
-    stopLoss.value = double.parse(
-      (stopLoss.value - pipValue).toStringAsFixed(digits),
-    );
+    
+    // Prevent decrement below minimum
+    final newValue = stopLoss.value - pipValue;
+    if (direction.toLowerCase() == 'buy') {
+      // Buy: cannot go higher than minSL (which is below current price)
+      // So we can decrease freely
+      stopLoss.value = double.parse(newValue.toStringAsFixed(digits));
+    } else {
+      // Sell: cannot go below minSL (which is above current price)
+      if (newValue >= minSL) {
+        stopLoss.value = double.parse(newValue.toStringAsFixed(digits));
+      }
+    }
+  }
+  
+  // Check if SL decrement is allowed
+  bool get canDecrementSL {
+    if (!_slInitialized.value) return true; // First time always allowed
+    if (direction.toLowerCase() == 'buy') {
+      return true; // Buy can always decrease (goes further below)
+    } else {
+      // Sell: cannot go below minSL
+      return (stopLoss.value - pipValue) >= minSL;
+    }
+  }
+  
+  // Check if SL increment is allowed
+  bool get canIncrementSL {
+    if (!_slInitialized.value) return true; // First time always allowed
+    if (direction.toLowerCase() == 'sell') {
+      return true; // Sell can always increase (goes further above)
+    } else {
+      // Buy: cannot go above minSL
+      return (stopLoss.value + pipValue) <= minSL;
+    }
   }
 
   void incrementTP() {
-    // First time: set to current price
+    // First time: set to minimum TP
     if (!_tpInitialized.value) {
-      takeProfit.value = double.parse(
-        currentPrice.value.toStringAsFixed(digits),
-      );
+      takeProfit.value = double.parse(minTP.toStringAsFixed(digits));
       _tpInitialized.value = true;
+      return;
     }
+    
     takeProfit.value = double.parse(
       (takeProfit.value + pipValue).toStringAsFixed(digits),
     );
   }
 
   void decrementTP() {
-    // First time: set to current price
+    // First time: set to minimum TP
     if (!_tpInitialized.value) {
-      takeProfit.value = double.parse(
-        currentPrice.value.toStringAsFixed(digits),
-      );
+      takeProfit.value = double.parse(minTP.toStringAsFixed(digits));
       _tpInitialized.value = true;
+      return;
     }
-    takeProfit.value = double.parse(
-      (takeProfit.value - pipValue).toStringAsFixed(digits),
-    );
+    
+    // Prevent decrement below minimum
+    final newValue = takeProfit.value - pipValue;
+    if (direction.toLowerCase() == 'buy') {
+      // Buy: cannot go below minTP (which is above current price)
+      if (newValue >= minTP) {
+        takeProfit.value = double.parse(newValue.toStringAsFixed(digits));
+      }
+    } else {
+      // Sell: cannot go higher than minTP (which is below current price)
+      // So we can decrease freely
+      takeProfit.value = double.parse(newValue.toStringAsFixed(digits));
+    }
+  }
+  
+  // Check if TP decrement is allowed
+  bool get canDecrementTP {
+    if (!_tpInitialized.value) return true; // First time always allowed
+    if (direction.toLowerCase() == 'sell') {
+      return true; // Sell can always decrease (goes further below)
+    } else {
+      // Buy: cannot go below minTP
+      return (takeProfit.value - pipValue) >= minTP;
+    }
+  }
+  
+  // Check if TP increment is allowed
+  bool get canIncrementTP {
+    if (!_tpInitialized.value) return true; // First time always allowed
+    if (direction.toLowerCase() == 'buy') {
+      return true; // Buy can always increase (goes further above)
+    } else {
+      // Sell: cannot go above minTP
+      return (takeProfit.value + pipValue) <= minTP;
+    }
   }
 
   void resetSL() {
@@ -142,9 +233,13 @@ Future<void> showEditPositionDialog({
     tag: positionId,
   );
 
-  // Listen to current price observable
-  final worker = ever(currentPriceObservable, (price) {
+  // Sync current price observable directly to controller
+  // Use ever to listen and update
+  StreamSubscription? priceSubscription;
+  priceSubscription = currentPriceObservable.listen((price) {
+    print('🔄 Price Update in Dialog: $price');
     controller.currentPrice.value = price;
+    print('✅ Controller Price Updated: ${controller.currentPrice.value}');
   });
 
   await showModalBottomSheet(
@@ -154,13 +249,13 @@ Future<void> showEditPositionDialog({
       borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
     ),
     isScrollControlled: true,
-    builder: (_) {
+    builder: (BuildContext dialogContext) {
       return Padding(
         padding: EdgeInsets.fromLTRB(
           20,
           20,
           20,
-          MediaQuery.of(context).viewInsets.bottom + 20,
+          MediaQuery.of(dialogContext).viewInsets.bottom + 20,
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -375,7 +470,7 @@ Future<void> showEditPositionDialog({
       );
     },
   ).whenComplete(() {
-    worker.dispose();
+    priceSubscription?.cancel();
     Get.delete<EditPositionController>(tag: positionId);
   });
 }
@@ -453,11 +548,17 @@ Widget _buildPriceControl({
         Row(
           children: [
             // DECREMENT BUTTON
-            _buildControlButton(
-              context: context,
-              icon: Icons.remove,
-              onPressed: onDecrement,
-            ),
+            Obx(() {
+              final canDecrement = isStopLoss 
+                  ? controller.canDecrementSL 
+                  : controller.canDecrementTP;
+              return _buildControlButton(
+                context: context,
+                icon: Icons.remove,
+                onPressed: canDecrement ? onDecrement : null,
+                isEnabled: canDecrement,
+              );
+            }),
             const SizedBox(width: 12),
             // VALUE DISPLAY
             Expanded(
@@ -494,11 +595,17 @@ Widget _buildPriceControl({
             ),
             const SizedBox(width: 12),
             // INCREMENT BUTTON
-            _buildControlButton(
-              context: context,
-              icon: Icons.add,
-              onPressed: onIncrement,
-            ),
+            Obx(() {
+              final canIncrement = isStopLoss 
+                  ? controller.canIncrementSL 
+                  : controller.canIncrementTP;
+              return _buildControlButton(
+                context: context,
+                icon: Icons.add,
+                onPressed: canIncrement ? onIncrement : null,
+                isEnabled: canIncrement,
+              );
+            }),
           ],
         ),
       ],
@@ -648,15 +755,18 @@ void _showPriceInputDialog({
 Widget _buildControlButton({
   required BuildContext context,
   required IconData icon,
-  required VoidCallback onPressed,
+  required VoidCallback? onPressed,
+  bool isEnabled = true,
 }) {
   final theme = Theme.of(context);
   final isDark = theme.brightness == Brightness.dark;
 
   return _HoldableButton(
-    onPressed: onPressed,
+    onPressed: isEnabled ? onPressed : null,
     child: Material(
-      color: isDark ? const Color(0xFF2A2A2A) : theme.colorScheme.surface,
+      color: isEnabled 
+          ? (isDark ? const Color(0xFF2A2A2A) : theme.colorScheme.surface)
+          : theme.colorScheme.onSurface.withOpacity(0.05),
       borderRadius: BorderRadius.circular(12),
       child: Container(
         width: 48,
@@ -664,18 +774,24 @@ Widget _buildControlButton({
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: theme.colorScheme.onSurface.withOpacity(0.15),
+            color: theme.colorScheme.onSurface.withOpacity(isEnabled ? 0.15 : 0.05),
             width: 1,
           ),
         ),
-        child: Icon(icon, color: CustomColor.secondaryColor, size: 22),
+        child: Icon(
+          icon, 
+          color: isEnabled 
+              ? CustomColor.secondaryColor 
+              : theme.colorScheme.onSurface.withOpacity(0.2), 
+          size: 22,
+        ),
       ),
     ),
   );
 }
 
 class _HoldableButton extends StatefulWidget {
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final Widget child;
 
   const _HoldableButton({required this.onPressed, required this.child});
@@ -691,10 +807,12 @@ class _HoldableButtonState extends State<_HoldableButton> {
   int _holdDuration = 0;
 
   void _startHolding() {
+    if (widget.onPressed == null) return;
+    
     setState(() => _isHolding = true);
 
     // Execute immediately on press
-    widget.onPressed();
+    widget.onPressed!();
 
     // Start repeating after initial delay
     _timer = Timer(const Duration(milliseconds: 200), () {
@@ -704,6 +822,8 @@ class _HoldableButtonState extends State<_HoldableButton> {
   }
 
   void _startRepeating() {
+    if (widget.onPressed == null) return;
+    
     _accelerationTimer?.cancel();
 
     // Start with slower interval
@@ -712,7 +832,12 @@ class _HoldableButtonState extends State<_HoldableButton> {
     _accelerationTimer = Timer.periodic(Duration(milliseconds: interval), (
       timer,
     ) {
-      widget.onPressed();
+      if (widget.onPressed == null) {
+        timer.cancel();
+        return;
+      }
+      
+      widget.onPressed!();
       _holdDuration++;
 
       // Accelerate after holding for a while
@@ -724,7 +849,7 @@ class _HoldableButtonState extends State<_HoldableButton> {
         _accelerationTimer = Timer.periodic(const Duration(milliseconds: 30), (
           _,
         ) {
-          widget.onPressed();
+          widget.onPressed?.call();
         });
       }
     });
@@ -747,9 +872,9 @@ class _HoldableButtonState extends State<_HoldableButton> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (_) => _startHolding(),
-      onTapUp: (_) => _stopHolding(),
-      onTapCancel: _stopHolding,
+      onTapDown: widget.onPressed != null ? (_) => _startHolding() : null,
+      onTapUp: widget.onPressed != null ? (_) => _stopHolding() : null,
+      onTapCancel: widget.onPressed != null ? _stopHolding : null,
       child: widget.child,
     );
   }

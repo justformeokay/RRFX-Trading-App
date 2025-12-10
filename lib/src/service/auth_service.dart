@@ -106,7 +106,7 @@ class AuthService extends GetxController {
         body: body
       );
 
-      print("INI LOG DARI POST => ${response.body}");
+      print("POST ${GlobalVariable.mainURL}/$url");
 
       if (response.statusCode == 300) {
         if(maxReload > 3) {
@@ -360,6 +360,84 @@ class AuthService extends GetxController {
 
     } catch (e) {
       throw Exception(e);
+    }
+  }
+
+  // Method khusus untuk withdrawal dengan multipart form-data
+  Future<Map<String, dynamic>> withdrawalMultipart(
+    String url,
+    Map<String, String> body, {
+    int maxReload = 0,
+  }) async {
+    try {
+      await init();
+      headers['Authorization'] = 'Bearer $accessToken';
+
+      print("=== Withdrawal Multipart Request ===");
+      print("URL: ${GlobalVariable.mainURL}/$url");
+      print("Headers: $headers");
+      print("Body: $body");
+
+      // Buat request multipart
+      http.MultipartRequest request =
+          http.MultipartRequest('POST', Uri.parse("${GlobalVariable.mainURL}/$url"));
+      request.headers.addAll(headers);
+      request.fields.addAll(body);
+
+      // Kirim request
+      http.StreamedResponse response = await request.send();
+
+      // Ambil response string
+      String responseString = await response.stream.bytesToString();
+
+      print("=== Withdrawal Multipart Response ===");
+      print("Status Code: ${response.statusCode}");
+      print("Response String: $responseString");
+
+      // Parse JSON
+      Map<String, dynamic> respBody;
+      try {
+        respBody = jsonDecode(responseString);
+      } catch (e) {
+        print("JSON Decode Error: $e");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Failed to parse server response',
+          'response': [],
+        };
+      }
+
+      // Handle token refresh
+      if (response.statusCode == 300) {
+        if (maxReload > 3) {
+          throw Exception("Telah mencapai max reload, silahkan login kembali");
+        }
+
+        Map<String, dynamic> refreshTokenResponse = await refreshingToken(body: {
+          'refresh_token': refreshToken ?? "",
+        });
+
+        accessToken = refreshTokenResponse['response']['access_token'];
+        refreshToken = refreshTokenResponse['response']['refresh_token'];
+
+        SharedPreferences preferences = await SharedPreferences.getInstance();
+        preferences.setString('accessToken', accessToken!);
+        preferences.setString('refreshToken', refreshToken!);
+
+        return await withdrawalMultipart(url, body, maxReload: maxReload + 1);
+      }
+
+      // Return dengan struktur yang benar
+      return {
+        'status': respBody['status'] ?? false,
+        'statusCode': response.statusCode,
+        'message': respBody['message'] ?? 'Unknown error',
+        'response': respBody['response'] ?? [],
+      };
+    } catch (e) {
+      print("Withdrawal Multipart Exception: $e");
+      throw Exception("authService withdrawalMultipart error: $e");
     }
   }
 }

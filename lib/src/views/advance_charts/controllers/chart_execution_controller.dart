@@ -68,6 +68,7 @@ class ChartExecutionController extends GetxController {
       if (response['status'] == true) {
         executionMessage.value = 'Order berhasil dieksekusi!';
         print('✅ Order executed successfully: ${response['message']}');
+        print('📄 Response Data EXECUTE: ${response['response']}');
         return response;
       } else {
         final errorMsg = response['message'] ?? 'Order gagal dieksekusi';

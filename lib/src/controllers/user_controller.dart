@@ -4,6 +4,7 @@ import 'package:rrfx/src/models/auth/profile.dart';
 import 'package:rrfx/src/models/settings/detail_history_dp_wd_model.dart';
 import 'package:rrfx/src/models/settings/history_withdraw_deposit_model.dart';
 import 'package:rrfx/src/models/settings/internal_transfer_model.dart';
+import 'package:rrfx/src/models/settings/internal_transfer_history_model.dart';
 import 'package:rrfx/src/service/auth_service.dart';
 
 class UserController extends GetxController {
@@ -13,6 +14,7 @@ class UserController extends GetxController {
   AuthService authService = AuthService();
   Rxn<ProfileModel> profileModel = Rxn<ProfileModel>();
   Rxn<InternalTransferModel> internalTransfer = Rxn<InternalTransferModel>();
+  Rxn<InternalTransferHistoryModel> internalTransferHistory = Rxn<InternalTransferHistoryModel>();
   Rxn<HistoryWithdrawDepositModel> historyDepoWd = Rxn<HistoryWithdrawDepositModel>();
   Rxn<DepositWithdrawDetailModel> transactionDetail = Rxn<DepositWithdrawDetailModel>();
 
@@ -120,19 +122,41 @@ class UserController extends GetxController {
     }
   }
 
-  Future<bool> internalTransferHistory({String? loginID}) async {
+  // Future<bool> internalTransferHistory({String? loginID}) async {
+  //   try {
+  //     isLoading(true);
+  //     Map<String, dynamic> result = await authService.get("transaction/history?login=$loginID");
+  //     isLoading(false);
+  //     // ✅ Parsing langsung dari List
+  //     var model = InternalTransferModel.fromJson(result);
+  //     internalTransfer(model); // Pastikan ini menerima tipe yang sesuai
+
+  //     responseMessage(result['message']);
+  //     if (result['status'] != true) {
+  //       return false;
+  //     }
+  //     return true;
+  //   } catch (e) {
+  //     isLoading(false);
+  //     responseMessage(e.toString());
+  //     return false;
+  //   }
+  // }
+
+  // Method baru untuk API history-internal-transfer
+  Future<bool> getInternalTransferHistory() async {
     try {
       isLoading(true);
-      Map<String, dynamic> result = await authService.get("transaction/history?login=$loginID");
+      Map<String, dynamic> result = await authService.get("transaction/history-internal-transfer");
       isLoading(false);
-      // ✅ Parsing langsung dari List
-      var model = InternalTransferModel.fromJson(result);
-      internalTransfer(model); // Pastikan ini menerima tipe yang sesuai
-
+      
       responseMessage(result['message']);
       if (result['status'] != true) {
         return false;
       }
+      
+      var model = InternalTransferHistoryModel.fromJson(result);
+      internalTransferHistory(model);
       return true;
     } catch (e) {
       isLoading(false);

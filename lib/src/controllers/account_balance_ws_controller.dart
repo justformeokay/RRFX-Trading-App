@@ -56,10 +56,31 @@ class AccountBalanceWSController extends GetxController
   }
 
   void subscribe({required String login, required String serverType}) {
+    // Skip if already subscribed to same account
+    if (_currentLogin == login && _currentServerType == serverType && 
+        status.value == AccountWSStatus.connected) {
+      // print('✅ [AccountWS] Already subscribed to $login');
+      return;
+    }
+
+    // Close old connection before creating new one
+    if (channel != null) {
+      // print('🔄 [AccountWS] Closing old connection for $_currentLogin');
+      try {
+        channel?.sink.close();
+      } catch (e) {
+        // print('⚠️ [AccountWS] Error closing old channel: $e');
+      }
+      channel = null;
+    }
+
     _currentLogin = login;
     _currentServerType = serverType;
+    _isManuallyDisconnected = false;
+    _reconnectAttempts = 0;
 
-    // Connect dulu, subscribe message akan dikirim otomatis setelah connected
+    // Connect to new account
+    // print('🔌 [AccountWS] Subscribing to new account: $login');
     _connectWebSocket();
   }
 
@@ -147,42 +168,78 @@ class AccountBalanceWSController extends GetxController
       final accountController = Get.find<AccountController>();
       final tradingController = Get.find<TradingController>();
 
-      // print('🔄 [AccountWS] Handling account update: $data');
-      // print(
-      //   '🔄 [AccountWS] Current selected account: ${accountController.selectedAccount.value?.login}',
-      // );
+      // Validate if data belongs to current account (prevent processing wrong account data)
+      final dataLogin = data['login']?.toString();
+      if (dataLogin != null && dataLogin != _currentLogin) {
+        // print('⚠️ [AccountWS] Ignoring data for different account: $dataLogin (current: $_currentLogin)');
+        return;
+      }
 
       // Update balance, equity, margin, dll
       if (accountController.selectedAccount.value != null) {
         final currentAccount = accountController.selectedAccount.value!;
 
-        // Update account data
-        currentAccount.balance =
-            data['balance']?.toString() ?? currentAccount.balance;
-        currentAccount.equity =
-            data['equity']?.toString() ?? currentAccount.equity;
-        currentAccount.margin = data['margin']?.toString() ?? "0";
-        currentAccount.marginFree =
-            data['free_margin']?.toString() ?? currentAccount.marginFree;
-        currentAccount.marginFreePercent =
-            (data['margin_level'] as num?)?.toDouble() ??
-            currentAccount.marginFreePercent;
+        // Only update if values actually changed (reduce unnecessary UI rebuilds)
+        bool hasChanges = false;
+        
+        final newBalance = data['balance']?.toString();
+        if (newBalance != null && newBalance != currentAccount.balance) {
+          currentAccount.balance = newBalance;
+          hasChanges = true;
+        }
+        
+        final newEquity = data['equity']?.toString();
+        if (newEquity != null && newEquity != currentAccount.equity) {
+          currentAccount.equity = newEquity;
+          hasChanges = true;
+        }
+        
+        final newMargin = data['margin']?.toString() ?? "0";
+        if (newMargin != currentAccount.margin) {
+          currentAccount.margin = newMargin;
+          hasChanges = true;
+        }
+        
+        final newMarginFree = data['free_margin']?.toString();
+        if (newMarginFree != null && newMarginFree != currentAccount.marginFree) {
+          currentAccount.marginFree = newMarginFree;
+          hasChanges = true;
+        }
+        
+        final newMarginLevel = (data['margin_level'] as num?)?.toDouble();
+        if (newMarginLevel != null && newMarginLevel != currentAccount.marginFreePercent) {
+          currentAccount.marginFreePercent = newMarginLevel;
+          hasChanges = true;
+        }
 
-        // Update profit dan floating dari WebSocket (tidak ada di model)
-        profit.value = (data['profit'] as num?)?.toDouble() ?? 0.0;
-        floating.value = (data['floating'] as num?)?.toDouble() ?? 0.0;
+        // Update profit dan floating
+        final newProfit = (data['profit'] as num?)?.toDouble() ?? 0.0;
+        if ((newProfit - profit.value).abs() > 0.001) { // Only update if difference > 0.001
+          profit.value = newProfit;
+          hasChanges = true;
+        }
+        
+        final newFloating = (data['floating'] as num?)?.toDouble() ?? 0.0;
+        if ((newFloating - floating.value).abs() > 0.001) {
+          floating.value = newFloating;
+          hasChanges = true;
+        }
 
-        // Trigger update
-        accountController.selectedAccount.refresh();
-
-        // print(
-        //   '💰 [AccountWS] Updated account: Balance=${data['balance']}, Equity=${data['equity']}',
-        // );
+        // Trigger update only if there are actual changes
+        if (hasChanges) {
+          accountController.selectedAccount.refresh();
+        }
       }
 
-      // Update open positions
+      // Update open positions (only if there are positions in the data)
       if (data['open_positions'] != null && data['open_positions'] is List) {
         final openPositions = data['open_positions'] as List;
+
+        // Skip if positions data is empty and we already have empty model
+        if (openPositions.isEmpty && 
+            (tradingController.openOrderModel.value?.response?.isEmpty ?? true)) {
+          return;
+        }
 
         // Convert WebSocket format to Response objects
         final updatedPositions =
@@ -208,11 +265,7 @@ class AccountBalanceWSController extends GetxController
 
         // Create new OpenOrderModel with updated data
         final newModel = {'response': updatedPositions};
-
-        tradingController.openOrderModel.value =
-            tradingController.openOrderModel.value != null
-                ? OpenOrderModel.fromJson(newModel)
-                : OpenOrderModel.fromJson(newModel);
+        tradingController.openOrderModel.value = OpenOrderModel.fromJson(newModel);
 
         // print('📊 [AccountWS] Updated ${openPositions.length} open positions');
       }

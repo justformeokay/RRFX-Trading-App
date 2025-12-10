@@ -204,6 +204,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     final operation = item['operation'] as String;
     final lot = item['lot'] as double;
     final status = item['status'] as String; // 'loading', 'success', 'error'
+    final openPrice = item['openPrice']; // Can be null
     
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -245,6 +246,26 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
               color: Get.isDarkMode ? Colors.white70 : Colors.black87,
             ),
           ),
+          if (openPrice != null) ...[
+            const SizedBox(width: 8),
+            Text(
+              '@',
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: Get.isDarkMode ? Colors.white38 : Colors.black38,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              openPrice.toString(),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: operation == 'buy' ? Colors.green : Colors.red,
+              ),
+            ),
+          ],
           const SizedBox(width: 12),
           if (status == 'loading')
             SizedBox(
@@ -315,7 +336,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
-        bottom: 80,
+        bottom: 140, // Naikkan dari 80 ke 140 agar tidak menutupi button Buy
         left: 0,
         right: 0,
         child: SafeArea(
@@ -372,22 +393,27 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     final operation = item['operation'] as String;
     
     try {
+      Map<String, dynamic> response;
       if (operation == 'buy') {
-        await executionController.executeBuy(
+        response = await executionController.executeBuy(
           login: widget.login,
           symbol: widget.symbol,
         );
       } else {
-        await executionController.executeSell(
+        response = await executionController.executeSell(
           login: widget.login,
           symbol: widget.symbol,
         );
       }
       
-      // Update status to success
+      // Extract openPrice from response
+      final openPrice = response['response']?['openPrice'];
+      
+      // Update status to success and add openPrice
       final index = _executionQueue.indexWhere((e) => e['id'] == item['id']);
       if (index != -1) {
         _executionQueue[index]['status'] = 'success';
+        _executionQueue[index]['openPrice'] = openPrice;
         _executionQueue.refresh();
       }
       
@@ -503,13 +529,18 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
             Expanded(
               flex: 3,
               child: Container(
-                height: 38,
+                height: 38.5,
                 decoration: BoxDecoration(
                   color: isDark ? Colors.grey.shade900 : Colors.white,
-                  border: Border.all(
+                  border: Border(
+                    bottom: BorderSide(
                     color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
                     width: 2,
                   ),
+                  top: BorderSide(
+                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                    width: 2,
+                  ))
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
