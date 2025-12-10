@@ -225,21 +225,20 @@ class AuthController extends GetxController {
           'Content-Type': 'application/x-www-form-urlencoded'
         },
         body: {
-          'email': email,
-          'device': jsonEncode(deviceInfo)
+          'email': email
         },
       );
       var result = jsonDecode(response.body);
+      print("INI RESULT FORGOT PASSWORD: $result");
+      responseMessage.value = result['message'];
+      print("INI RESPONSE MESSAGE: ${result['message']}");
       isLoading(false);
-      if (response.statusCode == 200) {
-        responseMessage.value = result['message'];
+      if (result['status'] == true) {
         return true;
       }
-      responseMessage.value = result['message'];
       return false;
     } catch (e) {
       isLoading(false);
-      responseMessage.value = e.toString();
       return false;
     }
   }

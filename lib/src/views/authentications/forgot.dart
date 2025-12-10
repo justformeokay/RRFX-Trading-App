@@ -61,6 +61,7 @@ class _ForgotState extends State<Forgot> {
                           fieldName: LanguageGlobalVar.EMAIL_ADDRESS.tr,
                           controller: emailController,
                           requiredField: true,
+                          labelText: "Email Address",
                           useValidator: false,
                           hintText: LanguageGlobalVar.INPUT_YOUR_EMAIL_ADDRESS.tr,
                         )
@@ -78,12 +79,14 @@ class _ForgotState extends State<Forgot> {
               onPressed: authController.isLoading.value ? null : (){
                 if(_formKey.currentState!.validate()){
                   authController.forgotPassword(email: emailController.text).then((result){
-                    if(result){
-                      AppSnackbar.success(authController.responseMessage.value);
-                      Get.back();
-                    }else{
+                    if(!result){
                       AppSnackbar.error(authController.responseMessage.value);
+                      return;
                     }
+                    AppSnackbar.success(authController.responseMessage.value);
+                      Future.delayed(const Duration(seconds: 2), (){
+                        Get.back(); 
+                    });
                   });
                 }
               },

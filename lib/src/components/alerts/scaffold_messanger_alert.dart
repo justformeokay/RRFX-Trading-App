@@ -83,7 +83,7 @@ class AppSnackbar {
     );
   }
 
-  static void error(String message, {String title = "Error"}) {
+  static void error(String message, {String title = "Gagal"}) {
     _show(
       title: title,
       message: message,
