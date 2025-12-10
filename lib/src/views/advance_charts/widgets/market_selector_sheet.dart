@@ -18,13 +18,16 @@ class MarketSelectorSheet extends StatefulWidget {
   State<MarketSelectorSheet> createState() => _MarketSelectorSheetState();
 }
 
-class _MarketSelectorSheetState extends State<MarketSelectorSheet> {
+class _MarketSelectorSheetState extends State<MarketSelectorSheet>
+    with SingleTickerProviderStateMixin {
   final symbolsController = Get.put(SymbolsController());
   final searchController = TextEditingController();
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 4, vsync: this);
     // Fetch symbols if not loaded
     if (symbolsController.allSymbols.isEmpty) {
       symbolsController.fetchSymbols();
@@ -34,6 +37,7 @@ class _MarketSelectorSheetState extends State<MarketSelectorSheet> {
   @override
   void dispose() {
     searchController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -65,9 +69,17 @@ class _MarketSelectorSheetState extends State<MarketSelectorSheet> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Icon(
-                  Iconsax.chart_outline,
-                  color: CustomColor.secondaryColor,
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: CustomColor.secondaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Iconsax.chart_outline,
+                    color: CustomColor.secondaryColor,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -141,6 +153,63 @@ class _MarketSelectorSheetState extends State<MarketSelectorSheet> {
 
           const SizedBox(height: 16),
 
+          // Tab Bar
+          Obx(() {
+            // Hide tabs when searching
+            if (symbolsController.searchQuery.value.isNotEmpty) {
+              return const SizedBox.shrink();
+            }
+
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicator: BoxDecoration(
+                  color: CustomColor.secondaryColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                labelColor: Colors.black,
+                unselectedLabelColor:
+                    isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                labelStyle: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+                unselectedLabelStyle: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+                padding: const EdgeInsets.all(4),
+                tabs: const [
+                  Tab(
+                    icon: Icon(Iconsax.star_bold, size: 18),
+                    text: 'Favorite',
+                  ),
+                  Tab(
+                    icon: Icon(Iconsax.chart_2_outline, size: 18),
+                    text: 'Forex',
+                  ),
+                  Tab(
+                    icon: Icon(Iconsax.diamonds_outline, size: 18),
+                    text: 'Komoditi',
+                  ),
+                  Tab(
+                    icon: Icon(Iconsax.status_up_outline, size: 18),
+                    text: 'Index',
+                  ),
+                ],
+              ),
+            );
+          }),
+
+          const SizedBox(height: 16),
+
           // Content
           Expanded(
             child: Obx(() {
@@ -157,7 +226,9 @@ class _MarketSelectorSheetState extends State<MarketSelectorSheet> {
                       Text(
                         'Memuat daftar market...',
                         style: GoogleFonts.inter(
-                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          color: isDark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
                         ),
                       ),
                     ],
@@ -192,13 +263,16 @@ class _MarketSelectorSheetState extends State<MarketSelectorSheet> {
                           symbolsController.errorMessage.value,
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
-                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
                           ),
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton.icon(
                           onPressed: () => symbolsController.refreshSymbols(),
-                          icon: const Icon(Iconsax.refresh_outline, color: Colors.black),
+                          icon: const Icon(Iconsax.refresh_outline,
+                              color: Colors.black),
                           label: Text(
                             'Coba Lagi',
                             style: GoogleFonts.inter(
@@ -223,65 +297,23 @@ class _MarketSelectorSheetState extends State<MarketSelectorSheet> {
                 );
               }
 
-              // Empty state
-              if (symbolsController.filteredSymbols.isEmpty) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Iconsax.search_normal_outline,
-                          size: 64,
-                          color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Market Tidak Ditemukan',
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : Colors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Coba gunakan kata kunci lain',
-                          style: GoogleFonts.inter(
-                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+              // Search results
+              if (symbolsController.searchQuery.value.isNotEmpty) {
+                if (symbolsController.filteredSymbols.isEmpty) {
+                  return _buildEmptyState(isDark);
+                }
+                return _buildSearchResults(isDark);
               }
 
-              // Symbol list grouped by category
-              return ListView.builder(
-                padding: const EdgeInsets.only(bottom: 16),
-                itemCount: symbolsController.searchQuery.value.isEmpty
-                    ? symbolsController.symbolGroups.length
-                    : 1,
-                itemBuilder: (context, index) {
-                  if (symbolsController.searchQuery.value.isNotEmpty) {
-                    // Show filtered results without grouping
-                    return _buildSymbolList(
-                      'Hasil Pencarian',
-                      symbolsController.filteredSymbols,
-                      isDark,
-                    );
-                  } else {
-                    // Show grouped results
-                    final group = symbolsController.symbolGroups[index];
-                    return _buildSymbolList(
-                      group.name,
-                      group.symbols,
-                      isDark,
-                    );
-                  }
-                },
+              // Tab content
+              return TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildFavoriteTab(isDark),
+                  _buildCategoryTab('Forex', isDark),
+                  _buildCategoryTab('Komoditi', isDark),
+                  _buildCategoryTab('Index', isDark),
+                ],
               );
             }),
           ),
@@ -290,100 +322,241 @@ class _MarketSelectorSheetState extends State<MarketSelectorSheet> {
     );
   }
 
-  Widget _buildSymbolList(String groupName, List<SymbolModel> symbols, bool isDark) {
-    if (symbols.isEmpty) return const SizedBox.shrink();
+  Widget _buildFavoriteTab(bool isDark) {
+    return Obx(() {
+      final favorites = symbolsController.favoriteSymbols;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Group header
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: Text(
-            groupName,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: CustomColor.secondaryColor,
-              letterSpacing: 0.5,
+      if (favorites.isEmpty) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Iconsax.star_outline,
+                  size: 64,
+                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Belum Ada Favorite',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Tap icon bintang untuk menambah symbol ke favorite',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
+        );
+      }
 
-        // Symbol items
-        ...symbols.map((symbol) => _buildSymbolItem(symbol, isDark)),
-      ],
+      return ListView.builder(
+        padding: const EdgeInsets.only(bottom: 16),
+        itemCount: favorites.length,
+        itemBuilder: (context, index) {
+          return _buildSymbolItem(favorites[index], isDark);
+        },
+      );
+    });
+  }
+
+  Widget _buildCategoryTab(String category, bool isDark) {
+    return Obx(() {
+      final symbols = symbolsController.getSymbolsByCategory(category);
+
+      if (symbols.isEmpty) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Iconsax.search_normal_outline,
+                  size: 64,
+                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Tidak Ada Symbol',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Kategori $category kosong',
+                  style: GoogleFonts.inter(
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      return ListView.builder(
+        padding: const EdgeInsets.only(bottom: 16),
+        itemCount: symbols.length,
+        itemBuilder: (context, index) {
+          return _buildSymbolItem(symbols[index], isDark);
+        },
+      );
+    });
+  }
+
+  Widget _buildSearchResults(bool isDark) {
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 16),
+      itemCount: symbolsController.filteredSymbols.length,
+      itemBuilder: (context, index) {
+        return _buildSymbolItem(
+          symbolsController.filteredSymbols[index],
+          isDark,
+        );
+      },
     );
   }
 
-  Widget _buildSymbolItem(SymbolModel symbol, bool isDark) {
-    final isSelected = symbolsController.selectedSymbol.value?.symbol == symbol.symbol;
-
-    return InkWell(
-      onTap: () {
-        symbolsController.selectSymbol(symbol);
-        widget.onSymbolSelected?.call(symbol);
-        Get.back();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? CustomColor.secondaryColor.withOpacity(0.1)
-              : Colors.transparent,
-          border: Border(
-            left: BorderSide(
-              color: isSelected
-                  ? CustomColor.secondaryColor
-                  : Colors.transparent,
-              width: 3,
-            ),
-          ),
-        ),
-        child: Row(
+  Widget _buildEmptyState(bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Symbol info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    symbol.symbolAlias,
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      _buildInfoChip(
-                        'Spread: ${symbol.spread}',
-                        isDark,
-                      ),
-                      const SizedBox(width: 8),
-                      _buildInfoChip(
-                        'Lot: ${symbol.volumeMin}-${symbol.volumeMax}',
-                        isDark,
-                      ),
-                    ],
-                  ),
-                ],
+            Icon(
+              Iconsax.search_normal_outline,
+              size: 64,
+              color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Market Tidak Ditemukan',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : Colors.black,
               ),
             ),
-
-            // Selected indicator
-            if (isSelected)
-              Icon(
-                Iconsax.tick_circle_bold,
-                color: CustomColor.secondaryColor,
-                size: 24,
+            const SizedBox(height: 8),
+            Text(
+              'Coba gunakan kata kunci lain',
+              style: GoogleFonts.inter(
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
               ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildSymbolItem(SymbolModel symbol, bool isDark) {
+    final isSelected =
+        symbolsController.selectedSymbol.value?.symbol == symbol.symbol;
+
+    return Obx(() {
+      final isFavorite = symbolsController.isFavorite(symbol.symbol);
+
+      return InkWell(
+        onTap: () {
+          symbolsController.selectSymbol(symbol);
+          widget.onSymbolSelected?.call(symbol);
+          Get.back();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? CustomColor.secondaryColor.withOpacity(0.1)
+                : Colors.transparent,
+            border: Border(
+              left: BorderSide(
+                color: isSelected
+                    ? CustomColor.secondaryColor
+                    : Colors.transparent,
+                width: 3,
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              // Favorite button
+              IconButton(
+                icon: Icon(
+                  isFavorite ? Iconsax.star_bold : Iconsax.star_outline,
+                  color: isFavorite
+                      ? CustomColor.secondaryColor
+                      : (isDark ? Colors.grey.shade600 : Colors.grey.shade400),
+                  size: 22,
+                ),
+                onPressed: () {
+                  symbolsController.toggleFavorite(symbol);
+                },
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+
+              const SizedBox(width: 12),
+
+              // Symbol info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      symbol.symbolAlias,
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        _buildInfoChip(
+                          'Spread: ${symbol.spread}',
+                          isDark,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildInfoChip(
+                          'Lot: ${symbol.volumeMin}-${symbol.volumeMax}',
+                          isDark,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Selected indicator
+              if (isSelected)
+                Icon(
+                  Iconsax.tick_circle_bold,
+                  color: CustomColor.secondaryColor,
+                  size: 24,
+                ),
+            ],
+          ),
+        ),
+      );
+    });
   }
 
   Widget _buildInfoChip(String text, bool isDark) {

@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
 import '../models/symbol_model.dart';
 import '../services/symbol_service.dart';
@@ -6,11 +7,13 @@ import '../services/symbol_service.dart';
 class SymbolsController extends GetxController {
   final SymbolService _symbolService = SymbolService();
   final accountController = Get.find<AccountController>();
+  final _storage = GetStorage();
 
   // State
   final RxList<SymbolGroupModel> symbolGroups = <SymbolGroupModel>[].obs;
   final RxList<SymbolModel> allSymbols = <SymbolModel>[].obs;
   final RxList<SymbolModel> filteredSymbols = <SymbolModel>[].obs;
+  final RxList<String> favoriteSymbolIds = <String>[].obs;
   final Rxn<SymbolModel> selectedSymbol = Rxn<SymbolModel>();
   final RxBool isLoading = false.obs;
   final RxBool hasError = false.obs;
@@ -18,9 +21,15 @@ class SymbolsController extends GetxController {
   final RxString searchQuery = ''.obs;
   String? _lastFetchedAccount;
 
+  // Storage key
+  static const String _favoritesKey = 'favorite_symbols';
+
   @override
   void onInit() {
     super.onInit();
+    // Load favorites from storage
+    _loadFavorites();
+    
     // Auto fetch symbols when account changes (with debounce)
     ever(accountController.selectedAccount, (_) {
       if (accountController.selectedAccount.value != null) {
@@ -31,6 +40,60 @@ class SymbolsController extends GetxController {
         }
       }
     });
+  }
+
+  /// Load favorites from GetStorage
+  void _loadFavorites() {
+    final storedFavorites = _storage.read<List>(_favoritesKey);
+    if (storedFavorites != null) {
+      favoriteSymbolIds.value = List<String>.from(storedFavorites);
+      print('📌 Loaded ${favoriteSymbolIds.length} favorite symbols');
+    }
+  }
+
+  /// Save favorites to GetStorage
+  void _saveFavorites() {
+    _storage.write(_favoritesKey, favoriteSymbolIds);
+    print('💾 Saved ${favoriteSymbolIds.length} favorite symbols');
+  }
+
+  /// Get favorite symbols
+  List<SymbolModel> get favoriteSymbols {
+    return allSymbols
+        .where((symbol) => favoriteSymbolIds.contains(symbol.symbol))
+        .toList();
+  }
+
+  /// Check if symbol is favorite
+  bool isFavorite(String symbolId) {
+    return favoriteSymbolIds.contains(symbolId);
+  }
+
+  /// Toggle favorite status
+  void toggleFavorite(SymbolModel symbol) {
+    if (isFavorite(symbol.symbol)) {
+      favoriteSymbolIds.remove(symbol.symbol);
+      print('⭐ Removed ${symbol.symbolAlias} from favorites');
+    } else {
+      favoriteSymbolIds.add(symbol.symbol);
+      print('⭐ Added ${symbol.symbolAlias} to favorites');
+    }
+    _saveFavorites();
+  }
+
+  /// Clear all favorites (used on logout)
+  void clearFavorites() {
+    favoriteSymbolIds.clear();
+    _storage.remove(_favoritesKey);
+    print('🗑️ Cleared all favorite symbols');
+  }
+
+  /// Get symbols by category
+  List<SymbolModel> getSymbolsByCategory(String category) {
+    final group = symbolGroups.firstWhereOrNull(
+      (g) => g.name.toLowerCase() == category.toLowerCase(),
+    );
+    return group?.symbols ?? [];
   }
 
   /// Fetch symbols from API

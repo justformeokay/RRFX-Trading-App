@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
@@ -110,6 +111,7 @@ class _SettingsState extends State<Settings> {
                 message: "Apakah anda yakin keluar dari aplikasi?",
                 moreThanOneButton: true,
                 onTap: () async {
+                  // Clear SharedPreferences
                   SharedPreferences prefs = await SharedPreferences.getInstance();
                   prefs.remove('accessToken');
                   prefs.remove('refreshToken');
@@ -119,13 +121,22 @@ class _SettingsState extends State<Settings> {
                   prefs.remove('selectedType');
                   prefs.remove('selectedCurrency');
                   prefs.remove('selectedLeverage');
+                  
+                  // Clear GetStorage (includes favorite symbols)
+                  final storage = GetStorage();
+                  await storage.erase();
+                  print('🗑️ GetStorage cleared on logout');
+                  
+                  // Clear controllers
                   _accountController.clearDefaultAccount();
-                  _accountController.resetAccountsState(); // <-- Panggil fungsi baru ini
+                  _accountController.resetAccountsState();
                   Get.delete<AccountController>();
                   Get.delete<TradingAccountController>();
                   Get.delete<TradingController>();
                   Get.delete<UserController>();
                   Get.delete<HomeController>();
+                  
+                  // Navigate to login
                   Get.offAll(() => const MainpageWithoutLogin());
                 },
                 title: "Keluar",
