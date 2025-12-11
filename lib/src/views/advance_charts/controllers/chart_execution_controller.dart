@@ -53,30 +53,49 @@ class ChartExecutionController extends GetxController {
 
       final lotVolume = volume ?? lot.value;
 
-      print('📤 Executing $operation order: $symbol @ $lotVolume lot');
+      print('📤 ===== EXECUTING ORDER =====');
+      print('   Operation: ${operation.toUpperCase()}');
+      print('   Symbol: $symbol');
+      print('   Volume: $lotVolume lot');
+      print('   Login: $login');
+      print('==============================');
+
+      final requestBody = {
+        'login': login,
+        'symbol': symbol,
+        'operation': operation.toLowerCase(),
+        'volume': lotVolume.toString(),
+      };
+
+      print('📦 Request Body: $requestBody');
 
       final response = await _authService.post(
         'market/execution/open',
-        {
-          'login': login,
-          'symbol': symbol,
-          'operation': operation.toLowerCase(),
-          'volume': lotVolume.toString(),
-        },
+        requestBody,
       );
+
+      print('📥 Response received:');
+      print('   Status: ${response['status']}');
+      print('   Status Code: ${response['statusCode']}');
+      print('   Message: ${response['message']}');
+      print('   Response Data: ${response['response']}');
 
       if (response['status'] == true) {
         executionMessage.value = 'Order berhasil dieksekusi!';
-        print('✅ Order executed successfully: ${response['message']}');
-        print('📄 Response Data EXECUTE: ${response['response']}');
+        print('✅ Order executed successfully!');
         return response;
       } else {
         final errorMsg = response['message'] ?? 'Order gagal dieksekusi';
         executionMessage.value = errorMsg;
+        print('❌ Order failed: $errorMsg');
         throw Exception(errorMsg);
       }
-    } catch (e) {
-      print('❌ Error executing order: $e');
+    } catch (e, stackTrace) {
+      print('❌ ===== ORDER EXECUTION ERROR =====');
+      print('   Error Type: ${e.runtimeType}');
+      print('   Error Message: $e');
+      print('   Stack Trace: $stackTrace');
+      print('====================================');
       executionMessage.value = 'Error: $e';
       rethrow;
     } finally {

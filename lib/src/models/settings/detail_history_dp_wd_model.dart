@@ -26,6 +26,7 @@ class Response {
     this.datetime,
     this.bankUser,
     this.bankAdmin,
+    this.from,
   });
   dynamic id;
   dynamic type;
@@ -34,6 +35,7 @@ class Response {
   dynamic amountReceived;
   dynamic status;
   dynamic datetime;
+  String? from;
   BankUser? bankUser;
   BankAdmin? bankAdmin;
   
@@ -45,6 +47,7 @@ class Response {
     amountReceived = json['amount_received'];
     status = json['status'];
     datetime = json['datetime'];
+    from = json.containsKey('from') ? json['from'] : null;
     bankUser = BankUser.fromJson(json['bank_user']);
     bankAdmin = BankAdmin.fromJson(json['bank_admin']);
   }

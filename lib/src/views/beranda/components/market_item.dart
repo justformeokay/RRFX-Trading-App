@@ -7,8 +7,8 @@ import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/bottomsheets/material_bottom_sheets.dart';
 import 'package:rrfx/src/components/colors/default.dart';
+import 'package:rrfx/src/views/advance_charts/webview_chart_view_from_tile.dart';
 import 'package:rrfx/src/views/chart/components/flag_pair.dart';
-import 'package:rrfx/src/views/trade/deriv_chart_page.dart';
 
 import 'gauge_range.dart';
 
@@ -174,7 +174,7 @@ Widget marketItem(BuildContext context, Size size, {String? marketName, String? 
                     style: GoogleFonts.inter(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white, // biar tetap kontras di atas background `color`
+                      color: Get.theme.textTheme.bodyMedium?.color, // biar tetap kontras di atas background `color`
                     ),
                   ),
               ),
@@ -195,11 +195,17 @@ Widget marketItem(BuildContext context, Size size, {String? marketName, String? 
                       CustomScaffoldMessanger.showAppSnackBar(context, message: "Silakan pilih akun trading terlebih dahulu.", type: SnackBarType.info);
                       return;
                     }
-                    Get.to(() => DerivChartPage(
-                      marketName: marketName ?? "",
-                      login: int.parse(accountController.selectedAccount.value!.login!),
-                      balance: accountController.selectedAccount.value!.balance ?? "0",
+                    Get.to(() => WebViewChartViewFromTile(
+                      login: int.parse(accountController.selectedAccount.value?.login ?? '0'), 
+                      marketName: "$marketName.db", 
+                      serverType: accountController.selectedAccount.value?.type ?? "",
+                      balance: double.tryParse(accountController.selectedAccount.value?.balance ?? "0")
                     ));
+                    // Get.to(() => DerivChartPage(
+                    //   marketName: marketName ?? "",
+                    //   login: int.parse(accountController.selectedAccount.value!.login!),
+                    //   balance: accountController.selectedAccount.value!.balance ?? "0",
+                    // ));
                   }
                 },
                 child: Text(

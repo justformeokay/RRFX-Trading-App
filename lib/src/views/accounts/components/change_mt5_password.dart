@@ -18,6 +18,7 @@ class _ChangeMT5PasswordPageState extends State<ChangeMT5PasswordPage> {
   final newPass = TextEditingController();
   final confirmPass = TextEditingController();
   final accountController = Get.put(AccountController());
+  RxBool isLoading = false.obs;
   AccountService accountService = Get.put(AccountService());
 
   // VALIDATION STATES
@@ -52,8 +53,8 @@ class _ChangeMT5PasswordPageState extends State<ChangeMT5PasswordPage> {
     });
   }
 
-  bool get isAllValid =>
-      hasUpper && hasLower && hasNumber && hasSymbol && hasMinLength && passwordMatch;
+  bool get isAllValid => hasUpper && hasLower && hasNumber && hasSymbol && hasMinLength && passwordMatch;
+
 
   @override
   Widget build(BuildContext context) {
@@ -150,8 +151,7 @@ class _ChangeMT5PasswordPageState extends State<ChangeMT5PasswordPage> {
                   width: double.infinity,
                   child: Obx(
                     () {
-                      final isLoading = accountController.isLoading.value;
-                      final isEnabled = !isLoading && isAllValid;
+                      bool isEnabled = !isLoading.value && isAllValid;
                       return ElevatedButton(
                         onPressed: isEnabled ? () async{
                           print("Response Message: ${accountService.responseMessage.value}");
@@ -179,7 +179,7 @@ class _ChangeMT5PasswordPageState extends State<ChangeMT5PasswordPage> {
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
-                        child: isLoading
+                        child: isLoading.value
                             ? SizedBox(
                                 width: 18,
                                 height: 18,

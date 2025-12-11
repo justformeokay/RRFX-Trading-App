@@ -5,8 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:lottie/lottie.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
-import 'package:rrfx/src/components/bottomsheets/material_bottom_sheets.dart';
-import 'package:rrfx/src/components/buttons/custom_buttons.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/controllers/trading.dart';
 import 'package:rrfx/src/controllers/user_controller.dart';
@@ -104,34 +102,6 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
                 Tab(text: 'Internal Transfer'),
               ],
             ),
-            // actions: [
-            //   CupertinoButton(
-            //     onPressed: (){
-            //       CustomMaterialBottomSheets.defaultBottomSheet(context, title: "Pilih Akun Trading", size: size, children: List.generate(allAccountTrading.length, (i){
-            //         return ListTile(
-            //           onTap: (){
-            //             selectedIndex.value = i;
-            //             // userController.internalTransferHistory(loginID: allAccountTrading[selectedIndex.value].login.toString());
-            //             Get.back();
-            //           },
-            //           leading: Container(
-            //             padding: EdgeInsets.all(4.0),
-            //             decoration: BoxDecoration(
-            //               shape: BoxShape.circle,
-            //               color: Colors.grey.shade200
-            //             ),
-            //             child: Text("${i+1}", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black, fontSize: 18)),
-            //           ),
-            //           title: Obx(() => Text("${allAccountTrading[i].type != null ? allAccountTrading[i].type.toString().toUpperCase() : ""} - ${allAccountTrading[i].login}", style: TextStyle(fontWeight: FontWeight.bold))),
-            //           subtitle: Obx(() => Text("Currency ${allAccountTrading[i].currency}", style: TextStyle(color: Theme.of(context).textTheme.titleSmall?.color))),
-            //           trailing: selectedIndex.value == i ? const Icon(Icons.check, color: Colors.green) : null,
-            //         );
-            //       }));
-            //     },
-            //     child: Icon(Icons.person_search, color: CustomColor.secondaryColor)
-            //   )
-              
-            // ],
           ),
           body: TabBarView(
               physics: const BouncingScrollPhysics(),
@@ -165,30 +135,121 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
       }
 
       if(userController.internalTransferHistory.value?.response.isEmpty == true){
-        return SizedBox(
-          width: size.width,
-          height: size.height / 1.2,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Lottie.asset('assets/json/cat.json', width: 200, height: 200),
-              const SizedBox(height: 16),
-              Text(
-                "Tidak ada riwayat Internal Transfer",
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: theme.textTheme.bodyMedium?.color,
+        return Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Icon with gradient background
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        CustomColor.secondaryColor.withValues(alpha: 0.2),
+                        Colors.purple.withValues(alpha: 0.2),
+                      ],
+                    ),
+                  ),
+                  child: Icon(
+                    BoxIcons.bx_transfer_alt,
+                    size: 60,
+                    color: CustomColor.secondaryColor,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              CustomButtons.buildOutlinedButton(
-                text: "Refresh", 
-                onPressed: () async {
-                  await userController.getInternalTransferHistory();
-                }
-              )
-            ],
+                
+                const SizedBox(height: 24),
+                
+                // Title
+                Text(
+                  "No Internal Transfer",
+                  style: GoogleFonts.inter(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: theme.textTheme.bodyLarge?.color,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Description
+                Text(
+                  "Belum ada riwayat transfer internal\nantara akun trading Anda",
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                
+                const SizedBox(height: 32),
+                
+                // Info Card
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildInfoRow(
+                        context,
+                        BoxIcons.bx_info_circle,
+                        "Transfer Mudah",
+                        "Pindahkan dana antar akun dengan cepat",
+                      ),
+                      const SizedBox(height: 16),
+                      _buildInfoRow(
+                        context,
+                        Iconsax.clock_outline,
+                        "Riwayat Otomatis",
+                        "Semua transfer tercatat secara otomatis",
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Refresh Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await userController.getInternalTransferHistory();
+                    },
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: Text(
+                      "Refresh",
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: CustomColor.secondaryColor,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       }
@@ -671,23 +732,121 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
         }
         
         if(userController.historyDepoWd.value?.response.isEmpty == true){
-          return SizedBox(
-            width: size.width,
-            height: size.height / 1.2,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Lottie.asset('assets/json/cat.json', width: 200, height: 200),
-                const SizedBox(height: 16),
-                Text(
-                  "Tidak ada riwayat Deposit",
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: theme.textTheme.bodyMedium?.color,
+          return Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Icon with gradient background
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.green.withValues(alpha: 0.2),
+                          Colors.teal.withValues(alpha: 0.2),
+                        ],
+                      ),
+                    ),
+                    child: Icon(
+                      AntDesign.arrow_down_outline,
+                      size: 60,
+                      color: Colors.green,
+                    ),
                   ),
-                ),
-              ],
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Title
+                  Text(
+                    "No Deposit History",
+                    style: GoogleFonts.inter(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: theme.textTheme.bodyLarge?.color,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  // Description
+                  Text(
+                    "Belum ada riwayat deposit\nke akun trading Anda",
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  
+                  const SizedBox(height: 32),
+                  
+                  // Info Card
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildInfoRow(
+                          context,
+                          Iconsax.wallet_add_outline,
+                          "Deposit Cepat",
+                          "Isi saldo dengan berbagai metode pembayaran",
+                        ),
+                        const SizedBox(height: 16),
+                        _buildInfoRow(
+                          context,
+                          Iconsax.shield_tick_outline,
+                          "Aman & Terpercaya",
+                          "Transaksi dilindungi dengan enkripsi",
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Refresh Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await userController.historyWithdrawAndDeposit();
+                      },
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: Text(
+                        "Refresh",
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: CustomColor.secondaryColor,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -697,23 +856,121 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
             .toList() ?? [];
 
         if (deposits.isEmpty) {
-          return SizedBox(
-            width: size.width,
-            height: size.height / 1.2,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Lottie.asset('assets/json/cat.json', width: 200, height: 200),
-                const SizedBox(height: 16),
-                Text(
-                  "Tidak ada riwayat Deposit",
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: theme.textTheme.bodyMedium?.color,
+          return Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Icon with gradient background
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.green.withValues(alpha: 0.2),
+                          Colors.teal.withValues(alpha: 0.2),
+                        ],
+                      ),
+                    ),
+                    child: Icon(
+                      AntDesign.arrow_down_outline,
+                      size: 60,
+                      color: Colors.green,
+                    ),
                   ),
-                ),
-              ],
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Title
+                  Text(
+                    "No Deposit History",
+                    style: GoogleFonts.inter(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: theme.textTheme.bodyLarge?.color,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  // Description
+                  Text(
+                    "Belum ada riwayat deposit\nke akun trading Anda",
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  
+                  const SizedBox(height: 32),
+                  
+                  // Info Card
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildInfoRow(
+                          context,
+                          Iconsax.wallet_add_outline,
+                          "Deposit Cepat",
+                          "Isi saldo dengan berbagai metode pembayaran",
+                        ),
+                        const SizedBox(height: 16),
+                        _buildInfoRow(
+                          context,
+                          Iconsax.shield_tick_outline,
+                          "Aman & Terpercaya",
+                          "Transaksi dilindungi dengan enkripsi",
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Refresh Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await userController.historyWithdrawAndDeposit();
+                      },
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: Text(
+                        "Refresh",
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: CustomColor.secondaryColor,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -999,23 +1256,121 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
         }
 
         if(userController.historyDepoWd.value?.response.isEmpty == true){
-          return SizedBox(
-            width: size.width,
-            height: size.height / 1.2,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Lottie.asset('assets/json/cat.json', width: 200, height: 200),
-                const SizedBox(height: 16),
-                Text(
-                  "Tidak ada riwayat Withdrawal",
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: theme.textTheme.bodyMedium?.color,
+          return Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Icon with gradient background
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.orange.withValues(alpha: 0.2),
+                          Colors.deepOrange.withValues(alpha: 0.2),
+                        ],
+                      ),
+                    ),
+                    child: Icon(
+                      AntDesign.arrow_up_outline,
+                      size: 60,
+                      color: Colors.orange,
+                    ),
                   ),
-                ),
-              ],
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Title
+                  Text(
+                    "No Withdrawal History",
+                    style: GoogleFonts.inter(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: theme.textTheme.bodyLarge?.color,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  // Description
+                  Text(
+                    "Belum ada riwayat penarikan dana\ndari akun trading Anda",
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  
+                  const SizedBox(height: 32),
+                  
+                  // Info Card
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildInfoRow(
+                          context,
+                          Iconsax.wallet_minus_outline,
+                          "Penarikan Mudah",
+                          "Tarik profit Anda kapan saja",
+                        ),
+                        const SizedBox(height: 16),
+                        _buildInfoRow(
+                          context,
+                          Iconsax.clock_outline,
+                          "Proses Cepat",
+                          "Withdrawal diproses dalam 1-24 jam",
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Refresh Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await userController.historyWithdrawAndDeposit();
+                      },
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: Text(
+                        "Refresh",
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: CustomColor.secondaryColor,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -1025,23 +1380,121 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
             .toList() ?? [];
 
         if (withdrawals.isEmpty) {
-          return SizedBox(
-            width: size.width,
-            height: size.height / 1.2,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Lottie.asset('assets/json/cat.json', width: 200, height: 200),
-                const SizedBox(height: 16),
-                Text(
-                  "Tidak ada riwayat Withdrawal",
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: theme.textTheme.bodyMedium?.color,
+          return Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Icon with gradient background
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.orange.withValues(alpha: 0.2),
+                          Colors.deepOrange.withValues(alpha: 0.2),
+                        ],
+                      ),
+                    ),
+                    child: Icon(
+                      AntDesign.arrow_up_outline,
+                      size: 60,
+                      color: Colors.orange,
+                    ),
                   ),
-                ),
-              ],
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Title
+                  Text(
+                    "No Withdrawal History",
+                    style: GoogleFonts.inter(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: theme.textTheme.bodyLarge?.color,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  // Description
+                  Text(
+                    "Belum ada riwayat penarikan dana\ndari akun trading Anda",
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  
+                  const SizedBox(height: 32),
+                  
+                  // Info Card
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildInfoRow(
+                          context,
+                          Iconsax.wallet_minus_outline,
+                          "Penarikan Mudah",
+                          "Tarik profit Anda kapan saja",
+                        ),
+                        const SizedBox(height: 16),
+                        _buildInfoRow(
+                          context,
+                          Iconsax.clock_outline,
+                          "Proses Cepat",
+                          "Withdrawal diproses dalam 1-24 jam",
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Refresh Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await userController.historyWithdrawAndDeposit();
+                      },
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: Text(
+                        "Refresh",
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: CustomColor.secondaryColor,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -1333,5 +1786,58 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
     } catch (e) {
       return datetime;
     }
+  }
+
+  Widget _buildInfoRow(BuildContext context, IconData icon, String title, String description) {
+    final theme = Theme.of(context);
+    
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                CustomColor.secondaryColor.withValues(alpha: 0.2),
+                CustomColor.secondaryColor.withValues(alpha: 0.1),
+              ],
+            ),
+          ),
+          child: Icon(
+            icon,
+            size: 20,
+            color: CustomColor.secondaryColor,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: theme.textTheme.bodyLarge?.color,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                description,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }

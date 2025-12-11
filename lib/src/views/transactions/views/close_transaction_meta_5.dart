@@ -8,7 +8,6 @@ import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/containers/no_account.dart';
 import 'package:rrfx/src/controllers/trading.dart';
-import 'package:shimmer/shimmer.dart';
 
 class CloseTransactionMeta5 extends StatefulWidget {
   const CloseTransactionMeta5({super.key});
@@ -58,17 +57,17 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
   Widget build(BuildContext context) {
     return Obx(() {
       if (!controller.hasAccounts) return noAccountDetected();
+      
       var closed = tradingController.tradingHistoryModel.value?.response;
-      if (closed == null) {
-        return _buildShimmerList(context);
-      }
+      
       return Scaffold(
         body: CustomScrollView(
           slivers: [
-            // Filter & Sort Bar
-            SliverToBoxAdapter(
-              child: _buildFilterBar(context, closed),
-            ),
+            // Filter & Sort Bar - only show when data is loaded
+            if (closed != null)
+              SliverToBoxAdapter(
+                child: _buildFilterBar(context, closed),
+              ),
 
             SliverPersistentHeader(
               pinned: true,
@@ -96,33 +95,149 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
               ),
             ),
 
-            SliverList(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final filteredAndSorted = _getFilteredAndSortedOrders(closed);
-                if (index >= filteredAndSorted.length) return null;
-                
-                final order = filteredAndSorted[index];
-                return _PositionTile(
-                  index: index,
-                  positionId: "${order.ticket}",
-                  swap: "-",
-                  stopLoss: "${order.stopLoss}",
-                  openTime: "${order.openTime}",
-                  closeTime: "${order.closeTime}",
-                  takeProfit: "${order.takeProfit}",
-                  doubleProfit: -0.10 * index,
-                  profit:
-                      order.profit != null
-                          ? "${order.profit}"
-                          : "0.00",
-                  symbol: "${order.symbol}",
-                  direction: "${order.orderType}",
-                  volume: _formatLot(order.lot),
-                  openPrice: "${order.openPrice}",
-                  closePrice: "${order.closePrice}",
-                );
-              }, childCount: _getFilteredAndSortedOrders(closed).length),
-            ),
+            // Show loading indicator or positions list
+            if (closed == null)
+              SliverToBoxAdapter(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(40.0),
+                    child: CircularProgressIndicator(color: CustomColor.secondaryColor),
+                  ),
+                ),
+              )
+            else if (closed.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Icon with gradient background
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                CustomColor.secondaryColor.withValues(alpha: 0.15),
+                                Colors.orange.withValues(alpha: 0.15),
+                              ],
+                            ),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Iconsax.folder_open_outline,
+                              size: 60,
+                              color: CustomColor.secondaryColor,
+                            ),
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 24),
+                        
+                        // Title
+                        Text(
+                          "No Trading History",
+                          style: GoogleFonts.inter(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 12),
+                        
+                        // Description
+                        Text(
+                          "You haven't closed any trading positions yet. Your trading history will appear here.",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            height: 1.5,
+                            color: Theme.of(context).textTheme.bodySmall?.color,
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 32),
+                        
+                        // Info cards
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey.shade900
+                                : Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey.shade800
+                                  : Colors.grey.shade200,
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              _buildInfoRow(
+                                context,
+                                icon: Iconsax.clock_outline,
+                                title: "Automatic Recording",
+                                description: "All closed positions are automatically saved here",
+                              ),
+                              const SizedBox(height: 16),
+                              Divider(
+                                height: 1,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade800
+                                    : Colors.grey.shade200,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildInfoRow(
+                                context,
+                                icon: Iconsax.document_text_outline,
+                                title: "Detailed Reports",
+                                description: "View profit/loss, open/close prices, and more",
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            else
+              SliverList(
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final filteredAndSorted = _getFilteredAndSortedOrders(closed);
+                  if (index >= filteredAndSorted.length) return null;
+                  
+                  final order = filteredAndSorted[index];
+                  return _PositionTile(
+                    index: index,
+                    positionId: "${order.ticket}",
+                    swap: "-",
+                    stopLoss: "${order.stopLoss}",
+                    openTime: "${order.openTime}",
+                    closeTime: "${order.closeTime}",
+                    takeProfit: "${order.takeProfit}",
+                    doubleProfit: -0.10 * index,
+                    profit:
+                        order.profit != null
+                            ? "${order.profit}"
+                            : "0.00",
+                    symbol: "${order.symbol}",
+                    direction: "${order.orderType}",
+                    volume: _formatLot(order.lot),
+                    openPrice: "${order.openPrice}",
+                    closePrice: "${order.closePrice}",
+                  );
+                }, childCount: _getFilteredAndSortedOrders(closed).length),
+              ),
           ],
         ),
       );
@@ -462,12 +577,12 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
     final isDark = theme.brightness == Brightness.dark;
     
     // Get display value
-    String getDisplayValue() {
-      if (itemLabels != null && itemLabels.containsKey(value)) {
-        return itemLabels[value]!;
-      }
-      return value;
-    }
+    // String getDisplayValue() {
+    //   if (itemLabels != null && itemLabels.containsKey(value)) {
+    //     return itemLabels[value]!;
+    //   }
+    //   return value;
+    // }
     
     return Container(
       decoration: BoxDecoration(
@@ -513,7 +628,7 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
             ),
             dropdownColor: isDark ? Colors.grey.shade800 : Colors.white,
             borderRadius: BorderRadius.circular(12),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
             items: items.map((String item) {
               final displayLabel = itemLabels?[item] ?? item;
               final isSelected = value == item;
@@ -609,30 +724,56 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
     return value.toStringAsFixed(2);
   }
 
-  Widget _buildShimmerList(BuildContext context) {
-    final theme = Theme.of(context);
-    final onSurface = theme.colorScheme.onSurface;
-    final surface = theme.colorScheme.surface;
-
-    // Base shimmer = permukaan + sedikit opasitas
-    final base = onSurface.withOpacity(0.10);
-    final highlight = onSurface.withOpacity(0.20);
-
-    return ListView.builder(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      itemCount: 2,
-      itemBuilder: (context, i) {
-        return Shimmer.fromColors(
-          baseColor: base,
-          highlightColor: highlight,
-          child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 2),
-            height: 80,
-            decoration: BoxDecoration(color: surface.withOpacity(0.6)),
+  Widget _buildInfoRow(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: CustomColor.secondaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
           ),
-        );
-      },
+          child: Icon(
+            icon,
+            size: 20,
+            color: CustomColor.secondaryColor,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: isDark ? Colors.white60 : Colors.black54,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

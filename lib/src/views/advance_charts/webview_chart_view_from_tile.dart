@@ -8,6 +8,7 @@ import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/views/advance_charts/controllers/symbols_controller.dart';
 import 'package:rrfx/src/views/advance_charts/widgets/market_selector_sheet.dart';
 import 'package:rrfx/src/views/advance_charts/widgets/chart_trading_panel.dart';
+import 'package:rrfx/src/views/chart/controllers/chart_controller.dart';
 
 /// WebView Chart View untuk dibuka dari Market Tile
 /// Langsung load chart dengan market yang dipilih
@@ -32,6 +33,7 @@ class WebViewChartViewFromTile extends StatefulWidget {
 class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
   final accountController = Get.put(AccountController());
   final symbolsController = Get.put(SymbolsController());
+  final chartControllers = Get.put(ChartControllers());
 
   InAppWebViewController? webViewController;
   bool isLoading = true;

@@ -44,8 +44,9 @@ class _TradingChartViewState extends State<TradingChartView> {
     if (!symbol.toLowerCase().endsWith('.db')) {
       symbol = '$symbol.db';
     }
+    final theme = Get.isDarkMode ? 'dark' : 'light';
     
-    return 'http://207.148.119.106/rrfx/chart.php?symbol=$symbol&server=demo';
+    return 'http://207.148.119.106/rrfx/chart.php?symbol=$symbol&server=demo&theme=$theme';
   }
 
   @override

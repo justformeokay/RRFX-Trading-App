@@ -269,7 +269,7 @@ class AuthController extends GetxController {
   }
 
   /// Send OTP WhatsApp API
-  Future<bool> getVersionApp({String? version}) async {
+  Future<Map<String, dynamic>> getVersionApp({String? version}) async {
     String? appVersion = await DeviceUtilitiesController.getAppVersion();
     try {
       isLoading(true);
@@ -284,18 +284,57 @@ class AuthController extends GetxController {
           'device': jsonEncode(deviceInfo)
         },
       );
-      var result = jsonDecode(response.body);
+      
       isLoading(false);
+      
+      // Check for server errors (5xx)
+      if (response.statusCode >= 500) {
+        responseMessage.value = 'Server error: ${response.statusCode}';
+        return {
+          'success': false,
+          'isServerError': true,
+          'message': 'Server sedang mengalami gangguan',
+        };
+      }
+      
+      // Check for timeout or other network errors
+      if (response.statusCode == 524 || response.statusCode == 408) {
+        responseMessage.value = 'Server timeout';
+        return {
+          'success': false,
+          'isServerError': true,
+          'message': 'Server timeout, silakan coba lagi',
+        };
+      }
+      
+      var result = jsonDecode(response.body);
+      
       if (response.statusCode == 200) {
         responseMessage.value = result['message'];
-        return true;
+        return {
+          'success': true,
+          'isServerError': false,
+          'message': result['message'],
+        };
       }
+      
+      // Version mismatch or other API error
       responseMessage.value = result['message'];
-      return false;
+      return {
+        'success': false,
+        'isServerError': false,
+        'message': result['message'],
+      };
     } catch (e) {
       isLoading(false);
       responseMessage.value = e.toString();
-      return false;
+      
+      // Network error atau parsing error = server error
+      return {
+        'success': false,
+        'isServerError': true,
+        'message': 'Tidak dapat terhubung ke server',
+      };
     }
   }
 

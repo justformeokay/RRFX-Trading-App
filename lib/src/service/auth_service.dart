@@ -241,6 +241,30 @@ class AuthService extends GetxController {
         headers: headers,
       );
 
+      // Handle server errors (5xx) dan Cloudflare errors
+      if (response.statusCode >= 500) {
+        print("❌ Server Error ${response.statusCode}: ${response.body}");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Server error (${response.statusCode}). Please try again later.',
+          'response': {},
+        };
+      }
+
+      // Handle Cloudflare errors (524, 520, 521, 522, 523)
+      if (response.statusCode == 524 || response.statusCode == 520 || 
+          response.statusCode == 521 || response.statusCode == 522 || 
+          response.statusCode == 523) {
+        print("❌ Cloudflare Error ${response.statusCode}: ${response.body}");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Server timeout or unavailable. Please try again.',
+          'response': {},
+        };
+      }
+
       if (response.statusCode == 300) {
         if(maxReload > 3) {
           throw Exception("Telah mencapai max reload, silahkan login kembali");
@@ -262,7 +286,21 @@ class AuthService extends GetxController {
         return await get(url, maxReload: maxReload + 1);
       }
 
-      Map<String, dynamic> respBody = jsonDecode(response.body);
+      // Safe JSON decode
+      Map<String, dynamic> respBody;
+      try {
+        respBody = jsonDecode(response.body);
+      } catch (e) {
+        print("❌ JSON Decode Error: ${e.toString()}");
+        print("Response Body: ${response.body}");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Invalid server response format',
+          'response': {},
+        };
+      }
+
       return {
         'status': respBody['status'],
         'statusCode': response.statusCode,
@@ -286,7 +324,14 @@ class AuthService extends GetxController {
           'response': {},
         };
       }
-      throw Exception("Exception Auth Service: $e");
+      
+      // Return error response instead of throwing
+      return {
+        'status': false,
+        'statusCode': 500,
+        'message': 'Network error: ${e.toString()}',
+        'response': {},
+      };
     }
   }
 

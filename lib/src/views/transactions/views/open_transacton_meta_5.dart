@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:icons_plus/icons_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
+import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/containers/no_account.dart';
 import 'package:rrfx/src/controllers/account_balance_ws_controller.dart';
 import 'package:rrfx/src/controllers/trading.dart';
 import 'package:rrfx/src/controllers/websocket_controller.dart';
 import 'package:rrfx/src/views/transactions/views/popup_close_order.dart';
 import 'package:rrfx/src/views/transactions/views/popup_edit_position.dart';
-import 'package:shimmer/shimmer.dart';
 
 class OpenTransactonMeta5 extends StatefulWidget {
   const OpenTransactonMeta5({super.key});
@@ -121,10 +122,9 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
     
     return Obx(() {
       if (!controller.hasAccounts) return noAccountDetected();
+      
       var opened = tradingController.openOrderModel.value?.response;
-      if (opened == null) {
-        return _buildShimmerList(context);
-      }
+      
       return Scaffold(
         key: ValueKey(currentLogin), // Force rebuild on account change
         body: CustomScrollView(
@@ -155,57 +155,199 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
               ),
             ),
 
-            SliverList(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                return _PositionTile(
-                  index: index,
-                  digits: opened[index].digits != null ? int.tryParse("${opened[index].digits}") : null,
-                  positionId: "${opened[index].ticket}",
-                  openTime: "${opened[index].openTime}",
-                  swap: "${opened[index].swap}",
-                  stopLoss: "${opened[index].stopLoss}",
-                  takeProfit: "${opened[index].takeProfit}",
-                  doubleProfit: -0.10 * index,
-                  profit: opened[index].profit != null ? "${opened[index].profit}" : "0.00",
-                  symbol: "${opened[index].symbol}",
-                  direction: "${opened[index].orderType}",
-                  volume: "${opened[index].lot}",
-                  openPrice: "${opened[index].openPrice}",
-                  closePrice: "-",
-                  currentPrice: "${opened[index].currentPrice}",
-                );
-              }, childCount: opened.length),
-            ),
+            // Show loading indicator or positions list
+            if (opened == null)
+              SliverToBoxAdapter(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(40.0),
+                    child: CircularProgressIndicator(color: CustomColor.secondaryColor,),
+                  ),
+                ),
+              )
+            else if (opened.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Icon with gradient background
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                CustomColor.secondaryColor.withValues(alpha: 0.15),
+                                Colors.blue.withValues(alpha: 0.15),
+                              ],
+                            ),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Iconsax.chart_21_outline,
+                              size: 60,
+                              color: CustomColor.secondaryColor,
+                            ),
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 24),
+                        
+                        // Title
+                        Text(
+                          "No Open Positions",
+                          style: GoogleFonts.inter(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 12),
+                        
+                        // Description
+                        Text(
+                          "You don't have any active trading positions at the moment.",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            height: 1.5,
+                            color: Theme.of(context).textTheme.bodySmall?.color,
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 32),
+                        
+                        // Info cards
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey.shade900
+                                : Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey.shade800
+                                  : Colors.grey.shade200,
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              _buildInfoRow(
+                                context,
+                                icon: Iconsax.chart_outline,
+                                title: "Start Trading",
+                                description: "Open a new position from the chart or market list",
+                              ),
+                              const SizedBox(height: 16),
+                              Divider(
+                                height: 1,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade800
+                                    : Colors.grey.shade200,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildInfoRow(
+                                context,
+                                icon: Iconsax.refresh_outline,
+                                title: "Real-time Updates",
+                                description: "Your positions will appear here automatically",
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            else
+              SliverList(
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  return _PositionTile(
+                    index: index,
+                    digits: opened[index].digits != null ? int.tryParse("${opened[index].digits}") : null,
+                    positionId: "${opened[index].ticket}",
+                    openTime: "${opened[index].openTime}",
+                    swap: "${opened[index].swap}",
+                    stopLoss: "${opened[index].stopLoss}",
+                    takeProfit: "${opened[index].takeProfit}",
+                    doubleProfit: -0.10 * index,
+                    profit: opened[index].profit != null ? "${opened[index].profit}" : "0.00",
+                    symbol: "${opened[index].symbol}",
+                    direction: "${opened[index].orderType}",
+                    volume: "${opened[index].lot}",
+                    openPrice: "${opened[index].openPrice}",
+                    closePrice: "-",
+                    currentPrice: "${opened[index].currentPrice}",
+                  );
+                }, childCount: opened.length),
+              ),
           ],
         ),
       );
     });
   }
 
-  Widget _buildShimmerList(BuildContext context) {
-    final theme = Theme.of(context);
-    final onSurface = theme.colorScheme.onSurface;
-    final surface = theme.colorScheme.surface;
-
-    // Base shimmer = permukaan + sedikit opasitas
-    final base = onSurface.withOpacity(0.10);
-    final highlight = onSurface.withOpacity(0.20);
-
-    return ListView.builder(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      itemCount: 2,
-      itemBuilder: (context, i) {
-        return Shimmer.fromColors(
-          baseColor: base,
-          highlightColor: highlight,
-          child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 2),
-            height: 80,
-            decoration: BoxDecoration(color: surface.withOpacity(0.6)),
+  Widget _buildInfoRow(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: CustomColor.secondaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
           ),
-        );
-      },
+          child: Icon(
+            icon,
+            size: 20,
+            color: CustomColor.secondaryColor,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: isDark ? Colors.white60 : Colors.black54,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

@@ -7,6 +7,9 @@ import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/controllers/trading.dart';
 import 'package:rrfx/src/helpers/formatters/number_formatter.dart';
 import 'package:rrfx/src/models/trades/trading_account_models.dart';
+import 'package:rrfx/src/views/advance_charts/webview_chart_view.dart';
+import 'package:rrfx/src/views/advance_charts/widgets/market_selector_sheet.dart';
+import 'package:rrfx/src/views/chart/controllers/chart_controller.dart';
 import 'package:rrfx/src/views/chart/views/market_bottom_sheet.dart';
 
 class DemoAccountInformation extends StatefulWidget {
@@ -22,6 +25,8 @@ class _DemoAccountInformationState extends State<DemoAccountInformation> {
 
   TradingController tradingController = Get.find();
   Demo? selectedAccount;
+  String? _currentSymbol;
+  final chartController = Get.put(ChartControllers());
 
   @override
   void initState() {
@@ -70,6 +75,20 @@ class _DemoAccountInformationState extends State<DemoAccountInformation> {
           ],
         ),
       ),
+    );
+  }
+  
+  void _showMarketSelector() {
+    Get.bottomSheet(
+      MarketSelectorSheet(
+        onSymbolSelected: (symbol) {
+          Future.delayed( Duration(milliseconds: 300), () {
+            Get.to(() => WebViewChartView(symbol: symbol.symbol, login: widget.loginID, serverType: 'demo'));
+          });
+        },
+      ),
+      isScrollControlled: true,
+      ignoreSafeArea: false,
     );
   }
 
@@ -166,7 +185,7 @@ class _DemoAccountInformationState extends State<DemoAccountInformation> {
       child: ListView(
         children: [
           _menuItem(Iconsax.chart_2_outline, 'Market', onPressed: () {
-            showMarketBottomSheetForAccountInfo(context, loginID: widget.loginID, balance: selectedAccount?.balance);
+            _showMarketSelector();
           }),
         ],
       ),

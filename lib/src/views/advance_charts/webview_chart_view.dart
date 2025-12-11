@@ -444,8 +444,11 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                   login: widget.login ?? accountController.selectedAccount.value?.login ?? '',
                   symbol: _currentSymbol ?? widget.symbol ?? chartController.selectedMarket.value,
                   onOrderExecuted: (operation) {
-                    print('✅ Order executed: $operation');
-                    // Bisa tambahkan refresh chart atau logic lainnya
+                    print('✅ Order executed callback: $operation');
+                    print('🔄 Symbol: ${_currentSymbol ?? widget.symbol}');
+                    print('👤 Login: ${widget.login ?? accountController.selectedAccount.value?.login}');
+                    // Bisa tambahkan refresh chart atau logic lainnya jika diperlukan
+                    // _reloadChart(); // Uncomment jika ingin auto-reload chart setelah order
                   },
                 ),
               ],

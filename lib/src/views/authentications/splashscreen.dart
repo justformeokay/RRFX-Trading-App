@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
 import 'package:rrfx/src/views/authentications/failed_version_app.dart';
+import 'package:rrfx/src/views/authentications/server_error_page.dart';
 import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rrfx/src/components/alerts/default.dart';
@@ -46,9 +47,25 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
   }
 
   Future<void> _startAppFlow() async {
-    bool isValidVersion = await authController.getVersionApp();
+    Map<String, dynamic> versionCheck = await authController.getVersionApp();
 
-    if (!isValidVersion) {
+    // Check if it's a server error
+    if (versionCheck['isServerError'] == true) {
+      _finishTransition(() {
+        Get.offAll(
+          () => ServerErrorPage(
+            onRetry: () {
+              Get.offAll(() => const Splashscreen());
+            },
+            errorMessage: versionCheck['message'],
+          ),
+        );
+      });
+      return;
+    }
+
+    // Check if version is invalid
+    if (versionCheck['success'] != true) {
       _finishTransition(() {
         Get.offAll(() => const FailedVersionPage(updateUrl: "https://rrfx.co.id/"));
       });

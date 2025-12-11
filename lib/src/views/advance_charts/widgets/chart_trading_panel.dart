@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../controllers/chart_execution_controller.dart';
 
 class ChartTradingPanel extends StatefulWidget {
@@ -23,6 +25,7 @@ class ChartTradingPanel extends StatefulWidget {
 
 class _ChartTradingPanelState extends State<ChartTradingPanel> {
   final executionController = Get.put(ChartExecutionController());
+  final AudioPlayer _audioPlayer = AudioPlayer();
   
   Timer? _incrementTimer;
   Timer? _decrementTimer;
@@ -40,6 +43,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   void dispose() {
     _incrementTimer?.cancel();
     _decrementTimer?.cancel();
+    _audioPlayer.dispose();
     if (_overlayEntry != null) {
       try {
         _overlayEntry?.remove();
@@ -72,6 +76,21 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   void _stopDecrementTimer() {
     _decrementTimer?.cancel();
     _decrementTimer = null;
+  }
+
+  /// Play success sound and trigger haptic feedback
+  Future<void> _playSuccessNotification() async {
+    try {
+      // Trigger haptic feedback (vibration)
+      await HapticFeedback.mediumImpact();
+      
+      // Play success sound
+      await _audioPlayer.play(AssetSource('sounds/applepay.mp3'));
+      
+      print('✅ Success notification played');
+    } catch (e) {
+      print('⚠️ Error playing notification: $e');
+    }
   }
 
   // Validasi apakah lot adalah kelipatan dari LOT_STEP
@@ -393,6 +412,9 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     final operation = item['operation'] as String;
     
     try {
+      print('🔄 Processing order: $operation for ${widget.symbol}');
+      print('📊 Login: ${widget.login}, Lot: ${item['lot']}');
+      
       Map<String, dynamic> response;
       if (operation == 'buy') {
         response = await executionController.executeBuy(
@@ -406,6 +428,11 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
         );
       }
       
+      print('✅ Order response received:');
+      print('   Status: ${response['status']}');
+      print('   Message: ${response['message']}');
+      print('   Response: ${response['response']}');
+      
       // Extract openPrice from response
       final openPrice = response['response']?['openPrice'];
       
@@ -417,6 +444,22 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
         _executionQueue.refresh();
       }
       
+      // Play success notification (sound + haptic)
+      await _playSuccessNotification();
+      
+      // Show success snackbar
+      // if (mounted) {
+      //   Get.snackbar(
+      //     'Order Berhasil',
+      //     '${operation.toUpperCase()} ${item['lot']} lot ${widget.symbol.replaceAll('.db', '')} @ $openPrice',
+      //     backgroundColor: operation == 'buy' ? Colors.green.shade800 : Colors.red.shade800,
+      //     colorText: Colors.white,
+      //     icon: Icon(Iconsax.tick_circle_bold, color: Colors.white),
+      //     snackPosition: SnackPosition.TOP,
+      //     duration: const Duration(seconds: 2),
+      //   );
+      // }
+      
       // Remove after 1.5 seconds
       await Future.delayed(const Duration(milliseconds: 1500));
       _executionQueue.removeWhere((e) => e['id'] == item['id']);
@@ -426,6 +469,10 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       }
       
     } catch (e) {
+      print('❌ Order execution error:');
+      print('   Error type: ${e.runtimeType}');
+      print('   Error message: $e');
+      
       // Update status to error
       final index = _executionQueue.indexWhere((e) => e['id'] == item['id']);
       if (index != -1) {
@@ -433,16 +480,23 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
         _executionQueue.refresh();
       }
       
-      // Show error snackbar
+      // Show error snackbar with more details
       if (mounted) {
+        String errorMsg = e.toString().replaceAll('Exception: ', '');
+        if (errorMsg.contains('524')) {
+          errorMsg = 'Server timeout. Coba lagi dalam beberapa saat.';
+        } else if (errorMsg.contains('500')) {
+          errorMsg = 'Server error. Silakan coba lagi.';
+        }
+        
         Get.snackbar(
           'Order Gagal',
-          e.toString().replaceAll('Exception: ', ''),
+          errorMsg,
           backgroundColor: Colors.red.shade800,
           colorText: Colors.white,
           icon: const Icon(Iconsax.close_circle_bold, color: Colors.white),
           snackPosition: SnackPosition.TOP,
-          duration: const Duration(seconds: 2),
+          duration: const Duration(seconds: 3),
         );
       }
       

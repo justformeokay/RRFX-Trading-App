@@ -23,6 +23,7 @@ class _InternalTransferState extends State<InternalTransfer> {
   final _formKey = GlobalKey<FormState>();
   RxString selectedSenderLogin = "".obs;
   RxString selectedReceiverLogin = "".obs;
+  RxString amountText = "".obs; // Reactive variable untuk track amount changes
   
   SettingController settingController = Get.put(SettingController());
   TradingController tradingController = Get.put(TradingController());
@@ -109,6 +110,41 @@ class _InternalTransferState extends State<InternalTransfer> {
                       color: Colors.grey.shade600,
                     ),
                   ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Info Rate Requirement
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.blue.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          color: Colors.blue,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "Transfer hanya dapat dilakukan antar akun dengan rate yang sama (IDR ke IDR atau USD ke USD)",
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: isDark ? Colors.blue.shade200 : Colors.blue.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
                   const SizedBox(height: 32),
 
                   // Step 1: From Account
@@ -118,10 +154,21 @@ class _InternalTransferState extends State<InternalTransfer> {
                     selectedLogin: selectedSenderLogin.value,
                     excludeLogin: null,
                     onSelect: (login) {
+                      // Get accounts to check rate compatibility
+                      final accounts = tradingController.tradingAccountModels.value?.response.real ?? [];
+                      final newSender = accounts.firstWhereOrNull((acc) => acc.login == login);
+                      final receiver = accounts.firstWhereOrNull((acc) => acc.login == selectedReceiverLogin.value);
+                      
                       selectedSenderLogin(login);
-                      // Reset receiver jika sama
+                      
+                      // Reset receiver jika sama atau rate berbeda
                       if (selectedReceiverLogin.value == login) {
                         selectedReceiverLogin("");
+                      } else if (receiver != null && newSender != null && receiver.rate != newSender.rate) {
+                        // Reset receiver jika rate tidak sama dengan sender baru
+                        selectedReceiverLogin("");
+                        amountController.clear();
+                        amountText("");
                       }
                     },
                     isDark: isDark,
@@ -148,21 +195,29 @@ class _InternalTransferState extends State<InternalTransfer> {
                   const SizedBox(height: 24),
 
                   // Step 2: To Account
-                  Obx(() => _buildAccountSelector(
-                    title: "2. Ke Akun",
-                    subtitle: "Pilih akun tujuan",
-                    selectedLogin: selectedReceiverLogin.value,
-                    excludeLogin: selectedSenderLogin.value,
-                    onSelect: (login) {
-                      selectedReceiverLogin(login);
-                    },
-                    isDark: isDark,
-                  )),
+                  Obx(() {
+                    // Get sender account to get rate
+                    final sender = tradingController.tradingAccountModels.value?.response.real
+                        ?.firstWhereOrNull((acc) => acc.login == selectedSenderLogin.value);
+                    final senderRate = sender?.rate;
+                    
+                    return _buildAccountSelector(
+                      title: "2. Ke Akun",
+                      subtitle: "Pilih akun tujuan",
+                      selectedLogin: selectedReceiverLogin.value,
+                      excludeLogin: selectedSenderLogin.value,
+                      senderRate: senderRate, // Pass sender rate untuk filter
+                      onSelect: (login) {
+                        selectedReceiverLogin(login);
+                      },
+                      isDark: isDark,
+                    );
+                  }),
 
                   const SizedBox(height: 32),
 
                   // Step 3: Amount
-                  _buildAmountSection(isDark),
+                  Obx(() => _buildAmountSection(isDark)),
 
                   const SizedBox(height: 32),
 
@@ -197,11 +252,21 @@ class _InternalTransferState extends State<InternalTransfer> {
     required String? excludeLogin,
     required Function(String login) onSelect,
     required bool isDark,
+    String? senderRate, // Parameter baru untuk filter by rate
   }) {
     final accounts = tradingController.tradingAccountModels.value?.response.real ?? [];
-    final filteredAccounts = excludeLogin != null
-        ? accounts.where((acc) => acc.login != excludeLogin).toList()
-        : accounts;
+    
+    // Filter akun berdasarkan excludeLogin dan senderRate
+    List<dynamic> filteredAccounts = accounts;
+    
+    if (excludeLogin != null) {
+      filteredAccounts = filteredAccounts.where((acc) => acc.login != excludeLogin).toList();
+    }
+    
+    // Jika senderRate tidak null, filter hanya akun dengan rate yang sama
+    if (senderRate != null && senderRate.isNotEmpty) {
+      filteredAccounts = filteredAccounts.where((acc) => acc.rate == senderRate).toList();
+    }
 
     final selectedAccount = accounts.firstWhereOrNull((acc) => acc.login == selectedLogin);
 
@@ -255,6 +320,7 @@ class _InternalTransferState extends State<InternalTransfer> {
             selectedLogin: selectedLogin,
             onSelect: onSelect,
             isDark: isDark,
+            senderRate: senderRate, // Pass senderRate ke picker
           ),
           borderRadius: BorderRadius.circular(16),
           child: Container(
@@ -302,13 +368,46 @@ class _InternalTransferState extends State<InternalTransfer> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              "Akun #${selectedAccount.login}",
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : Colors.black87,
-                              ),
+                            Row(
+                              children: [
+                                Text(
+                                  "Akun #${selectedAccount.login}",
+                                  style: GoogleFonts.inter(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : Colors.black87,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                // Rate badge
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: (selectedAccount.rate == "IDR" 
+                                        ? Colors.green 
+                                        : Colors.blue).withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: (selectedAccount.rate == "IDR" 
+                                          ? Colors.green 
+                                          : Colors.blue).withValues(alpha: 0.4),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    selectedAccount.rate ?? "USD",
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: selectedAccount.rate == "IDR" 
+                                          ? Colors.green.shade700 
+                                          : Colors.blue.shade700,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -435,11 +534,14 @@ class _InternalTransferState extends State<InternalTransfer> {
               const SizedBox(height: 8),
               TextField(
                 controller: amountController,
+                enabled: _isAmountFieldEnabled(),
                 keyboardType: TextInputType.number,
                 style: GoogleFonts.inter(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black87,
+                  color: _isAmountFieldEnabled() 
+                      ? (isDark ? Colors.white : Colors.black87)
+                      : Colors.grey.shade400,
                 ),
                 decoration: InputDecoration(
                   hintText: "0.00",
@@ -473,11 +575,49 @@ class _InternalTransferState extends State<InternalTransfer> {
                       );
                     }
                   }
+                  // Update reactive variable untuk trigger Obx rebuild
+                  amountText(value);
                 },
               ),
             ],
           ),
         ),
+        
+        // Warning message when balance is 0
+        if (!_isAmountFieldEnabled() && selectedSenderLogin.value.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.orange.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.orange,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "Saldo akun pengirim tidak mencukupi (\$0.00)",
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.orange.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -582,9 +722,15 @@ class _InternalTransferState extends State<InternalTransfer> {
   }
 
   Widget _buildSubmitButton(bool isDark) {
+    // Get sender account balance
+    final sender = tradingController.tradingAccountModels.value?.response.real
+        ?.firstWhereOrNull((acc) => acc.login == selectedSenderLogin.value);
+    final senderBalance = double.tryParse(sender?.balance ?? "0") ?? 0;
+    
     final isEnabled = selectedSenderLogin.value.isNotEmpty &&
         selectedReceiverLogin.value.isNotEmpty &&
-        amountController.text.isNotEmpty &&
+        amountText.value.isNotEmpty &&
+        senderBalance > 0 &&
         !settingController.isLoading.value;
 
     return SizedBox(
@@ -637,11 +783,17 @@ class _InternalTransferState extends State<InternalTransfer> {
     required String selectedLogin,
     required Function(String login) onSelect,
     required bool isDark,
+    String? senderRate, // Tambah parameter untuk info rate
   }) {
     if (accounts.isEmpty) {
+      // Pesan yang lebih informatif
+      final message = senderRate != null && senderRate.isNotEmpty
+          ? "Tidak ada akun tersedia dengan rate $senderRate"
+          : "Tidak ada akun tersedia";
+      
       CustomScaffoldMessanger.showAppSnackBar(
         context,
-        message: "Tidak ada akun tersedia",
+        message: message,
       );
       return;
     }
@@ -680,6 +832,41 @@ class _InternalTransferState extends State<InternalTransfer> {
               ],
             ),
             const SizedBox(height: 16),
+            
+            // Info box jika filter berdasarkan rate
+            if (senderRate != null && senderRate.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.blue.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      color: Colors.blue,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Menampilkan hanya akun dengan rate $senderRate",
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: isDark ? Colors.blue.shade200 : Colors.blue.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            
             ...accounts.map((acc) {
               final isSelected = acc.login == selectedLogin;
               return Container(
@@ -732,13 +919,46 @@ class _InternalTransferState extends State<InternalTransfer> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "Akun #${acc.login}",
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white : Colors.black87,
-                                ),
+                              Row(
+                                children: [
+                                  Text(
+                                    "Akun #${acc.login}",
+                                    style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // Rate badge
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: (acc.rate == "IDR" 
+                                          ? Colors.green 
+                                          : Colors.blue).withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: (acc.rate == "IDR" 
+                                            ? Colors.green 
+                                            : Colors.blue).withValues(alpha: 0.4),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      acc.rate ?? "USD",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: acc.rate == "IDR" 
+                                            ? Colors.green.shade700 
+                                            : Colors.blue.shade700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 4),
                               Text(
@@ -776,6 +996,16 @@ class _InternalTransferState extends State<InternalTransfer> {
         ),
       ),
     );
+  }
+
+  bool _isAmountFieldEnabled() {
+    if (selectedSenderLogin.value.isEmpty) return false;
+    
+    final sender = tradingController.tradingAccountModels.value?.response.real
+        ?.firstWhereOrNull((acc) => acc.login == selectedSenderLogin.value);
+    final senderBalance = double.tryParse(sender?.balance ?? "0") ?? 0;
+    
+    return senderBalance > 0;
   }
 
   void _handleTransfer() async {
