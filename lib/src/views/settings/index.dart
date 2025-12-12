@@ -111,7 +111,10 @@ class _SettingsState extends State<Settings> {
                 message: "Apakah anda yakin keluar dari aplikasi?",
                 moreThanOneButton: true,
                 onTap: () async {
+                  Get.log("🔴 [LOGOUT] User confirmed logout");
+                  
                   // Clear SharedPreferences
+                  Get.log("🗑️ [LOGOUT] Clearing SharedPreferences...");
                   SharedPreferences prefs = await SharedPreferences.getInstance();
                   prefs.remove('accessToken');
                   prefs.remove('refreshToken');
@@ -121,22 +124,34 @@ class _SettingsState extends State<Settings> {
                   prefs.remove('selectedType');
                   prefs.remove('selectedCurrency');
                   prefs.remove('selectedLeverage');
+                  Get.log("✅ [LOGOUT] SharedPreferences cleared");
                   
                   // Clear GetStorage (includes favorite symbols)
+                  Get.log("🗑️ [LOGOUT] Clearing GetStorage...");
                   final storage = GetStorage();
                   await storage.erase();
-                  print('🗑️ GetStorage cleared on logout');
+                  Get.log("✅ [LOGOUT] GetStorage cleared");
                   
                   // Clear controllers
+                  Get.log("🗑️ [LOGOUT] Disposing controllers...");
+                  Get.log("   - Clearing AccountController default account");
                   _accountController.clearDefaultAccount();
+                  Get.log("   - Resetting AccountController state");
                   _accountController.resetAccountsState();
+                  Get.log("   - Deleting AccountController");
                   Get.delete<AccountController>();
+                  Get.log("   - Deleting TradingAccountController");
                   Get.delete<TradingAccountController>();
+                  Get.log("   - Deleting TradingController");
                   Get.delete<TradingController>();
+                  Get.log("   - Deleting UserController");
                   Get.delete<UserController>();
-                  Get.delete<HomeController>();
+                  Get.log("   - Deleting HomeController (force: true for permanent)");
+                  Get.delete<HomeController>(force: true);
+                  Get.log("✅ [LOGOUT] All controllers deleted");
                   
                   // Navigate to login
+                  Get.log("🚀 [LOGOUT] Navigating to MainpageWithoutLogin");
                   Get.offAll(() => const MainpageWithoutLogin());
                 },
                 title: "Keluar",

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/views/accounts/registration_online/controllers/progress_account_controller.dart';
+import 'package:rrfx/src/views/accounts/registration_online/controllers/agreement_section_controller.dart';
 
 class AgreementDisputeSection extends StatefulWidget {
   /// Callback yang akan dipanggil setiap kali pilihan berubah
@@ -10,15 +11,16 @@ class AgreementDisputeSection extends StatefulWidget {
   const AgreementDisputeSection({super.key, this.onChanged});
 
   @override
-  State<AgreementDisputeSection> createState() => _AgreementDisputeSectionState();
+  State<AgreementDisputeSection> createState() =>
+      _AgreementDisputeSectionState();
 }
 
 class _AgreementDisputeSectionState extends State<AgreementDisputeSection> {
   final progressController = Get.put(ProgressAccountController());
+  final agreementController = Get.find<AgreementSectionController>();
 
   String? selectedPenyelesaian;
   String? selectedKota;
-  bool agreed = false;
 
   @override
   void initState() {
@@ -92,20 +94,24 @@ class _AgreementDisputeSectionState extends State<AgreementDisputeSection> {
             Padding(
               padding: const EdgeInsets.only(left: 32.0),
               child: Column(
-                children: listKantor.entries.map((entry) {
-                  final key = entry.key;
-                  final value = entry.value;
-                  return RadioListTile<String>(
-                    value: key,
-                    groupValue: selectedPenyelesaian,
-                    activeColor: primary,
-                    onChanged: (val) {
-                      setState(() => selectedPenyelesaian = val);
-                      _notifyParent();
-                    },
-                    title: Text(value, style: const TextStyle(fontSize: 15, height: 1.4)),
-                  );
-                }).toList(),
+                children:
+                    listKantor.entries.map((entry) {
+                      final key = entry.key;
+                      final value = entry.value;
+                      return RadioListTile<String>(
+                        value: key,
+                        groupValue: selectedPenyelesaian,
+                        activeColor: primary,
+                        onChanged: (val) {
+                          setState(() => selectedPenyelesaian = val);
+                          _notifyParent();
+                        },
+                        title: Text(
+                          value,
+                          style: const TextStyle(fontSize: 15, height: 1.4),
+                        ),
+                      );
+                    }).toList(),
               ),
             ),
 
@@ -125,52 +131,63 @@ class _AgreementDisputeSectionState extends State<AgreementDisputeSection> {
           Padding(
             padding: const EdgeInsets.only(left: 32.0),
             child: Column(
-              children: listKota.map((kota) {
-                return RadioListTile<String>(
-                  value: kota,
-                  groupValue: selectedKota,
-                  activeColor: primary,
-                  onChanged: (val) {
-                    setState(() => selectedKota = val);
-                    _notifyParent();
-                  },
-                  title: Text(kota, style: const TextStyle(fontSize: 15, height: 1.4)),
-                );
-              }).toList(),
+              children:
+                  listKota.map((kota) {
+                    return RadioListTile<String>(
+                      value: kota,
+                      groupValue: selectedKota,
+                      activeColor: primary,
+                      onChanged: (val) {
+                        setState(() => selectedKota = val);
+                        _notifyParent();
+                      },
+                      title: Text(
+                        kota,
+                        style: const TextStyle(fontSize: 15, height: 1.4),
+                      ),
+                    );
+                  }).toList(),
             ),
           ),
 
           const SizedBox(height: 8),
 
           // 🔹 Checkbox persetujuan
-          Row(
-            children: [
-              Theme(
-                data: Theme.of(context).copyWith(
-                  checkboxTheme: CheckboxThemeData(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                    side: const BorderSide(width: 1.5, color: Colors.grey),
-                    fillColor: WidgetStateProperty.resolveWith<Color?>(
-                      (states) => states.contains(WidgetState.selected) ? primary : null,
+          Obx(
+            () => Row(
+              children: [
+                Theme(
+                  data: Theme.of(context).copyWith(
+                    checkboxTheme: CheckboxThemeData(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      side: const BorderSide(width: 1.5, color: Colors.grey),
+                      fillColor: WidgetStateProperty.resolveWith<Color?>(
+                        (states) =>
+                            states.contains(WidgetState.selected)
+                                ? primary
+                                : null,
+                      ),
+                      checkColor: WidgetStateProperty.all(Colors.white),
                     ),
-                    checkColor: WidgetStateProperty.all(Colors.white),
+                  ),
+                  child: Checkbox(
+                    value: agreementController.disputeSectionChecked.value,
+                    onChanged: (val) {
+                      agreementController.toggleDisputeSection(val);
+                      _notifyParent();
+                    },
                   ),
                 ),
-                child: Checkbox(
-                  value: agreed,
-                  onChanged: (val) {
-                    setState(() => agreed = val ?? false);
-                    _notifyParent();
-                  },
+                const Expanded(
+                  child: Text(
+                    "Saya sudah membaca dan memahami *)",
+                    style: TextStyle(fontSize: 15),
+                  ),
                 ),
-              ),
-              const Expanded(
-                child: Text(
-                  "Saya sudah membaca dan memahami *)",
-                  style: TextStyle(fontSize: 15),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       );

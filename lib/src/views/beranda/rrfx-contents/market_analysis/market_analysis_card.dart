@@ -35,10 +35,50 @@ class MarketAnalysisCard extends StatelessWidget {
                 height: 70,
                 width: 70,
                 fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    height: 70,
+                    width: 70,
+                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                    child: Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: isDark ? Colors.white54 : Colors.black54,
+                          value:
+                              loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 70,
+                    width: 70,
+                    decoration: BoxDecoration(
+                      color:
+                          isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.broken_image_outlined,
+                      size: 28,
+                      color:
+                          isDark ? Colors.grey.shade600 : Colors.grey.shade400,
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 12),
-      
+
             // Text
             Expanded(
               child: Column(
@@ -49,8 +89,8 @@ class MarketAnalysisCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   // Row(

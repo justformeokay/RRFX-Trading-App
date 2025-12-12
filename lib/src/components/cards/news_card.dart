@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-enum NewsCardType {
-  news,
-  marketAnalysis,
-  fundamentals,
-}
+enum NewsCardType { news, marketAnalysis, fundamentals }
 
 class NewsCard extends StatelessWidget {
   final String author;
@@ -63,15 +59,17 @@ class NewsCard extends StatelessWidget {
           color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isDark
-                ? Colors.white.withOpacity(0.08)
-                : Colors.black.withOpacity(0.06),
+            color:
+                isDark
+                    ? Colors.white.withOpacity(0.08)
+                    : Colors.black.withOpacity(0.06),
           ),
           boxShadow: [
             BoxShadow(
-              color: isDark
-                  ? Colors.black.withOpacity(0.18)
-                  : Colors.black.withOpacity(0.08),
+              color:
+                  isDark
+                      ? Colors.black.withOpacity(0.18)
+                      : Colors.black.withOpacity(0.08),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -88,10 +86,53 @@ class NewsCard extends StatelessWidget {
                 child: Image.network(
                   imageUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: Colors.grey.shade300,
-                    child: const Icon(Icons.broken_image, size: 40),
-                  ),
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      color:
+                          isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: colorAccent,
+                          value:
+                              loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color:
+                          isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.broken_image_outlined,
+                            size: 40,
+                            color:
+                                isDark
+                                    ? Colors.grey.shade600
+                                    : Colors.grey.shade400,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Image unavailable',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color:
+                                  isDark
+                                      ? Colors.grey.shade500
+                                      : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -100,8 +141,7 @@ class NewsCard extends StatelessWidget {
 
             // TAG TYPE
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: colorAccent.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(8),

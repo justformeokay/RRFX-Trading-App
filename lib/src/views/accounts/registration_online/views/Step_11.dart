@@ -26,13 +26,15 @@ class Step11 extends StatefulWidget {
 }
 
 class _Step11State extends State<Step11> {
-
   StatementController controller = Get.find();
-  final AgreementSectionController agreementController = Get.put(AgreementSectionController());
+  final AgreementSectionController agreementController = Get.put(
+    AgreementSectionController(),
+  );
   HomeController userController = Get.find();
   final progressController = Get.find<ProgressAccountController>();
   final RegolRepository _regolRepository = Get.find<RegolRepository>();
-  String selectedPerselisihan = "Badan Arbitrase Perdagangan Berjangka Komoditi (BAKTI) berdasarkan Peraturan dan Prosedur Badan Arbitrase Perdagangan Berjangka Komoditi (BAKTI)";
+  String selectedPerselisihan =
+      "Badan Arbitrase Perdagangan Berjangka Komoditi (BAKTI) berdasarkan Peraturan dan Prosedur Badan Arbitrase Perdagangan Berjangka Komoditi (BAKTI)";
   String selecterdKantorPerselisihan = "JAKARTA UTARA";
 
   @override
@@ -48,30 +50,52 @@ class _Step11State extends State<Step11> {
     return Scaffold(
       appBar: CustomAppBar.defaultAppBar(
         autoImplyLeading: true,
-        title: "Step 11"
+        title: "Step 11",
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(horizontal: 16.0),
         child: Column(
           children: [
-            CustomText.titleHeadingPage(context, text: "PERJANJIAN PEMBERIAN AMANAT SECARA ELEKTRONIK ONLINE UNTUK TRANSAKSI KONTRAK DERIVATIF DALAM SISTEM PERDAGANGAN ALTERNATIF"),
+            CustomText.titleHeadingPage(
+              context,
+              text:
+                  "PERJANJIAN PEMBERIAN AMANAT SECARA ELEKTRONIK ONLINE UNTUK TRANSAKSI KONTRAK DERIVATIF DALAM SISTEM PERDAGANGAN ALTERNATIF",
+            ),
             const SizedBox(height: 15),
             CustomText.titleHeadingPage(context, text: "PERHATIAN !"),
-            CustomText.normal(context, text: "PERJANJIAN INI MERUPAKAN KONTRAK HUKUM. HARAP DIBACA DENGAN SEKSAMA !"),
+            CustomText.normal(
+              context,
+              text:
+                  "PERJANJIAN INI MERUPAKAN KONTRAK HUKUM. HARAP DIBACA DENGAN SEKSAMA !",
+            ),
             Obx(
               () => TodayStatement(
                 name1: userController.profileModel.value?.name ?? "-",
-                job1: progressController.progressData.value?.response?.kerjaNama ?? "-",
-                address1: progressController.progressData.value?.response?.address ?? "-",
+                job1:
+                    progressController
+                        .progressData
+                        .value
+                        ?.response
+                        ?.kerjaNama ??
+                    "-",
+                address1:
+                    progressController.progressData.value?.response?.address ??
+                    "-",
                 name2: "Rachmat Setiyadi",
                 job2: "(Petugas Wakil Pialang yang Ditunjuk Memverifikasi)",
-                address2: "Ruko Soho Rodeo Drive Blok. A No. 20 (SRD-020), Desa/Kelurahan Kamal Muara, Kec. Penjaringan, Kota Adm. Jakarta Utara, Provinsi DKI Jakarta 14470",
+                address2:
+                    "Ruko Soho Rodeo Drive Blok. A No. 20 (SRD-020), Desa/Kelurahan Kamal Muara, Kec. Penjaringan, Kota Adm. Jakarta Utara, Provinsi DKI Jakarta 14470",
                 companyName: "PT RRFX Investasi Berjangka",
               ),
             ),
             StatementWidget.paraPihak(context),
             const SizedBox(height: 15.0),
-            CustomText.normal(context, text: "Para Pihak sepakat untuk mengadakan Perjanjian Pemberian Amanat untuk melakukan transaksi penjualan maupun pembelian Kontrak Derivatif Dalam Sistem Perdagangan Alternatif dengan ketentuan sebagai berikut :", align: TextAlign.justify),
+            CustomText.normal(
+              context,
+              text:
+                  "Para Pihak sepakat untuk mengadakan Perjanjian Pemberian Amanat untuk melakukan transaksi penjualan maupun pembelian Kontrak Derivatif Dalam Sistem Perdagangan Alternatif dengan ketentuan sebagai berikut :",
+              align: TextAlign.justify,
+            ),
             const SizedBox(height: 15.0),
             AgreementSectionList(
               sections: {
@@ -90,21 +114,21 @@ class _Step11State extends State<Step11> {
                   "Apabila jumlah Margin memerlukan penambahan maka Pialang Berjangka wajib memberitahukan dan memintakan kepada Nasabah untuk menambah Margin segera.",
                   "Apabila jumlah Margin memerlukan tambahan (Call Margin) maka Nasabah wajib melakukan penyerahan Call Margin selambat-lambatnya sebelum dimulai hari perdagangan berikutnya. Kewajiban Nasabah sehubungan dengan penyerahan Call Margin tidak terbatas pada jumlah Margin awal.",
                   "Pialang Berjangka tidak berkewajiban melaksanakan amanat untuk melakukan transaksi yang baru dari Nasabah sebelum Call Margin dipenuhi.",
-                  "Untuk memenuhi kewajiban Call Margin dan keuangan lainnya dari Nasabah, Pialang Berjangka dapat mencairkan dana Nasabah yang ada di Pialang Berjangka."
+                  "Untuk memenuhi kewajiban Call Margin dan keuangan lainnya dari Nasabah, Pialang Berjangka dapat mencairkan dana Nasabah yang ada di Pialang Berjangka.",
                 ],
                 "Hak Pialang Berjangka Melikuidasi Posisi Nasabah": [
-                  "Nasabah bertanggung jawab memantau/mengetahui posisi terbukanya secara terus- menerus dan memenuhi kewajibannya. Apabila dalam jangka waktu tertentu dana pada rekening Nasabah kurang dari yang dipersyaratkan, Pialang Berjangka dapat menutup posisi terbuka Nasabah secara keseluruhan atau sebagian, membatasi transaksi, atau tindakan lain untuk melindungi diri dalam pemenuhan Margin tersebut dengan terlebih dahulu memberitahu atau tanpa memberitahu Nasabah dan Pialang Berjangka tidak bertanggung jawab atas kerugian yang timbul akibat tindakan tersebut."
+                  "Nasabah bertanggung jawab memantau/mengetahui posisi terbukanya secara terus- menerus dan memenuhi kewajibannya. Apabila dalam jangka waktu tertentu dana pada rekening Nasabah kurang dari yang dipersyaratkan, Pialang Berjangka dapat menutup posisi terbuka Nasabah secara keseluruhan atau sebagian, membatasi transaksi, atau tindakan lain untuk melindungi diri dalam pemenuhan Margin tersebut dengan terlebih dahulu memberitahu atau tanpa memberitahu Nasabah dan Pialang Berjangka tidak bertanggung jawab atas kerugian yang timbul akibat tindakan tersebut.",
                 ],
                 "Penggantian Kerugian Tidak Adanya Penutupan Posisi": [
-                  "Apabila Nasabah tidak mampu melakukan penutupan atas transaksi yang jatuh tempo, Pialang Berjangka dapat melakukan penutupan atas transaksi Nasabah yang terjadi. Nasabah wajib membayar biaya-biaya, termasuk biaya kerugian dan premi yang telah dibayarkan oleh Pialang Berjangka, dan apabila Nasabah lalai untuk membayar biaya-biaya tersebut, Pialang Berjangka berhak untuk mengambil pembayaran dari dana Nasabah."
+                  "Apabila Nasabah tidak mampu melakukan penutupan atas transaksi yang jatuh tempo, Pialang Berjangka dapat melakukan penutupan atas transaksi Nasabah yang terjadi. Nasabah wajib membayar biaya-biaya, termasuk biaya kerugian dan premi yang telah dibayarkan oleh Pialang Berjangka, dan apabila Nasabah lalai untuk membayar biaya-biaya tersebut, Pialang Berjangka berhak untuk mengambil pembayaran dari dana Nasabah.",
                 ],
                 "Pialang Berjangka Dapat Membatasi Posisi": [
-                  "Nasabah mengakui hak Pialang Berjangka untuk membatasi posisi terbuka Kontrak dan Nasabah tidak melakukan transaksi melebihi batas yang telah ditetapkan tersebut."
+                  "Nasabah mengakui hak Pialang Berjangka untuk membatasi posisi terbuka Kontrak dan Nasabah tidak melakukan transaksi melebihi batas yang telah ditetapkan tersebut.",
                 ],
                 "Tidak Ada Jaminan atas Informasi atau Rekomendasi": [
                   "Informasi dan rekomendasi yang diberikan oleh Pialang Berjangka kepada Nasabah tidak selalu lengkap dan perlu diverifikasi.",
                   "Pialang Berjangka tidak menjamin bahwa informasi dan rekomendasi yang diberikan merupakan informasi yang akurat dan lengkap.",
-                  "Informasi dan rekomendasi yang diberikan oleh Wakil Pialang Berjangka yang satu dengan yang lain mungkin berbeda karena perbedaan analisis fundamental atau teknikal. Nasabah menyadari bahwa ada kemungkinan Pialang Berjangka dan pihak terafiliasinya memiliki posisi di pasar dan memberikan rekomendasi tidak konsisten kepada Nasabah."
+                  "Informasi dan rekomendasi yang diberikan oleh Wakil Pialang Berjangka yang satu dengan yang lain mungkin berbeda karena perbedaan analisis fundamental atau teknikal. Nasabah menyadari bahwa ada kemungkinan Pialang Berjangka dan pihak terafiliasinya memiliki posisi di pasar dan memberikan rekomendasi tidak konsisten kepada Nasabah.",
                 ],
                 "Pembatasan Tanggung Jawab Pialang Berjangka.": [
                   "Pialang Berjangka tidak bertanggung jawab untuk memberikan penilaian kepada Nasabah mengenai iklim, pasar, keadaan politik dan ekonomi nasional dan internasional, nilai Kontrak Derivatif, kolateral, atau memberikan nasihat mengenai keadaan pasar. Pialang Berjangka hanya memberikan pelayanan untuk melakukan transaksi secara jujur serta memberikan laporan atas transaksi tersebut.",
@@ -121,7 +145,7 @@ class _Step11State extends State<Step11> {
                   "Pialang Berjangka berkewajiban menyampaikan konfirmasi transaksi, laporan rekening, permintaan Call Margin, dan pemberitahuan lainnya kepada Nasabah secara akurat, benar dan secepatnya pada alamat (email) Nasabah sesuai dengan yang tertera dalam rekening Nasabah. Apabila dalam jangka waktu 2 x 24 jam setelah amanat jual atau beli disampaikan, tetapi Nasabah belum menerima konfirmasi melalui alamat email Nasabah dan/atau sistem transaksi, Nasabah segera memberitahukan hal tersebut kepada Pialang Berjangka melalui telepon dan disusul dengan pemberitahuan tertulis.",
                   "Jika dalam waktu 2 x 24 jam sejak tanggal penerimaan konfirmasi tersebut tidak ada sanggahan dari Nasabah maka konfirmasi Pialang Berjangka dianggap benar dan sah.",
                   "Kekeliruan atas konfirmasi yang diterbitkan Pialang Berjangka akan diperbaiki oleh Pialang Berjangka sesuai keadaan yang sebenarnya dan demi hukum konfirmasi yang lama batal.",
-                  "Nasabah tidak bertanggung jawab atas transaksi yang dilaksanakan atas rekeningnya apabila konfirmasi tersebut tidak disampaikan secara benar dan akurat."
+                  "Nasabah tidak bertanggung jawab atas transaksi yang dilaksanakan atas rekeningnya apabila konfirmasi tersebut tidak disampaikan secara benar dan akurat.",
                 ],
                 "Kebenaran Informasi Nasabah": [
                   "Nasabah memberikan informasi yang benar dan akurat mengenai data Nasabah yang diminta oleh Pialang Berjangka dan akan memberitahukan paling lambat dalam waktu 3 (tiga) hari kerja setelah terjadi perubahan, termasuk perubahan kemampuan keuangannya untuk terus melaksanakan transaksi.",
@@ -142,7 +166,7 @@ class _Step11State extends State<Step11> {
                 "Jangka Waktu Perjanjian dan Pengakhiran": [
                   "Perjanjian ini mulai berlaku terhitung sejak tanggal dilakukannya konfirmasi oleh Pialang Berjangka dengan diterimanya Bukti Konfirmasi Penerimaan Nasabah dari Pialang Berjangka oleh Nasabah.",
                   "Nasabah dapat mengakhiri Perjanjian ini hanya jika Nasabah sudah tidak lagi memiliki posisi terbuka dan tidak ada kewajiban Nasabah yang diemban oleh atau terhutang kepada Pialang Berjangka.",
-                  "Pengakhiran tidak membebaskan salah satu Pihak dari tanggung jawab atau kewajiban yang terjadi sebelum pemberitahuan tersebut."
+                  "Pengakhiran tidak membebaskan salah satu Pihak dari tanggung jawab atau kewajiban yang terjadi sebelum pemberitahuan tersebut.",
                 ],
                 "Berakhirnya Perjanjian": [
                   "Dinyatakan pailit, memiliki hutang yang sangat besar, dalam proses peradilan, menjadi hilang ingatan, mengundurkan diri atau meninggal;",
@@ -150,10 +174,10 @@ class _Step11State extends State<Step11> {
                   {
                     "Berkaitan dengan butir (1) dan (2) tersebut diatas, Pialang Berjangka dapat:": [
                       "Meneruskan atau menutup posisi Nasabah tersebut setelah mempertimbangkannya secara cermat dan jujur",
-                      "Menolak transaksi dari Nasabah."
-                    ]
+                      "Menolak transaksi dari Nasabah.",
+                    ],
                   },
-                  "Pengakhiran Perjanjian sebagaimana dimaksud dengan angka (1) dan (2) tersebut di atas tidak melepaskan kewajiban dari Para Pihak yang berhubungan dengan penerimaan atau kewajiban pembayaran atau pertanggungjawaban kewajiban lainnya yang timbul dari Perjanjian."
+                  "Pengakhiran Perjanjian sebagaimana dimaksud dengan angka (1) dan (2) tersebut di atas tidak melepaskan kewajiban dari Para Pihak yang berhubungan dengan penerimaan atau kewajiban pembayaran atau pertanggungjawaban kewajiban lainnya yang timbul dari Perjanjian.",
                 ],
                 "Force Majeur": [
                   """Tidak ada satupun pihak di dalam Perjanjian dapat diminta pertanggungjawabannya untuk suatu keterlambatan atau terhalangnya memenuhi kewajiban berdasarkan Perjanjian yang diakibatkan oleh suatu sebab yang berada di luar kemampuannya atau kekuasaannya (force majeur), sepanjang pemberitahuan tertulis mengenai sebab itu disampaikannya kepada pihak lain dalam Perjanjian dalam waktu tidak lebih dari 24 (dua puluh empat) jam sejak timbulnya sebab itu.
@@ -165,11 +189,9 @@ class _Step11State extends State<Step11> {
                 "Tanggung Jawab Kepada Nasabah": [
                   "Penyelenggara Sistem Perdagangan Alternatif yang merupakan pihak yang menguasai dan/atau memiliki sistem perdagangan elektronik bertanggung jawab atas pelanggaran penyalahgunaan sistem perdagangan elektronik sesuai dengan ketentuan yang diatur dalam Perjanjian Kerjasama (PKS) dan peraturan perdagangan (trading rules) antara Penyelenggara Sistem Perdagangan Alternatif dan Peserta Sistem Perdagangan Alternatif yang mengakibatkan kerugian Nasabah.",
                   "Peserta Sistem Perdagangan Alternatif yang merupakan pihak yang menggunakan sistem perdagangan elektronik bertanggung jawab atas pelanggaran penyalahgunaan sistem perdagangan elektronik sebagaimana dimaksud pada angka 22 huruf (a) yang mengakibatkan kerugian Nasabah.",
-                  "Dalam pemanfaatan sistem perdagangan elektronik, Penyelenggara Sistem Perdagangan Alternatif dan/atau Peserta Sistem Perdagangan Alternatif tidak bertanggung jawab atas kerugian Nasabah diluar hal-hal yang telah diatur pada angka 22 huruf (a) dan (b), antara lain: kerugian yang diakibatkan oleh risiko-risiko yang di sebutkan di dalam Dokumen Pemberitahuan Adanya Risiko yang telah dimengerti dan disetujui oleh Nasabah."
+                  "Dalam pemanfaatan sistem perdagangan elektronik, Penyelenggara Sistem Perdagangan Alternatif dan/atau Peserta Sistem Perdagangan Alternatif tidak bertanggung jawab atas kerugian Nasabah diluar hal-hal yang telah diatur pada angka 22 huruf (a) dan (b), antara lain: kerugian yang diakibatkan oleh risiko-risiko yang di sebutkan di dalam Dokumen Pemberitahuan Adanya Risiko yang telah dimengerti dan disetujui oleh Nasabah.",
                 ],
-                "Bahasa": [
-                  "Perjanjian ini dibuat dalam Bahasa Indonesia.",
-                ],
+                "Bahasa": ["Perjanjian ini dibuat dalam Bahasa Indonesia."],
               },
             ),
             AgreementDisputeSection(
@@ -188,36 +210,61 @@ class _Step11State extends State<Step11> {
               ],
               details: {
                 "Nama": "PT RRFX Investasi Berjangka",
-                "Alamat": "Ruko Soho Rodeo Drive Blok. A No. 20 (SRD-020), Desa/Kelurahan Kamal Muara, Kec. Penjaringan, Kota Adm. Jakarta Utara, Provinsi DKI Jakarta 14470",
+                "Alamat":
+                    "Ruko Soho Rodeo Drive Blok. A No. 20 (SRD-020), Desa/Kelurahan Kamal Muara, Kec. Penjaringan, Kota Adm. Jakarta Utara, Provinsi DKI Jakarta 14470",
               },
               table: [
-                {"name": "PT BANK CENTRAL ASIA Tbk", "currency": "IDR", "account": "0353118673"},
-                {"name": "PT BANK MANDIRI (PERSERO) Tbk", "currency": "IDR", "account": "1220013916724"},
-                {"name": "PT BANK CENTRAL ASIA Tbk", "currency": "USD", "account": "0353288111"},
-                {"name": "PT BANK MANDIRI (PERSERO) Tbk", "currency": "USD", "account": "1220013916773"},
-                {"name": "Bank CCB", "currency": "USD", "account": "1010862333"},
+                {
+                  "name": "PT BANK CENTRAL ASIA Tbk",
+                  "currency": "IDR",
+                  "account": "0353118673",
+                },
+                {
+                  "name": "PT BANK MANDIRI (PERSERO) Tbk",
+                  "currency": "IDR",
+                  "account": "1220013916724",
+                },
+                {
+                  "name": "PT BANK CENTRAL ASIA Tbk",
+                  "currency": "USD",
+                  "account": "0353288111",
+                },
+                {
+                  "name": "PT BANK MANDIRI (PERSERO) Tbk",
+                  "currency": "USD",
+                  "account": "1220013916773",
+                },
+                {
+                  "name": "Bank CCB",
+                  "currency": "USD",
+                  "account": "1010862333",
+                },
               ],
             ),
             StatementWidget.perjanjainPemberianAmanat(),
             const SizedBox(height: 15.0),
             Align(
               alignment: Alignment.centerRight,
-              child: Obx(() => TextButton.icon(
-                onPressed: agreementController.checkAll,
-                icon: Icon(
-                  agreementController.allChecked ? Icons.clear_all : Icons.done_all,
-                  color: CustomColor.secondaryColor,
-                ),
-                label: Text(
-                  agreementController.allChecked
-                      ? "Hapus Centang Semua"
-                      : "Centang Semua",
-                  style: const TextStyle(
+              child: Obx(
+                () => TextButton.icon(
+                  onPressed: agreementController.checkAll,
+                  icon: Icon(
+                    agreementController.allChecked
+                        ? Icons.clear_all
+                        : Icons.done_all,
                     color: CustomColor.secondaryColor,
-                    fontWeight: FontWeight.w600,
+                  ),
+                  label: Text(
+                    agreementController.allChecked
+                        ? "Hapus Centang Semua"
+                        : "Centang Semua",
+                    style: const TextStyle(
+                      color: CustomColor.secondaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              )),
+              ),
             ),
             const SizedBox(height: 10.0),
             TimeAndStatement(),
@@ -227,18 +274,46 @@ class _Step11State extends State<Step11> {
       ),
       bottomNavigationBar: ButtonNextPrevious(
         onPressed: () async {
-          if(!controller.selectedStatement.value){
-            CustomScaffoldMessanger.showAppSnackBar(context, message: "Mohon centang \"YA\" pada checkbox persetujuan profil perusahaan berjangka", type: SnackBarType.error);
+          // Validasi semua checkbox agreement sections
+          if (!agreementController.allChecked) {
+            CustomScaffoldMessanger.showAppSnackBar(
+              context,
+              message:
+                  "Mohon centang semua checkbox persetujuan sebelum melanjutkan",
+              type: SnackBarType.error,
+            );
             return;
           }
-          bool result = await _regolRepository.step11A(kantorPenyelesaian: selecterdKantorPerselisihan, kotaPenyelesaian: selectedPerselisihan);
-          if(result) {
+
+          // Validasi checkbox persetujuan profil perusahaan
+          if (!controller.selectedStatement.value) {
+            CustomScaffoldMessanger.showAppSnackBar(
+              context,
+              message:
+                  "Mohon centang \"YA\" pada checkbox persetujuan profil perusahaan berjangka",
+              type: SnackBarType.error,
+            );
+            return;
+          }
+
+          // Lanjutkan ke API call
+          bool result = await _regolRepository.step11A(
+            kantorPenyelesaian: selecterdKantorPerselisihan,
+            kotaPenyelesaian: selectedPerselisihan,
+          );
+
+          if (result) {
             Get.to(() => const Step12());
             return;
           }
-          CustomScaffoldMessanger.showAppSnackBar(context, message: _regolRepository.responseMessage.value, type: SnackBarType.error);
+
+          CustomScaffoldMessanger.showAppSnackBar(
+            context,
+            message: _regolRepository.responseMessage.value,
+            type: SnackBarType.error,
+          );
         },
-      )
+      ),
     );
   }
 }

@@ -39,26 +39,81 @@ class _VerificationAccountPageState extends State<VerificationAccountPage> {
   TextEditingController fullNameController = TextEditingController();
   TextEditingController genderController = TextEditingController();
   AuthController authController = Get.find();
-  HomeController homeController = Get.find();
+  // HomeController getter - ensures controller exists before use
+  HomeController get homeController {
+    try {
+      return Get.find<HomeController>();
+    } catch (e) {
+      Get.log("⚠️ [VERIFICATION_PAGE] HomeController not found, creating permanent instance");
+      return Get.put(HomeController(), permanent: true);
+    }
+  }
   String originalPhoneNumber = "";
+  RxBool isDataReady = false.obs;
 
   @override
   void initState() {
     super.initState();
-    Future.delayed( Duration(seconds: 2), () {
-      if(homeController.profileModel.value == null){
-        Get.back();
+    Get.log("🟢 [VERIFICATION_PAGE] initState() called");
+    Get.log("🔍 [VERIFICATION_PAGE] Current profileModel: ${homeController.profileModel.value?.email ?? 'NULL'}");
+    _loadProfileData();
+  }
+
+  Future<void> _loadProfileData() async {
+    Get.log("🟡 [VERIFICATION_PAGE] _loadProfileData() started");
+    try {
+      Get.log("📡 [VERIFICATION_PAGE] Calling homeController.profile()...");
+      
+      // Force refresh profile untuk memastikan data terbaru
+      final success = await homeController.profile();
+      
+      Get.log("📥 [VERIFICATION_PAGE] profile() completed. Success: $success");
+      Get.log("📋 [VERIFICATION_PAGE] profileModel after fetch: ${homeController.profileModel.value?.toJson()}");
+      
+      if (!success || homeController.profileModel.value == null) {
+        Get.log("❌ [VERIFICATION_PAGE] Profile data NULL or failed");
+        if (mounted) {
+          CustomScaffoldMessanger.showAppSnackBar(
+            context,
+            message: "Gagal memuat data profil. Silakan coba lagi.",
+            type: SnackBarType.error,
+          );
+          Get.back();
+        }
         return;
-      }else{
-        setState(() {
-          fullNameController.text = homeController.profileModel.value?.name ?? '';
-          emailController.text = homeController.profileModel.value?.email ?? '';
-          phoneController.text = homeController.profileModel.value?.phone ?? '';
-          originalPhoneNumber = phoneController.text;
-          phoneController.text = cleanPhoneNumber(phoneController.text);
-        });
       }
-    });
+
+      // Set data setelah berhasil fetch
+      if (mounted) {
+        final name = homeController.profileModel.value?.name ?? '';
+        final email = homeController.profileModel.value?.email ?? '';
+        final phone = homeController.profileModel.value?.phone ?? '';
+        
+        Get.log("✅ [VERIFICATION_PAGE] Setting controllers:");
+        Get.log("   - Name: $name");
+        Get.log("   - Email: $email");
+        Get.log("   - Phone: $phone");
+        
+        fullNameController.text = name;
+        emailController.text = email;
+        phoneController.text = phone;
+        originalPhoneNumber = phoneController.text;
+        phoneController.text = cleanPhoneNumber(phoneController.text);
+        isDataReady.value = true;
+        
+        Get.log("✅ [VERIFICATION_PAGE] Data loaded successfully. isDataReady: ${isDataReady.value}");
+      }
+    } catch (e) {
+      Get.log("❌ [VERIFICATION_PAGE] Exception in _loadProfileData: $e");
+      if (mounted) {
+        CustomScaffoldMessanger.showAppSnackBar(
+          context,
+          message: "Terjadi kesalahan saat memuat data: $e",
+          type: SnackBarType.error,
+        );
+        Get.back();
+      }
+    }
   }
   
   @override
@@ -86,7 +141,31 @@ class _VerificationAccountPageState extends State<VerificationAccountPage> {
               forceMaterialTransparency: true,
             ),
             body: SafeArea(
-              child: SingleChildScrollView(
+              child: Obx(() {
+                // Loading state
+                if (!isDataReady.value) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(
+                          color: CustomColor.secondaryColor,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          "Memuat data profil...",
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                // Form content
+                return SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 child: Form(
                   key: _formKey,
@@ -174,9 +253,9 @@ class _VerificationAccountPageState extends State<VerificationAccountPage> {
                         ),
                       ],
                     ),
-                  )
-                ),
-              ),
+                  ),
+                ));
+              }),
             ),
             bottomNavigationBar: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),

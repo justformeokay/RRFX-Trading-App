@@ -25,7 +25,15 @@ class AuthController extends GetxController {
   RxString statusAccount = "".obs;
   Rxn<CountryCodeModel> countryCodeModel = Rxn<CountryCodeModel>();
   Rxn<PersonalModels> personalModel = Rxn<PersonalModels>();
-  HomeController homeController = Get.put(HomeController());
+  // HomeController getter - ensures controller exists before use
+  HomeController get homeController {
+    try {
+      return Get.find<HomeController>();
+    } catch (e) {
+      Get.log("⚠️ [AUTH] HomeController not found, creating permanent instance");
+      return Get.put(HomeController(), permanent: true);
+    }
+  }
   Map<String, String> deviceInfo = {};
   AuthService authService = Get.find();
 
@@ -41,16 +49,22 @@ class AuthController extends GetxController {
     init();
   }
 
-  Future<void> login(BuildContext context, {String? email, String? password}) async {
+  Future<void> login(
+    BuildContext context, {
+    String? email,
+    String? password,
+  }) async {
+    Get.log("🔵 [AUTH] login() called for email: $email");
     SharedPreferences preferences = await SharedPreferences.getInstance();
     try {
       isLoading(true);
 
+      Get.log("📡 [AUTH] Sending login request...");
       final response = await http.post(
         Uri.tryParse("${GlobalVariable.mainURL}/auth/login")!,
         headers: {
           'x-api-key': GlobalVariable.x_api_key,
-          'Content-Type': 'application/x-www-form-urlencoded'
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: {
           'email': email,
@@ -58,49 +72,78 @@ class AuthController extends GetxController {
           'device': jsonEncode(deviceInfo),
         },
       );
+      Get.log("📥 [AUTH] Login response status: ${response.statusCode}");
+      Get.log("📋 [AUTH] Login response body: ${response.body}");
 
       final result = jsonDecode(response.body);
       isLoading(false);
 
       if (response.statusCode != 200) {
+        Get.log("❌ [AUTH] Login failed - status code not 200");
         responseMessage(result['message'] ?? "Login gagal");
         return;
       }
 
-      if(result['status'] == false){
-        CustomScaffoldMessanger.showAppSnackBar(context, message: "Sign in gagal, mohon cek ulang Email atau Password anda apakah sudah benar");
+      if (result['status'] == false) {
+        Get.log("❌ [AUTH] Login failed - status false in response");
+        CustomScaffoldMessanger.showAppSnackBar(
+          context,
+          message:
+              "Sign in gagal, mohon cek ulang Email atau Password anda apakah sudah benar",
+        );
         return;
       }
+      
       responseMessage(result['message'] ?? "Login berhasil");
       final status = result['response']?['status'] ?? "";
       statusAccount(status);
       final accessToken = result['response']?['access_token'];
       final refreshToken = result['response']?['refresh_token'];
+      
+      Get.log("✅ [AUTH] Login successful");
+      Get.log("🔐 [AUTH] Account status: $status");
+      Get.log("🎫 [AUTH] Access token: ${accessToken?.substring(0, 20)}...");
+      
       preferences.setString('refreshToken', refreshToken);
       preferences.setString('accessToken', accessToken);
       await box.write('token', accessToken);
       await box.write('refreshToken', refreshToken);
       authService.accessToken = accessToken;
       authService.refreshToken = refreshToken;
+      
+      Get.log("💾 [AUTH] Tokens saved successfully");
+      Get.log("🎮 [AUTH] Initializing controllers...");
       Get.put(AccountController());
-      homeController.profile().then((refreshToken){
-        if(!refreshToken){
-          return;
-        }
-      });
+      // Ensure HomeController exists and is permanent (won't be deleted on navigation)
+      if (!Get.isRegistered<HomeController>()) {
+        Get.log("🎮 [AUTH] Creating HomeController as permanent...");
+        Get.put(HomeController(), permanent: true);
+      }
 
+      Get.log("📡 [AUTH] Fetching user profile...");
+      // Tunggu profile selesai di-fetch sebelum routing
+      final profileSuccess = await homeController.profile();
+      Get.log("📥 [AUTH] Profile fetch completed. Success: $profileSuccess");
+      Get.log("👤 [AUTH] Profile data: ${homeController.profileModel.value?.toJson()}");
+
+      Get.log("🚀 [AUTH] Routing based on status: $status");
       switch (status) {
         case "active":
+          Get.log("✅ [AUTH] Status: active - Going to Mainpage");
           await preferences.setBool('loggedIn', true);
           Get.offAll(() => Mainpage());
           break;
         case "suspend":
+          Get.log("⚠️ [AUTH] Status: suspend - Going to SuspendedAccountPage");
           Get.offAll(() => const SuspendedAccountPage());
           break;
         case "otp":
+          Get.log("📱 [AUTH] Status: otp - Going to OtpPage");
           Get.to(() => const OtpPage());
           break;
         case "verification":
+          Get.log("📧 [AUTH] Status: verification - Going to VerificationAccountPage");
+          Get.log("👤 [AUTH] Profile before navigation: ${homeController.profileModel.value?.email ?? 'NULL'}");
           Get.to(() => const VerificationAccountPage());
           break;
         default:
@@ -113,14 +156,24 @@ class AuthController extends GetxController {
   }
 
   /// Register API
-  Future<bool> register({String? email, String? password, String? name, String? ibCode, String? phone, String? phoneCode, bool? agree}) async {
+  Future<bool> register({
+    String? email,
+    String? password,
+    String? name,
+    String? ibCode,
+    String? phone,
+    String? phoneCode,
+    bool? agree,
+  }) async {
+    Get.log("🟢 [AUTH] register() called for email: $email, name: $name, phone: $phone");
     try {
       isLoading(true);
+      Get.log("📡 [AUTH] Sending registration request...");
       http.Response response = await http.post(
         Uri.tryParse("${GlobalVariable.mainURL}/auth/register")!,
         headers: {
           'x-api-key': GlobalVariable.x_api_key,
-          'Content-Type': 'application/x-www-form-urlencoded'
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: {
           'fullname': name,
@@ -130,23 +183,30 @@ class AuthController extends GetxController {
           'phone': phone,
           'phone_code': phoneCode ?? '62',
           'terms': agree == true ? '1' : '0',
-          'device': jsonEncode(deviceInfo)
+          'device': jsonEncode(deviceInfo),
         },
       );
       var result = jsonDecode(response.body);
       isLoading(false);
+      Get.log("📥 [AUTH] Register response status: ${response.statusCode}");
+      Get.log("📋 [AUTH] Register response: ${response.body}");
+      
       if (response.statusCode == 200) {
-        if(result['status'] != true) {
+        if (result['status'] != true) {
+          Get.log("❌ [AUTH] Registration failed - status false");
           responseMessage.value = result['message'];
           return false;
         }
+        Get.log("✅ [AUTH] Registration successful");
         responseMessage.value = result['message'];
         return true;
       }
+      Get.log("❌ [AUTH] Registration failed - status code not 200");
       responseMessage.value = result['message'];
       // responseMessage.value = result['message']['data']['id'];
       return false;
     } catch (e) {
+      Get.log("❌ [AUTH] Exception in register(): $e");
       isLoading(false);
       responseMessage.value = e.toString();
       return false;
@@ -161,12 +221,12 @@ class AuthController extends GetxController {
         Uri.tryParse("${GlobalVariable.mainURL}/auth/send-otp")!,
         headers: {
           'x-api-key': GlobalVariable.x_api_key,
-          'Content-Type': 'application/x-www-form-urlencoded'
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: {
           'phone': phone,
           'phone_code': phoneCode ?? '62',
-          'device': jsonEncode(deviceInfo)
+          'device': jsonEncode(deviceInfo),
         },
       );
       var result = jsonDecode(response.body);
@@ -192,12 +252,12 @@ class AuthController extends GetxController {
         Uri.tryParse("${GlobalVariable.mainURL}/auth/send-otp-wa")!,
         headers: {
           'x-api-key': GlobalVariable.x_api_key,
-          'Content-Type': 'application/x-www-form-urlencoded'
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: {
           'phone': phone,
           'phone_code': phoneCode ?? '62',
-          'device': jsonEncode(deviceInfo)
+          'device': jsonEncode(deviceInfo),
         },
       );
       var result = jsonDecode(response.body);
@@ -221,12 +281,8 @@ class AuthController extends GetxController {
       isLoading(true);
       http.Response response = await http.post(
         Uri.tryParse("${GlobalVariable.mainURL}/auth/forget")!,
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: {
-          'email': email
-        },
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {'email': email},
       );
       var result = jsonDecode(response.body);
       print("INI RESULT FORGOT PASSWORD: $result");
@@ -249,9 +305,7 @@ class AuthController extends GetxController {
       isLoading(true);
       http.Response response = await http.get(
         Uri.tryParse("${GlobalVariable.mainURL}/auth/country")!,
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       );
       var result = jsonDecode(response.body);
       isLoading(false);
@@ -277,16 +331,13 @@ class AuthController extends GetxController {
         Uri.tryParse("${GlobalVariable.mainURL}/public/check-version")!,
         headers: {
           'x-api-key': GlobalVariable.x_api_key,
-          'Content-Type': 'application/x-www-form-urlencoded'
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: {
-          'version': appVersion,
-          'device': jsonEncode(deviceInfo)
-        },
+        body: {'version': appVersion, 'device': jsonEncode(deviceInfo)},
       );
-      
+
       isLoading(false);
-      
+
       // Check for server errors (5xx)
       if (response.statusCode >= 500) {
         responseMessage.value = 'Server error: ${response.statusCode}';
@@ -296,7 +347,7 @@ class AuthController extends GetxController {
           'message': 'Server sedang mengalami gangguan',
         };
       }
-      
+
       // Check for timeout or other network errors
       if (response.statusCode == 524 || response.statusCode == 408) {
         responseMessage.value = 'Server timeout';
@@ -306,9 +357,9 @@ class AuthController extends GetxController {
           'message': 'Server timeout, silakan coba lagi',
         };
       }
-      
+
       var result = jsonDecode(response.body);
-      
+
       if (response.statusCode == 200) {
         responseMessage.value = result['message'];
         return {
@@ -317,7 +368,7 @@ class AuthController extends GetxController {
           'message': result['message'],
         };
       }
-      
+
       // Version mismatch or other API error
       responseMessage.value = result['message'];
       return {
@@ -328,7 +379,7 @@ class AuthController extends GetxController {
     } catch (e) {
       isLoading(false);
       responseMessage.value = e.toString();
-      
+
       // Network error atau parsing error = server error
       return {
         'success': false,
@@ -342,13 +393,14 @@ class AuthController extends GetxController {
   Future<bool> confirmOTP({String? otp}) async {
     try {
       isLoading(true);
-      Map<String, dynamic> result = await authService.post("auth/otp-verification", {
-        'otp': otp,
-        'device': jsonEncode(deviceInfo)
-      });
+      Map<String, dynamic> result = await authService.post(
+        "auth/otp-verification",
+        {'otp': otp, 'device': jsonEncode(deviceInfo)},
+      );
       isLoading(false);
+      Get.log("Response Confirm OTP: $result");
       responseMessage(result['message']);
-      if(result['status'] == true) {
+      if (result['status'] == true) {
         return true;
       }
       return false;
@@ -364,11 +416,11 @@ class AuthController extends GetxController {
     try {
       isLoading(true);
       Map<String, dynamic> result = await authService.post("auth/resend-otp", {
-        'device': jsonEncode(deviceInfo)
+        'device': jsonEncode(deviceInfo),
       });
       isLoading(false);
       responseMessage(result['message']);
-      if(result['status'] == true) {
+      if (result['status'] == true) {
         return true;
       }
       return false;
@@ -386,11 +438,11 @@ class AuthController extends GetxController {
       Map<String, dynamic> result = await authService.post("verif/step-1", {
         'gender': gender,
         'address': address,
-        'device': jsonEncode(deviceInfo)
+        'device': jsonEncode(deviceInfo),
       });
       isLoading(false);
       responseMessage(result['message']);
-      if(result['status'] == true) {
+      if (result['status'] == true) {
         return true;
       }
       return false;

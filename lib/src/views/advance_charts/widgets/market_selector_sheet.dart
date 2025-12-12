@@ -9,10 +9,7 @@ import '../models/symbol_model.dart';
 class MarketSelectorSheet extends StatefulWidget {
   final Function(SymbolModel)? onSymbolSelected;
 
-  const MarketSelectorSheet({
-    super.key,
-    this.onSymbolSelected,
-  });
+  const MarketSelectorSheet({super.key, this.onSymbolSelected});
 
   @override
   State<MarketSelectorSheet> createState() => _MarketSelectorSheetState();
@@ -124,17 +121,18 @@ class _MarketSelectorSheetState extends State<MarketSelectorSheet>
                 suffixIcon: Obx(() {
                   return symbolsController.searchQuery.value.isNotEmpty
                       ? IconButton(
-                          icon: Icon(
-                            Iconsax.close_circle_outline,
-                            color: isDark
-                                ? Colors.grey.shade600
-                                : Colors.grey.shade400,
-                          ),
-                          onPressed: () {
-                            searchController.clear();
-                            symbolsController.clearSearch();
-                          },
-                        )
+                        icon: Icon(
+                          Iconsax.close_circle_outline,
+                          color:
+                              isDark
+                                  ? Colors.grey.shade600
+                                  : Colors.grey.shade400,
+                        ),
+                        onPressed: () {
+                          searchController.clear();
+                          symbolsController.clearSearch();
+                        },
+                      )
                       : const SizedBox.shrink();
                 }),
                 filled: true,
@@ -161,6 +159,7 @@ class _MarketSelectorSheetState extends State<MarketSelectorSheet>
             }
 
             return Container(
+              height: 56,
               margin: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
                 color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
@@ -178,29 +177,33 @@ class _MarketSelectorSheetState extends State<MarketSelectorSheet>
                 unselectedLabelColor:
                     isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                 labelStyle: GoogleFonts.inter(
-                  fontSize: 13,
+                  fontSize: 11,
                   fontWeight: FontWeight.w700,
                 ),
                 unselectedLabelStyle: GoogleFonts.inter(
-                  fontSize: 13,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
-                padding: const EdgeInsets.all(4),
+                padding: const EdgeInsets.all(3),
                 tabs: const [
                   Tab(
-                    icon: Icon(Iconsax.star_bold, size: 18),
+                    icon: Icon(Iconsax.star_bold, size: 16),
+                    iconMargin: EdgeInsets.only(bottom: 2),
                     text: 'Favorite',
                   ),
                   Tab(
-                    icon: Icon(Iconsax.chart_2_outline, size: 18),
+                    icon: Icon(Iconsax.chart_2_outline, size: 16),
+                    iconMargin: EdgeInsets.only(bottom: 2),
                     text: 'Forex',
                   ),
                   Tab(
-                    icon: Icon(Iconsax.diamonds_outline, size: 18),
+                    icon: Icon(Iconsax.diamonds_outline, size: 16),
+                    iconMargin: EdgeInsets.only(bottom: 2),
                     text: 'Komoditi',
                   ),
                   Tab(
-                    icon: Icon(Iconsax.status_up_outline, size: 18),
+                    icon: Icon(Iconsax.status_up_outline, size: 16),
+                    iconMargin: EdgeInsets.only(bottom: 2),
                     text: 'Index',
                   ),
                 ],
@@ -226,9 +229,10 @@ class _MarketSelectorSheetState extends State<MarketSelectorSheet>
                       Text(
                         'Memuat daftar market...',
                         style: GoogleFonts.inter(
-                          color: isDark
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade600,
+                          color:
+                              isDark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
                         ),
                       ),
                     ],
@@ -263,16 +267,19 @@ class _MarketSelectorSheetState extends State<MarketSelectorSheet>
                           symbolsController.errorMessage.value,
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
-                            color: isDark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade600,
+                            color:
+                                isDark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
                           ),
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton.icon(
                           onPressed: () => symbolsController.refreshSymbols(),
-                          icon: const Icon(Iconsax.refresh_outline,
-                              color: Colors.black),
+                          icon: const Icon(
+                            Iconsax.refresh_outline,
+                            color: Colors.black,
+                          ),
                           label: Text(
                             'Coba Lagi',
                             style: GoogleFonts.inter(
@@ -482,14 +489,16 @@ class _MarketSelectorSheetState extends State<MarketSelectorSheet>
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected
-                ? CustomColor.secondaryColor.withOpacity(0.1)
-                : Colors.transparent,
+            color:
+                isSelected
+                    ? CustomColor.secondaryColor.withOpacity(0.1)
+                    : Colors.transparent,
             border: Border(
               left: BorderSide(
-                color: isSelected
-                    ? CustomColor.secondaryColor
-                    : Colors.transparent,
+                color:
+                    isSelected
+                        ? CustomColor.secondaryColor
+                        : Colors.transparent,
                 width: 3,
               ),
             ),
@@ -500,9 +509,12 @@ class _MarketSelectorSheetState extends State<MarketSelectorSheet>
               IconButton(
                 icon: Icon(
                   isFavorite ? Iconsax.star_bold : Iconsax.star_outline,
-                  color: isFavorite
-                      ? CustomColor.secondaryColor
-                      : (isDark ? Colors.grey.shade600 : Colors.grey.shade400),
+                  color:
+                      isFavorite
+                          ? CustomColor.secondaryColor
+                          : (isDark
+                              ? Colors.grey.shade600
+                              : Colors.grey.shade400),
                   size: 22,
                 ),
                 onPressed: () {
@@ -530,10 +542,7 @@ class _MarketSelectorSheetState extends State<MarketSelectorSheet>
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        _buildInfoChip(
-                          'Spread: ${symbol.spread}',
-                          isDark,
-                        ),
+                        _buildInfoChip('Spread: ${symbol.spread}', isDark),
                         const SizedBox(width: 8),
                         _buildInfoChip(
                           'Lot: ${symbol.volumeMin}-${symbol.volumeMax}',

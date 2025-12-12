@@ -111,7 +111,6 @@ class _TransactionState extends State<Transaction> {
       loadAccountSelected().then((result){
         selectedIndex(result);
       });
-      print("INI RESULT AKUN => ${allAccountTrading.length}");
     });
   }
 

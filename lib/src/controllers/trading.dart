@@ -669,6 +669,7 @@ class TradingController extends GetxController {
           'is_pending': isPending ? '1' : '0',
         },
       );
+      Get.log("INI RESULT MODIFY POSITION => $result");
       return result;
     } catch (e) {
       isLoading(false);

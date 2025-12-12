@@ -12,7 +12,7 @@ import 'package:rrfx/src/controllers/account_balance_ws_controller.dart';
 import 'package:rrfx/src/controllers/trading.dart';
 import 'package:rrfx/src/controllers/websocket_controller.dart';
 import 'package:rrfx/src/views/transactions/views/popup_close_order.dart';
-import 'package:rrfx/src/views/transactions/views/popup_edit_position.dart';
+import 'package:rrfx/src/views/transactions/views/edit_position_page.dart';
 
 class OpenTransactonMeta5 extends StatefulWidget {
   const OpenTransactonMeta5({super.key});
@@ -42,29 +42,29 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
   @override
   void initState() {
     super.initState();
-    
+
     // Setup listener ONCE for account changes
     _accountListener = ever(controller.selectedAccount, (account) {
       if (account != null) {
         final newLogin = account.login;
-        
+
         // Only reload if account actually changed
         if (_lastLoadedLogin != newLogin) {
           // print('🔄 [OpenTransaction] Account changed: $_lastLoadedLogin → $newLogin');
-          
+
           // Clear old data immediately to prevent blinking
           tradingController.openOrderModel.value = null;
           accountWS.profit.value = 0.0;
-          
+
           // Then load new data
           _loadOrders();
           _subscribeToAccountWS();
-          
+
           _lastLoadedLogin = newLogin;
         }
       }
     });
-    
+
     // Initial load
     if (controller.selectedAccount.value != null) {
       _lastLoadedLogin = controller.selectedAccount.value!.login;
@@ -98,15 +98,15 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
       // print('⏸️ [OpenTransaction] Already loading orders, skipping...');
       return;
     }
-    
+
     if (!controller.hasAccounts) {
       Get.log("TIDAK MEMILIKI AKUN TRADING DEMO MAUPUN REAL");
       return;
     }
-    
+
     String? loginID = controller.selectedAccount.value?.login;
     if (loginID == null) return;
-    
+
     try {
       _isLoadingOrders = true;
       await tradingController.openOrder(login: loginID);
@@ -119,12 +119,12 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
   Widget build(BuildContext context) {
     // Force rebuild when account changes to prevent showing old data
     final currentLogin = controller.selectedAccount.value?.login ?? '';
-    
+
     return Obx(() {
       if (!controller.hasAccounts) return noAccountDetected();
-      
+
       var opened = tradingController.openOrderModel.value?.response;
-      
+
       return Scaffold(
         key: ValueKey(currentLogin), // Force rebuild on account change
         body: CustomScrollView(
@@ -161,7 +161,9 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
                 child: Center(
                   child: Padding(
                     padding: const EdgeInsets.all(40.0),
-                    child: CircularProgressIndicator(color: CustomColor.secondaryColor,),
+                    child: CircularProgressIndicator(
+                      color: CustomColor.secondaryColor,
+                    ),
                   ),
                 ),
               )
@@ -184,7 +186,9 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                CustomColor.secondaryColor.withValues(alpha: 0.15),
+                                CustomColor.secondaryColor.withValues(
+                                  alpha: 0.15,
+                                ),
                                 Colors.blue.withValues(alpha: 0.15),
                               ],
                             ),
@@ -197,9 +201,9 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
                             ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 24),
-                        
+
                         // Title
                         Text(
                           "No Open Positions",
@@ -209,9 +213,9 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
                             color: Theme.of(context).textTheme.bodyLarge?.color,
                           ),
                         ),
-                        
+
                         const SizedBox(height: 12),
-                        
+
                         // Description
                         Text(
                           "You don't have any active trading positions at the moment.",
@@ -222,21 +226,24 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
                             color: Theme.of(context).textTheme.bodySmall?.color,
                           ),
                         ),
-                        
+
                         const SizedBox(height: 32),
-                        
+
                         // Info cards
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey.shade900
-                                : Colors.grey.shade50,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade900
+                                    : Colors.grey.shade50,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.grey.shade800
-                                  : Colors.grey.shade200,
+                              color:
+                                  Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.grey.shade800
+                                      : Colors.grey.shade200,
                               width: 1,
                             ),
                           ),
@@ -246,21 +253,25 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
                                 context,
                                 icon: Iconsax.chart_outline,
                                 title: "Start Trading",
-                                description: "Open a new position from the chart or market list",
+                                description:
+                                    "Open a new position from the chart or market list",
                               ),
                               const SizedBox(height: 16),
                               Divider(
                                 height: 1,
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade800
-                                    : Colors.grey.shade200,
+                                color:
+                                    Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.grey.shade800
+                                        : Colors.grey.shade200,
                               ),
                               const SizedBox(height: 16),
                               _buildInfoRow(
                                 context,
                                 icon: Iconsax.refresh_outline,
                                 title: "Real-time Updates",
-                                description: "Your positions will appear here automatically",
+                                description:
+                                    "Your positions will appear here automatically",
                               ),
                             ],
                           ),
@@ -275,14 +286,20 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
                 delegate: SliverChildBuilderDelegate((context, index) {
                   return _PositionTile(
                     index: index,
-                    digits: opened[index].digits != null ? int.tryParse("${opened[index].digits}") : null,
+                    digits:
+                        opened[index].digits != null
+                            ? int.tryParse("${opened[index].digits}")
+                            : null,
                     positionId: "${opened[index].ticket}",
                     openTime: "${opened[index].openTime}",
                     swap: "${opened[index].swap}",
                     stopLoss: "${opened[index].stopLoss}",
                     takeProfit: "${opened[index].takeProfit}",
                     doubleProfit: -0.10 * index,
-                    profit: opened[index].profit != null ? "${opened[index].profit}" : "0.00",
+                    profit:
+                        opened[index].profit != null
+                            ? "${opened[index].profit}"
+                            : "0.00",
                     symbol: "${opened[index].symbol}",
                     direction: "${opened[index].orderType}",
                     volume: "${opened[index].lot}",
@@ -305,7 +322,7 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
     required String description,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -316,11 +333,7 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
             color: CustomColor.secondaryColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: CustomColor.secondaryColor,
-          ),
+          child: Icon(icon, size: 20, color: CustomColor.secondaryColor),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -396,7 +409,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
               "Account ID",
               accountController.selectedAccount.value?.login ?? "N/A",
               context,
-              color: Get.textTheme.bodyLarge?.color
+              color: Get.textTheme.bodyLarge?.color,
             ),
           ),
           // Only show Profit if there are open positions
@@ -412,7 +425,10 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
               "Profit",
               _formatProfit(accountWS.profit.value),
               context,
-              color: accountWS.profit.value >= 0 ? Colors.blue : Colors.red.shade400,
+              color:
+                  accountWS.profit.value >= 0
+                      ? Colors.blue
+                      : Colors.red.shade400,
             );
           }),
           Obx(
@@ -420,7 +436,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
               "Balance",
               _formatNumber(accountController.selectedAccount.value?.balance),
               context,
-              color: Get.textTheme.bodyLarge?.color
+              color: Get.textTheme.bodyLarge?.color,
             ),
           ),
           Obx(
@@ -428,7 +444,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
               "Equity",
               _formatNumber(accountController.selectedAccount.value?.equity),
               context,
-              color: Get.textTheme.bodyLarge?.color
+              color: Get.textTheme.bodyLarge?.color,
             ),
           ),
           Obx(
@@ -436,7 +452,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
               "Margin",
               _formatNumber(accountController.selectedAccount.value?.margin),
               context,
-              color: Get.textTheme.bodyLarge?.color
+              color: Get.textTheme.bodyLarge?.color,
             ),
           ),
           Obx(
@@ -446,7 +462,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
                 accountController.selectedAccount.value?.marginFree,
               ),
               context,
-              color: Get.textTheme.bodyLarge?.color
+              color: Get.textTheme.bodyLarge?.color,
             ),
           ),
           Obx(
@@ -456,7 +472,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
                   ? "${accountController.selectedAccount.value?.marginFreePercent}"
                   : "N/A",
               context,
-              color: Get.textTheme.bodyLarge?.color
+              color: Get.textTheme.bodyLarge?.color,
             ),
           ),
         ],
@@ -475,11 +491,14 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text("$label:", style: GoogleFonts.roboto(
-            fontSize: 14,
-            color: Theme.of(context).textTheme.bodyLarge?.color,
-            fontWeight: FontWeight.w800,
-          )),
+          Text(
+            "$label:",
+            style: GoogleFonts.roboto(
+              fontSize: 14,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -503,7 +522,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
               fontSize: 14,
               color: color,
               fontWeight: FontWeight.w900,
-            )
+            ),
           ),
         ],
       ),
@@ -816,13 +835,13 @@ class _PositionTile extends StatelessWidget {
 
     // Create reactive profit observable
     final realtimeProfit = RxString(profit ?? "0.0");
-    
+
     // Listen to position updates from API response (updated by WebSocket indirectly)
     final worker = ever(tradingController.openOrderModel, (model) {
       if (model?.response != null) {
         // Find this position in the updated list
         final position = model!.response!.firstWhereOrNull(
-          (p) => p.ticket.toString() == positionId
+          (p) => p.ticket.toString() == positionId,
         );
         if (position != null && position.profit != null) {
           realtimeProfit.value = position.profit.toString();
@@ -840,24 +859,24 @@ class _PositionTile extends StatelessWidget {
       onConfirm: () async {
         // Dispose worker before closing
         worker.dispose();
-        
+
         // Show loading indicator
         Get.dialog(
           Center(child: CircularProgressIndicator()),
           barrierDismissible: false,
         );
-        
+
         try {
           await tradingController.closingOrder(
-            loginID: loginID, 
-            ticketID: positionId ?? ''
+            loginID: loginID,
+            ticketID: positionId ?? '',
           );
-          
+
           // Close loading
           if (Get.isDialogOpen ?? false) Get.back();
-          
+
           AppSnackbar.success("Posisi $positionId berhasil ditutup.");
-          
+
           // Reload positions once
           await tradingController.openOrder(login: loginID);
         } catch (e) {
@@ -867,7 +886,7 @@ class _PositionTile extends StatelessWidget {
         }
       },
     );
-    
+
     // Dispose worker after dialog closes (in case user cancels)
     worker.dispose();
   }
@@ -885,83 +904,89 @@ class _PositionTile extends StatelessWidget {
 
     // Get symbol name (remove .db suffix if exists)
     final cleanSymbol = symbol?.replaceAll('.db', '') ?? '';
-    
+
     // Create reactive current price observable that updates from WebSocket
-    final currentPriceObs = Rx<double>(double.tryParse(currentPrice ?? "0") ?? 0.0);
-    
+    final currentPriceObs = Rx<double>(
+      double.tryParse(currentPrice ?? "0") ?? 0.0,
+    );
+
     // Listen to WebSocket updates for this symbol
     final worker = ever(marketWS.marketData, (data) {
       final symbolData = data[cleanSymbol];
       if (symbolData != null) {
         // Use bid for sell positions, ask for buy positions
-        final newPrice = direction?.toLowerCase() == 'buy' 
-            ? symbolData.bid 
-            : symbolData.ask;
-        print('📡 WebSocket Update - Symbol: $cleanSymbol, Direction: $direction, New Price: $newPrice');
+        final newPrice =
+            direction?.toLowerCase() == 'buy' ? symbolData.bid : symbolData.ask;
         currentPriceObs.value = newPrice;
-        print('✅ currentPriceObs updated: ${currentPriceObs.value}');
       }
     });
 
     // Get digits from symbol or use provided digits
     final symbolDigits = digits ?? _getDigitsForSymbol(symbol ?? '');
 
-    await showEditPositionDialog(
-      context: context,
-      symbol: cleanSymbol,
-      positionId: positionId ?? '-',
-      direction: direction ?? 'buy',
-      openPrice: double.tryParse(openPrice ?? "0") ?? 0.0,
-      currentPrice: currentPriceObs.value,
-      stopLoss: double.tryParse(stopLoss ?? "0") ?? 0.0,
-      takeProfit: double.tryParse(takeProfit ?? "0") ?? 0.0,
-      digits: symbolDigits,
-      currentPriceObservable: currentPriceObs,
-      onModify: (sl, tp) async {
-        try {
-          // Show loading
-          Get.dialog(
-            Center(child: CircularProgressIndicator()),
-            barrierDismissible: false,
-          );
-          
-          // Call modify API
-          final result = await tradingController.modifyPosition(
-            login: loginID,
-            ticket: positionId ?? '',
-            stopLoss: sl,
-            takeProfit: tp,
-            isPending: false,
-          );
-          
-          // Close loading dialog
-          if (Get.isDialogOpen ?? false) Get.back();
-          
-          if (result['status'] == true) {
-            AppSnackbar.success(
-              result['message'] ?? "Position berhasil dimodifikasi",
+    // Navigate to new page
+    await Get.to(
+      () => EditPositionPage(
+        symbol: cleanSymbol,
+        positionId: positionId ?? '-',
+        direction: direction ?? 'buy',
+        openPrice: double.tryParse(openPrice ?? "0") ?? 0.0,
+        currentPrice: currentPriceObs.value,
+        stopLoss: double.tryParse(stopLoss ?? "0") ?? 0,
+        takeProfit: double.tryParse(takeProfit ?? "0") ?? 0,
+        digits: symbolDigits,
+        currentPriceObservable: currentPriceObs,
+        onModify: (sl, tp) async {
+          try {
+            // Show loading
+            Get.dialog(
+              Center(
+                child: CircularProgressIndicator(
+                  color: CustomColor.secondaryColor,
+                ),
+              ),
+              barrierDismissible: false,
             );
-            
-            // WebSocket will auto-update the positions, no need for API call
-            // Only reload if WebSocket is not connected
-            if (Get.find<AccountBalanceWSController>().status.value != AccountWSStatus.connected) {
-              await tradingController.openOrder(login: loginID);
+
+            // Call modify API
+            final result = await tradingController.modifyPosition(
+              login: loginID,
+              ticket: positionId ?? '',
+              stopLoss: sl,
+              takeProfit: tp,
+              isPending: false,
+            );
+
+            // Close loading dialog
+            if (Get.isDialogOpen ?? false) Get.back();
+
+            if (result['status'] == true) {
+              AppSnackbar.success(
+                result['message'] ?? "Position berhasil dimodifikasi",
+              );
+
+              // WebSocket will auto-update the positions, no need for API call
+              // Only reload if WebSocket is not connected
+              if (Get.find<AccountBalanceWSController>().status.value !=
+                  AccountWSStatus.connected) {
+                await tradingController.openOrder(login: loginID);
+              }
+            } else {
+              AppSnackbar.error(
+                result['message'] ?? "Gagal memodifikasi position",
+              );
             }
-          } else {
-            AppSnackbar.error(
-              result['message'] ?? "Gagal memodifikasi position",
-            );
+          } catch (e) {
+            // Close loading dialog if still open
+            if (Get.isDialogOpen ?? false) Get.back();
+            AppSnackbar.error("Error: ${e.toString()}");
           }
-        } catch (e) {
-          // Close loading dialog if still open
-          if (Get.isDialogOpen ?? false) Get.back();
-          AppSnackbar.error("Error: ${e.toString()}");
-        }
-      },
-    ).whenComplete(() {
-      // Dispose worker after dialog closes
-      worker.dispose();
-    });
+        },
+      ),
+    );
+
+    // Dispose worker after page closes
+    worker.dispose();
   }
 
   int _getDigitsForSymbol(String symbol) {

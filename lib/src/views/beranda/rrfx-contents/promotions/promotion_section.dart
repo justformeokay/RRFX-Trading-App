@@ -85,7 +85,7 @@ class _PromotionSectionState extends State<PromotionSection> {
                 return _buildPromotionCard(isDark, item);
               },
             ),
-          )
+          ),
         ],
       );
     });
@@ -106,7 +106,52 @@ class _PromotionSectionState extends State<PromotionSection> {
               // Image
               Image.network(
                 item.image,
-                fit: BoxFit.cover
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: CustomColor.secondaryColor,
+                        value:
+                            loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                      ),
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.broken_image_outlined,
+                          size: 48,
+                          color:
+                              isDark
+                                  ? Colors.grey.shade600
+                                  : Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Gagal memuat gambar',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color:
+                                isDark
+                                    ? Colors.grey.shade500
+                                    : Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
 
               // Gradient overlay
@@ -115,7 +160,7 @@ class _PromotionSectionState extends State<PromotionSection> {
                   gradient: LinearGradient(
                     colors: [
                       Colors.black.withOpacity(0.05),
-                      Colors.black.withOpacity(0.55)
+                      Colors.black.withOpacity(0.55),
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,

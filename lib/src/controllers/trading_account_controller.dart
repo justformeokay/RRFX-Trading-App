@@ -23,7 +23,6 @@ class TradingAccountController extends GetxController {
       realAccount.value = tradingController.tradingAccountModels.value?.response.real ?? [];
       allAccountTrading.clear();
       allAccountTrading..clear()..addAll(demoAccount)..addAll(realAccount);
-      Get.log("INI RESULT AKUN => ${allAccountTrading.length}");
     });
   }
 }

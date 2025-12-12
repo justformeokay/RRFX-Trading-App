@@ -20,69 +20,158 @@ class _AllTradingSignalsState extends State<AllTradingSignals> {
   TradingController tradingController = Get.put(TradingController());
   Map<String, String>? flag;
   Future<void> loadTradingAccount() async {
-    tradingController.accountTrading.value = await tradingController.getTradingAccountV2().then((result) => result);
+    tradingController.accountTrading.value = await tradingController
+        .getTradingAccountV2()
+        .then((result) => result);
   }
 
   @override
   void initState() {
     super.initState();
-    Future.delayed(Duration.zero, (){
-      utilitiesController.getTradingSignals().then((result){
+    Future.delayed(Duration.zero, () {
+      utilitiesController.getTradingSignals().then((result) {
         loadTradingAccount();
-        if(!result){}
+        if (!result) {}
       });
     });
   }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     return Scaffold(
       appBar: CustomAppBar.defaultAppBar(
         title: "Trading Signals",
-        autoImplyLeading: true
+        autoImplyLeading: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(right: 16.0),
-        child: Obx(
-          () => Padding(
+      body: Obx(() {
+        // Loading state
+        if (utilitiesController.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        // Empty or null data
+        final signals = utilitiesController.tradingSignal.value?.message;
+        if (signals == null || signals.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.signal_cellular_no_sim_outlined,
+                    size: 64,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Tidak Ada Sinyal',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Trading signals belum tersedia saat ini',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.only(right: 16.0),
+          child: Padding(
             padding: const EdgeInsets.only(bottom: 50.0),
             child: Column(
-              children: List.generate(utilitiesController.tradingSignal.value?.message?.length ?? 0, (index){
-                flag = RegexFormatter.getFlagsFromPairName(utilitiesController.tradingSignal.value?.message?[index].symbol ?? "EURUSD");
-                  return marketItem(
-                    context,
-                    size,
-                    tradingAccountUser: tradingController.accountTrading,
-                    marketName: utilitiesController.tradingSignal.value?.message?[index].symbol,
-                    flagPair: flag?['flag_one'],
-                    flagPaired: flag?['flag_two'],
-                    ask: utilitiesController.tradingSignal.value?.message?[index].analysis?.currentPrice?.ask.toString(),
-                    recommendation: utilitiesController.tradingSignal.value?.message?[index].analysis?.recommendation != null ? utilitiesController.tradingSignal.value?.message![index].analysis!.recommendation!.toUpperCase() : "-",
-                    bid: utilitiesController.tradingSignal.value?.message?[index].analysis?.currentPrice?.bid.toString(),
-                    stopLoss: utilitiesController.tradingSignal.value?.message?[index].analysis?.tradingSuggestions?.stopLoss.toString(),
-                    date: utilitiesController.tradingSignal.value?.message?[index].analysis?.lastUpdate != null ? DateFormat("EEEE, dd MMMM yyyy hh:mm:ss").format(DateTime.parse(utilitiesController.tradingSignal.value!.message![index].analysis!.lastUpdate!)) : "-",
-                    sma10: utilitiesController.tradingSignal.value?.message?[index].analysis?.indicators?.movingAverages?.sma_10.toString(),
-                    sma20: utilitiesController.tradingSignal.value?.message?[index].analysis?.indicators?.movingAverages?.sma_20.toString(),
-                    sma50: utilitiesController.tradingSignal.value?.message?[index].analysis?.indicators?.movingAverages?.sma_50.toString(),
-                    priceVsSMA: utilitiesController.tradingSignal.value?.message?[index].analysis?.indicators?.movingAverages?.priceVsSma50.toString(),
-                    macdLine: utilitiesController.tradingSignal.value?.message?[index].analysis?.indicators?.macd?.macdLine.toString(),
-                    signalLine: utilitiesController.tradingSignal.value?.message?[index].analysis?.indicators?.macd?.signalLine.toString(),
-                    histogram: utilitiesController.tradingSignal.value?.message?[index].analysis?.indicators?.macd?.histogram.toString(),
-                    upper: utilitiesController.tradingSignal.value?.message?[index].analysis?.indicators?.bollingerBands?.upper.toString(),
-                    lower: utilitiesController.tradingSignal.value?.message?[index].analysis?.indicators?.bollingerBands?.lower.toString(),
-                    middle: utilitiesController.tradingSignal.value?.message?[index].analysis?.indicators?.bollingerBands?.middle.toString(),
-                    pricePosition: utilitiesController.tradingSignal.value?.message?[index].analysis?.indicators?.bollingerBands?.pricePosition.toString(),
-                    rsi: utilitiesController.tradingSignal.value?.message?[index].analysis?.indicators?.rsi.toString(),
-                    signalSummaryBollingerBands: utilitiesController.tradingSignal.value?.message?[index].analysis?.signals?.bollinger,
-                    signalSummarySMA: utilitiesController.tradingSignal.value?.message?[index].analysis?.signals?.maCross,
-                    signalSummaryRSI: utilitiesController.tradingSignal.value?.message?[index].analysis?.signals?.rsi,
-                    signalSummaryMACD: utilitiesController.tradingSignal.value?.message?[index].analysis?.signals?.macd,
-                  );
+              children: List.generate(signals.length, (index) {
+                final signal = signals[index];
+                flag = RegexFormatter.getFlagsFromPairName(
+                  signal.symbol ?? "EURUSD",
+                );
+
+                return marketItem(
+                  context,
+                  size,
+                  tradingAccountUser: tradingController.accountTrading,
+                  marketName: signal.symbol ?? "N/A",
+                  flagPair: flag?['flag_one'],
+                  flagPaired: flag?['flag_two'],
+                  ask: signal.analysis?.currentPrice?.ask?.toString() ?? "-",
+                  recommendation:
+                      signal.analysis?.recommendation?.toUpperCase() ?? "-",
+                  bid: signal.analysis?.currentPrice?.bid?.toString() ?? "-",
+                  stopLoss:
+                      signal.analysis?.tradingSuggestions?.stopLoss
+                          ?.toString() ??
+                      "-",
+                  date:
+                      signal.analysis?.lastUpdate != null
+                          ? DateFormat(
+                            "EEEE, dd MMMM yyyy hh:mm:ss",
+                          ).format(DateTime.parse(signal.analysis!.lastUpdate!))
+                          : "-",
+                  sma10:
+                      signal.analysis?.indicators?.movingAverages?.sma_10
+                          ?.toString() ??
+                      "-",
+                  sma20:
+                      signal.analysis?.indicators?.movingAverages?.sma_20
+                          ?.toString() ??
+                      "-",
+                  sma50:
+                      signal.analysis?.indicators?.movingAverages?.sma_50
+                          ?.toString() ??
+                      "-",
+                  priceVsSMA:
+                      signal.analysis?.indicators?.movingAverages?.priceVsSma50
+                          ?.toString() ??
+                      "-",
+                  macdLine:
+                      signal.analysis?.indicators?.macd?.macdLine?.toString() ??
+                      "-",
+                  signalLine:
+                      signal.analysis?.indicators?.macd?.signalLine
+                          ?.toString() ??
+                      "-",
+                  histogram:
+                      signal.analysis?.indicators?.macd?.histogram
+                          ?.toString() ??
+                      "-",
+                  upper:
+                      signal.analysis?.indicators?.bollingerBands?.upper
+                          ?.toString() ??
+                      "-",
+                  lower:
+                      signal.analysis?.indicators?.bollingerBands?.lower
+                          ?.toString() ??
+                      "-",
+                  middle:
+                      signal.analysis?.indicators?.bollingerBands?.middle
+                          ?.toString() ??
+                      "-",
+                  pricePosition:
+                      signal.analysis?.indicators?.bollingerBands?.pricePosition
+                          ?.toString() ??
+                      "-",
+                  rsi: signal.analysis?.indicators?.rsi?.toString() ?? "-",
+                  signalSummaryBollingerBands:
+                      signal.analysis?.signals?.bollinger ?? "-",
+                  signalSummarySMA: signal.analysis?.signals?.maCross ?? "-",
+                  signalSummaryRSI: signal.analysis?.signals?.rsi ?? "-",
+                  signalSummaryMACD: signal.analysis?.signals?.macd ?? "-",
+                );
               }),
             ),
           ),
-        ),
-      ),
+        );
+      }),
     );
   }
 }

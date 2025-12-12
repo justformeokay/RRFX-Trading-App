@@ -85,6 +85,8 @@ class _OtpPageState extends State<OtpPage> {
                       LabelTextField.labelName(
                         label: "Kode OTP",
                         child: OTPTextField(
+                          requiredField: true,
+                          labelText: "Kode OTP",
                           fieldName: "Kode OTP",
                           controller: otpController,
                           hintText: "Masukkan Kode OTP",

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:rrfx/src/views/accounts/registration_online/controllers/agreement_section_controller.dart';
 
-class AgreementSectionWithTable extends StatelessWidget {
+class AgreementSectionWithTable extends StatefulWidget {
   final int sectionNumber;
   final String title;
   final List<String> subItems;
-  final Map<String, String>? details; // untuk key-value detail (Nama, Alamat, dsb)
+  final Map<String, String>?
+  details; // untuk key-value detail (Nama, Alamat, dsb)
   final List<Map<String, String>>? table; // untuk data table
   final bool showCheckbox;
 
@@ -18,6 +21,14 @@ class AgreementSectionWithTable extends StatelessWidget {
     this.table,
     this.showCheckbox = true,
   });
+
+  @override
+  State<AgreementSectionWithTable> createState() =>
+      _AgreementSectionWithTableState();
+}
+
+class _AgreementSectionWithTableState extends State<AgreementSectionWithTable> {
+  final agreementController = Get.find<AgreementSectionController>();
 
   @override
   Widget build(BuildContext context) {
@@ -33,13 +44,19 @@ class AgreementSectionWithTable extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "$sectionNumber. ",
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                "${widget.sectionNumber}. ",
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
               Expanded(
                 child: Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  widget.title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ],
@@ -49,57 +66,63 @@ class AgreementSectionWithTable extends StatelessWidget {
           // Sub Items
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: subItems.asMap().entries.map((entry) {
-              final int subIndex = entry.key + 1;
-              final String subText = entry.value;
+            children:
+                widget.subItems.asMap().entries.map((entry) {
+                  final int subIndex = entry.key + 1;
+                  final String subText = entry.value;
 
-              return Padding(
-                padding: const EdgeInsets.only(left: 30, bottom: 6),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "($subIndex) ",
-                      style: const TextStyle(fontSize: 15),
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 30, bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "($subIndex) ",
+                          style: const TextStyle(fontSize: 15),
+                        ),
+                        Expanded(
+                          child: Text(
+                            subText,
+                            style: const TextStyle(fontSize: 15, height: 1.4),
+                            textAlign: TextAlign.justify,
+                          ),
+                        ),
+                      ],
                     ),
-                    Expanded(
-                      child: Text(
-                        subText,
-                        style: const TextStyle(fontSize: 15, height: 1.4),
-                        textAlign: TextAlign.justify,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
+                  );
+                }).toList(),
           ),
 
           // Detail Key-Value
-          if (details != null && details!.isNotEmpty) ...[
+          if (widget.details != null && widget.details!.isNotEmpty) ...[
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.only(left: 30),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: details!.entries.map((e) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Row(
-                      children: [
-                        Text("${e.key} : ",
-                            style: const TextStyle(fontWeight: FontWeight.w500)),
-                        Expanded(child: Text(e.value)),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                children:
+                    widget.details!.entries.map((e) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          children: [
+                            Text(
+                              "${e.key} : ",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Expanded(child: Text(e.value)),
+                          ],
+                        ),
+                      );
+                    }).toList(),
               ),
             ),
           ],
 
           // Table Section
-          if (table != null && table!.isNotEmpty) ...[
+          if (widget.table != null && widget.table!.isNotEmpty) ...[
             const SizedBox(height: 12),
             Table(
               border: TableBorder.all(color: Colors.grey.shade800),
@@ -111,24 +134,48 @@ class AgreementSectionWithTable extends StatelessWidget {
               children: [
                 // Header
                 TableRow(
-                  decoration: BoxDecoration(color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300, border: Border.all(color: Colors.grey.shade800)),
+                  decoration: BoxDecoration(
+                    color:
+                        isDarkMode
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade300,
+                    border: Border.all(color: Colors.grey.shade800),
+                  ),
                   children: [
                     Padding(
                       padding: EdgeInsets.all(8.0),
-                      child: Text("NAME", style: GoogleFonts.inter(fontWeight: FontWeight.bold , color: isDarkMode ? Colors.white : Colors.black)),
+                      child: Text(
+                        "NAME",
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : Colors.black,
+                        ),
+                      ),
                     ),
                     Padding(
                       padding: EdgeInsets.all(8.0),
-                      child: Text("CURRENCY", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: isDarkMode ? Colors.white : Colors.black)),
+                      child: Text(
+                        "CURRENCY",
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : Colors.black,
+                        ),
+                      ),
                     ),
                     Padding(
                       padding: EdgeInsets.all(8.0),
-                      child: Text("ACCOUNT", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: isDarkMode ? Colors.white : Colors.black)),
+                      child: Text(
+                        "ACCOUNT",
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : Colors.black,
+                        ),
+                      ),
                     ),
                   ],
                 ),
                 // Data Rows
-                ...table!.map((row) {
+                ...widget.table!.map((row) {
                   return TableRow(
                     children: [
                       Padding(
@@ -151,16 +198,22 @@ class AgreementSectionWithTable extends StatelessWidget {
           ],
 
           // Checkbox
-          if (showCheckbox) ...[
+          if (widget.showCheckbox) ...[
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Checkbox(value: true, onChanged: (_) {}),
-                const Text(
-                  "Saya sudah membaca dan memahami *)",
-                  style: TextStyle(),
-                ),
-              ],
+            Obx(
+              () => Row(
+                children: [
+                  Checkbox(
+                    value: agreementController.tableSectionChecked.value,
+                    onChanged:
+                        (val) => agreementController.toggleTableSection(val),
+                  ),
+                  const Text(
+                    "Saya sudah membaca dan memahami *)",
+                    style: TextStyle(),
+                  ),
+                ],
+              ),
             ),
           ],
         ],

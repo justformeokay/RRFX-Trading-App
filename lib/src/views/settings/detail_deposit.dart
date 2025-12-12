@@ -175,83 +175,128 @@ class _TransactionDetailViewState extends State<TransactionDetailView> {
 
               const SizedBox(height: 20),
 
-              // Sender Bank Details
-              _buildModernSectionHeader(
-                context,
-                isDark,
-                'Sender Bank Details',
-                Iconsax.bank_outline,
-              ),
-              const SizedBox(height: 12),
-              _buildModernInfoCard(
-                context: context,
-                isDark: isDark,
-                children: [
-                  _buildModernInfoRow(
-                    context,
-                    isDark,
-                    'Bank Name',
-                    data.response?.bankUser?.name?.toString() ?? '-',
-                    Iconsax.building_outline,
-                  ),
-                  _buildDivider(isDark),
-                  _buildModernInfoRow(
-                    context,
-                    isDark,
-                    'Account Number',
-                    data.response?.bankUser?.accountNumber?.toString() ?? '-',
-                    Iconsax.card_outline,
-                  ),
-                  _buildDivider(isDark),
-                  _buildModernInfoRow(
-                    context,
-                    isDark,
-                    'Account Name',
-                    data.response?.bankUser?.accountName?.toString() ?? '-',
-                    Iconsax.user_outline,
-                  ),
-                ],
-              ),
+              // Determine if it's a withdrawal to swap the bank details
+              // For withdrawal: Only show User Bank as Receiver (no sender)
+              // For deposit: bankUser is sender, bankAdmin is receiver
+              if (data.response?.type?.toString().toLowerCase() ==
+                  'withdrawal') ...[
+                // For Withdrawal: Show User Bank as Receiver (User's bank account)
+                _buildModernSectionHeader(
+                  context,
+                  isDark,
+                  'Receiver Bank Details',
+                  Iconsax.receive_square_outline,
+                ),
+                const SizedBox(height: 12),
+                _buildModernInfoCard(
+                  context: context,
+                  isDark: isDark,
+                  children: [
+                    _buildModernInfoRow(
+                      context,
+                      isDark,
+                      'Bank Name',
+                      data.response?.bankUser?.name?.toString() ?? '-',
+                      Iconsax.building_outline,
+                    ),
+                    _buildDivider(isDark),
+                    _buildModernInfoRow(
+                      context,
+                      isDark,
+                      'Account Number',
+                      data.response?.bankUser?.accountNumber?.toString() ?? '-',
+                      Iconsax.card_outline,
+                    ),
+                    _buildDivider(isDark),
+                    _buildModernInfoRow(
+                      context,
+                      isDark,
+                      'Account Name',
+                      data.response?.bankUser?.accountName?.toString() ?? '-',
+                      Iconsax.user_outline,
+                    ),
+                  ],
+                ),
+              ] else ...[
+                // For Deposit: Show User Bank as Sender
+                _buildModernSectionHeader(
+                  context,
+                  isDark,
+                  'Sender Bank Details',
+                  Iconsax.bank_outline,
+                ),
+                const SizedBox(height: 12),
+                _buildModernInfoCard(
+                  context: context,
+                  isDark: isDark,
+                  children: [
+                    _buildModernInfoRow(
+                      context,
+                      isDark,
+                      'Bank Name',
+                      data.response?.bankUser?.name?.toString() ?? '-',
+                      Iconsax.building_outline,
+                    ),
+                    _buildDivider(isDark),
+                    _buildModernInfoRow(
+                      context,
+                      isDark,
+                      'Account Number',
+                      data.response?.bankUser?.accountNumber?.toString() ?? '-',
+                      Iconsax.card_outline,
+                    ),
+                    _buildDivider(isDark),
+                    _buildModernInfoRow(
+                      context,
+                      isDark,
+                      'Account Name',
+                      data.response?.bankUser?.accountName?.toString() ?? '-',
+                      Iconsax.user_outline,
+                    ),
+                  ],
+                ),
 
-              const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-              // Receiver Bank Details
-              _buildModernSectionHeader(
-                context,
-                isDark,
-                'Receiver Bank Details',
-                Iconsax.receive_square_outline,
-              ),
-              const SizedBox(height: 12),
-              _buildModernInfoCard(
-                context: context,
-                isDark: isDark,
-                children: [
-                  _buildModernInfoRow(
-                    context,
-                    isDark,
-                    'Bank Name',
-                    data.response?.bankAdmin?.name?.toString() ?? '-',
-                    Iconsax.building_outline,
-                  ),
-                  _buildDivider(isDark),
-                  _buildModernInfoRow(
-                    context,
-                    isDark,
-                    'Account Number',
-                    data.response?.bankAdmin?.accountNumber?.toString() ?? '-',
-                    Iconsax.card_outline,
-                  ),
-                  _buildDivider(isDark),
-                  _buildModernInfoRow(
-                    context,
-                    isDark,
-                    'Account Name',
-                    data.response?.bankAdmin?.accountName?.toString() ?? '-',
-                    Iconsax.user_outline,
-                  ),
-                ],
-              ),
+                // For Deposit: Show Admin Bank as Receiver
+                _buildModernSectionHeader(
+                  context,
+                  isDark,
+                  'Receiver Bank Details',
+                  Iconsax.receive_square_outline,
+                ),
+                const SizedBox(height: 12),
+                _buildModernInfoCard(
+                  context: context,
+                  isDark: isDark,
+                  children: [
+                    _buildModernInfoRow(
+                      context,
+                      isDark,
+                      'Bank Name',
+                      data.response?.bankAdmin?.name?.toString() ?? '-',
+                      Iconsax.building_outline,
+                    ),
+                    _buildDivider(isDark),
+                    _buildModernInfoRow(
+                      context,
+                      isDark,
+                      'Account Number',
+                      data.response?.bankAdmin?.accountNumber?.toString() ??
+                          '-',
+                      Iconsax.card_outline,
+                    ),
+                    _buildDivider(isDark),
+                    _buildModernInfoRow(
+                      context,
+                      isDark,
+                      'Account Name',
+                      data.response?.bankAdmin?.accountName?.toString() ?? '-',
+                      Iconsax.user_outline,
+                    ),
+                  ],
+                ),
+              ],
 
               const SizedBox(height: 32),
             ],
