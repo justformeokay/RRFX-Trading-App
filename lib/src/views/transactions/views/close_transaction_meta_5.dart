@@ -71,7 +71,11 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
 
             SliverPersistentHeader(
               pinned: true,
-              delegate: _BalanceHeaderDelegate(),
+              delegate: _BalanceHeaderDelegate(
+                totalSwap: closed != null ? _calculateTotals(_getFilteredAndSortedOrders(closed))['swap']! : 0.0,
+                totalCommission: closed != null ? _calculateTotals(_getFilteredAndSortedOrders(closed))['commission']! : 0.0,
+                totalProfit: closed != null ? _calculateTotals(_getFilteredAndSortedOrders(closed))['profit']! : 0.0,
+              ),
             ),
 
             SliverToBoxAdapter(
@@ -220,21 +224,19 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                   return _PositionTile(
                     index: index,
                     positionId: "${order.ticket}",
-                    swap: "-",
+                    swap: "${order.swap}",
                     stopLoss: "${order.stopLoss}",
                     openTime: "${order.openTime}",
                     closeTime: "${order.closeTime}",
                     takeProfit: "${order.takeProfit}",
                     doubleProfit: -0.10 * index,
-                    profit:
-                        order.profit != null
-                            ? "${order.profit}"
-                            : "0.00",
+                    profit: order.profit != null ? "${order.profit}" : "0.00",
                     symbol: "${order.symbol}",
                     direction: "${order.orderType}",
                     volume: _formatLot(order.lot),
                     openPrice: "${order.openPrice}",
                     closePrice: "${order.closePrice}",
+                    commission: "${order.commission}",
                   );
                 }, childCount: _getFilteredAndSortedOrders(closed).length),
               ),
@@ -724,6 +726,33 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
     return value.toStringAsFixed(2);
   }
 
+  // Calculate total swap and commission from filtered orders
+  Map<String, double> _calculateTotals(List<dynamic> orders) {
+    double totalSwap = 0.0;
+    double totalCommission = 0.0;
+    double totalProfit = 0.0;
+
+    for (var order in orders) {
+      // Handle swap - treat null, empty, or invalid as 0
+      final swapValue = double.tryParse(order.swap?.toString() ?? '0') ?? 0.0;
+      totalSwap += swapValue;
+
+      // Handle commission - treat null, empty, or invalid as 0
+      final commissionValue = double.tryParse(order.commission?.toString() ?? '0') ?? 0.0;
+      totalCommission += commissionValue;
+
+      // Handle profit - treat null, empty, or invalid as 0
+      final profitValue = double.tryParse(order.profit?.toString() ?? '0') ?? 0.0;
+      totalProfit += profitValue;
+    }
+
+    return {
+      'swap': totalSwap,
+      'commission': totalCommission,
+      'profit': totalProfit,
+    };
+  }
+
   Widget _buildInfoRow(
     BuildContext context, {
     required IconData icon,
@@ -780,11 +809,21 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
 
 // ---------------- BALANCE SECTION --------------------
 class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
-  @override
-  double get minExtent => 140;
+  final double totalSwap;
+  final double totalCommission;
+  final double totalProfit;
+
+  _BalanceHeaderDelegate({
+    required this.totalSwap,
+    required this.totalCommission,
+    required this.totalProfit,
+  });
 
   @override
-  double get maxExtent => 150;
+  double get minExtent => 170;
+
+  @override
+  double get maxExtent => 180;
 
   final accountController = Get.find<AccountController>();
 
@@ -817,12 +856,13 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
               context,
             ),
           ),
-          _balanceRow("Swap", "-", context),
-          _balanceRow("Commission", "-", context),
+          _balanceRow("Profit", totalProfit.toStringAsFixed(2), context),
+          _balanceRow("Swap", totalSwap.toStringAsFixed(2), context),
+          _balanceRow("Commission", totalCommission.toStringAsFixed(2), context),
           Obx(
             () => _balanceRow(
               "Balance",
-              "${accountController.selectedAccount.value?.balance ?? "N/A"} ${accountController.selectedAccount.value?.accountCurrency ?? "0"}",
+              accountController.selectedAccount.value?.balance ?? "N/A",
               context,
             ),
           ),
@@ -892,6 +932,7 @@ class _PositionTile extends StatelessWidget {
   final String? openPrice;
   final String? closePrice;
   final String? closeTime;
+  final String? commission;
 
   const _PositionTile({
     required this.index,
@@ -908,6 +949,7 @@ class _PositionTile extends StatelessWidget {
     this.volume,
     this.openPrice,
     this.closePrice,
+    this.commission,
   });
 
   @override
@@ -931,9 +973,7 @@ class _PositionTile extends StatelessWidget {
             ? Colors.red
             : Theme.of(context).colorScheme.onSurfaceVariant;
 
-    final Color buySellColor =
-        direction?.toLowerCase() == "buy" ? Colors.blue : Colors.red;
-
+    final Color buySellColor = direction?.toLowerCase() == "buy" ? Colors.blue : Colors.red;
     return Slidable(
       key: ValueKey(positionId),
       child: Theme(
@@ -1122,22 +1162,53 @@ class _PositionTile extends StatelessWidget {
                   // ROW 3: TP only (Left)
                   Row(
                     children: [
-                      Text(
-                        "T / P: ",
-                        style: GoogleFonts.oswald(
-                          fontSize: 13.0,
-                          fontWeight: FontWeight.w700,
-                          color: Get.theme.textTheme.bodySmall?.color,
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Text(
+                              "T / P: ",
+                              style: GoogleFonts.oswald(
+                                fontSize: 13.0,
+                                fontWeight: FontWeight.w700,
+                                color: Get.theme.textTheme.bodySmall?.color,
+                              ),
+                            ),
+                            Text(
+                              (takeProfit != null && takeProfit != "0")
+                                  ? takeProfit!
+                                  : "–",
+                              style: GoogleFonts.oswald(
+                                fontSize: 13.0,
+                                fontWeight: FontWeight.w700,
+                                color: Get.theme.textTheme.bodySmall?.color,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      Text(
-                        (takeProfit != null && takeProfit != "0")
-                            ? takeProfit!
-                            : "–",
-                        style: GoogleFonts.oswald(
-                          fontSize: 13.0,
-                          fontWeight: FontWeight.w700,
-                          color: Get.theme.textTheme.bodySmall?.color,
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Text(
+                              "Commission: ",
+                              style: GoogleFonts.oswald(
+                                fontSize: 13.0,
+                                fontWeight: FontWeight.w700,
+                                color: Get.theme.textTheme.bodySmall?.color,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                commission ?? "-",
+                                textAlign: TextAlign.right,
+                                style: GoogleFonts.oswald(
+                                  fontSize: 13.0,
+                                  fontWeight: FontWeight.w700,
+                                  color: Get.theme.textTheme.bodySmall?.color,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],

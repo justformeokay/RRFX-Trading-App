@@ -59,19 +59,26 @@ class AuthController extends GetxController {
     try {
       isLoading(true);
 
+      // ✅ Get device_id (FCM Token) from SharedPreferences
+      String? deviceId = preferences.getString('deviceID');
+      Get.log("📱 [AUTH] Device ID (FCM Token): $deviceId");
+
       Get.log("📡 [AUTH] Sending login request...");
       final response = await http.post(
         Uri.tryParse("${GlobalVariable.mainURL}/auth/login")!,
         headers: {
           'x-api-key': GlobalVariable.x_api_key,
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
         },
         body: {
           'email': email,
           'password': password,
           'device': jsonEncode(deviceInfo),
+          'device_id': deviceId ?? '', // ✅ Send FCM Token to API
         },
       );
+      Get.log("Device Information Sent: ${jsonEncode(deviceInfo)}");
+      Get.log("Device ID Sent: ${deviceId ?? 'NULL'}");
       Get.log("📥 [AUTH] Login response status: ${response.statusCode}");
       Get.log("📋 [AUTH] Login response body: ${response.body}");
 

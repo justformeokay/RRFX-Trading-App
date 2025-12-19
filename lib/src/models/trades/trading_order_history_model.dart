@@ -23,6 +23,8 @@ class Response {
     this.stopLoss,
     this.takeProfit,
     this.digits,
+    this.commission,
+    this.swap
   });
   dynamic ticket;
   dynamic profit;
@@ -31,11 +33,13 @@ class Response {
   dynamic openPrice;
   dynamic openTime;
   dynamic lot;
+  dynamic swap;
   String? orderType;
   String? symbol;
   dynamic stopLoss;
   dynamic takeProfit;
   dynamic digits;
+  dynamic commission;
   
   Response.fromJson(Map<String, dynamic> json){
     ticket = json['ticket'];
@@ -45,10 +49,12 @@ class Response {
     openPrice = json['openPrice'];
     openTime = json['openTime'];
     lot = json['lot'];
+    swap = json['swap'];
     orderType = json['orderType'];
     symbol = json['symbol'];
     stopLoss = json['stopLoss'];
     takeProfit = json['takeProfit'];
+    commission = json['commission'];
     digits = json['digits'];
   }
 }

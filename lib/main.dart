@@ -8,6 +8,7 @@ import 'package:rrfx/src/controllers/network_controller.dart';
 import 'package:rrfx/src/controllers/theme_controller.dart';
 import 'package:rrfx/src/service/auth_service.dart';
 import 'package:rrfx/src/service/deeplink_service.dart';
+import 'package:rrfx/src/service/notification_service.dart';
 import 'package:rrfx/src/views/no_network_page.dart';
 import 'src/components/languages/languages.dart';
 import 'src/components/themes/default.dart';
@@ -18,7 +19,11 @@ final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<Scaffol
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await GetStorage.init(); 
+  await GetStorage.init();
+  
+  // ✅ Initialize Firebase & Notifications
+  await initFirebaseAndNotifications();
+  
   final themeController = Get.put(ThemeController());
 
   final deepLinkService = DeepLinkService();

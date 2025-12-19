@@ -72,8 +72,8 @@ class _ServerErrorPageState extends State<ServerErrorPage> with SingleTickerProv
             children: [
               // Animated Icon/Lottie
               Container(
-                width: size.width * 0.6,
-                height: size.width * 0.6,
+                width: size.width * 0.2,
+                height: size.width * 0.2,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
@@ -101,10 +101,10 @@ class _ServerErrorPageState extends State<ServerErrorPage> with SingleTickerProv
 
               // Title
               Text(
-                'Server Sedang Bermasalah',
+                'Pastikan koneksi stabil untuk pengalaman terbaik',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
-                  fontSize: 28,
+                  fontSize: 17,
                   fontWeight: FontWeight.w800,
                   color: isDark ? Colors.white : Colors.black,
                   height: 1.2,
@@ -116,10 +116,10 @@ class _ServerErrorPageState extends State<ServerErrorPage> with SingleTickerProv
               // Description
               Text(
                 widget.errorMessage ?? 
-                'Kami sedang mengalami gangguan pada server. Mohon tunggu beberapa saat dan coba lagi.',
+                'Terjadi kesalahan pada server kami atau koneksi internet Anda bermasalah. Silakan coba lagi.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
-                  fontSize: 15,
+                  fontSize: 14,
                   height: 1.6,
                   color: isDark ? Colors.white70 : Colors.black54,
                 ),
