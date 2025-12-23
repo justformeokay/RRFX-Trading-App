@@ -63,6 +63,8 @@ dependencies:
   flutter_widget_from_html: ^0.16.1
   home_widget: ^0.7.0
   workmanager: ^0.7.0
+  local_auth: ^2.3.0
+  local_auth_android: ^1.0.43
   
 
 dev_dependencies:

@@ -18,6 +18,7 @@ class RedeemRewardsPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
+        forceMaterialTransparency: true,
         title: const Text("Redeem Rewards"),
         centerTitle: true,
         elevation: 0,

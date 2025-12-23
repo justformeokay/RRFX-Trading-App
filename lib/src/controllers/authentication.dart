@@ -8,9 +8,12 @@ import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/controllers/device_utilities_controller.dart';
 import 'package:rrfx/src/models/auth/country_code_model.dart';
 import 'package:rrfx/src/service/auth_service.dart';
+import 'package:rrfx/src/service/passcode_service.dart';
 import 'package:rrfx/src/views/authentications/otp_page.dart';
+import 'package:rrfx/src/views/authentications/setup_passcode_page.dart';
 import 'package:rrfx/src/views/authentications/suspended_page.dart';
 import 'package:rrfx/src/views/authentications/verification_account_page.dart';
+import 'package:rrfx/src/views/authentications/verify_passcode_page.dart';
 import 'package:rrfx/src/views/mainpage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rrfx/src/controllers/home.dart';
@@ -49,11 +52,7 @@ class AuthController extends GetxController {
     init();
   }
 
-  Future<void> login(
-    BuildContext context, {
-    String? email,
-    String? password,
-  }) async {
+  Future<void> login(BuildContext context, {String? email, String? password}) async {
     Get.log("🔵 [AUTH] login() called for email: $email");
     SharedPreferences preferences = await SharedPreferences.getInstance();
     try {
@@ -68,7 +67,7 @@ class AuthController extends GetxController {
         Uri.tryParse("${GlobalVariable.mainURL}/auth/login")!,
         headers: {
           'x-api-key': GlobalVariable.x_api_key,
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: {
           'email': email,
@@ -77,6 +76,8 @@ class AuthController extends GetxController {
           'device_id': deviceId ?? '', // ✅ Send FCM Token to API
         },
       );
+      print(response.body);
+      print(response.statusCode);
       Get.log("Device Information Sent: ${jsonEncode(deviceInfo)}");
       Get.log("Device ID Sent: ${deviceId ?? 'NULL'}");
       Get.log("📥 [AUTH] Login response status: ${response.statusCode}");
@@ -103,12 +104,14 @@ class AuthController extends GetxController {
       
       responseMessage(result['message'] ?? "Login berhasil");
       final status = result['response']?['status'] ?? "";
+      final hasPasscode = result['response']?['passcode'] ?? false;
       statusAccount(status);
       final accessToken = result['response']?['access_token'];
       final refreshToken = result['response']?['refresh_token'];
       
       Get.log("✅ [AUTH] Login successful");
       Get.log("🔐 [AUTH] Account status: $status");
+      Get.log("📋 [AUTH] Has passcode on server: $hasPasscode");
       Get.log("🎫 [AUTH] Access token: ${accessToken?.substring(0, 20)}...");
       
       preferences.setString('refreshToken', refreshToken);
@@ -133,12 +136,20 @@ class AuthController extends GetxController {
       Get.log("📥 [AUTH] Profile fetch completed. Success: $profileSuccess");
       Get.log("👤 [AUTH] Profile data: ${homeController.profileModel.value?.toJson()}");
 
-      Get.log("🚀 [AUTH] Routing based on status: $status");
+      Get.log("🚀 [AUTH] Routing based on status: $status and passcode: $hasPasscode");
       switch (status) {
         case "active":
-          Get.log("✅ [AUTH] Status: active - Going to Mainpage");
+          Get.log("✅ [AUTH] Status: active - Checking passcode...");
           await preferences.setBool('loggedIn', true);
-          Get.offAll(() => Mainpage());
+          
+          // Check if passcode already exists on server
+          if (hasPasscode) {
+            Get.log("✅ [AUTH] Passcode exists on server - Going to VerifyPasscodePage");
+            Get.offAll(() => const VerifyPasscodePage());
+          } else {
+            Get.log("🔐 [AUTH] Passcode not set up on server - Going to SetupPasscodePage");
+            Get.offAll(() => const SetupPasscodePage());
+          }
           break;
         case "suspend":
           Get.log("⚠️ [AUTH] Status: suspend - Going to SuspendedAccountPage");
@@ -158,6 +169,7 @@ class AuthController extends GetxController {
       }
     } catch (e) {
       isLoading(false);
+      print("❌ [AUTH] Exception in login(): $e");
       responseMessage.value = "Terjadi kesalahan: $e";
     }
   }

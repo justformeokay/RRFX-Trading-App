@@ -89,16 +89,6 @@ class _NumberTextFieldState extends State<NumberTextField> {
   Widget build(BuildContext context) {
     final isReadOnly = widget.readOnly ?? false;
     final colorScheme = Theme.of(context).colorScheme;
-    final disabledBorderColor = colorScheme.onSurface.withOpacity(0.12);
-    final borderColor = isReadOnly
-        ? disabledBorderColor
-        : CustomColor.textThemeDarkSoftColor;
-
-    final fillColor = isReadOnly
-        ? colorScheme.surfaceVariant.withOpacity(
-            Theme.of(context).brightness == Brightness.dark ? 0.25 : 0.5)
-        : Colors.transparent;
-
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Obx(() {

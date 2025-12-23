@@ -5,8 +5,12 @@ import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.widget.LinearLayout
 import android.widget.RemoteViews
+import android.widget.TextView
 import es.antonborri.home_widget.HomeWidgetPlugin
+import org.json.JSONArray
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -43,45 +47,12 @@ class XAUUSDWidgetProvider : AppWidgetProvider() {
             appWidgetId: Int
         ) {
             val widgetData = HomeWidgetPlugin.getData(context)
-            val views = RemoteViews(context.packageName, R.layout.xauusd_widget)
+            val views = RemoteViews(context.packageName, R.layout.market_card_widget)
 
-            // Get data from SharedPreferences
-            val symbol = widgetData.getString("widget_symbol", "XAUUSD")
-            val price = widgetData.getString("widget_price", "0.00")
-            val change = widgetData.getString("widget_change", "0.00")
-            val changePercent = widgetData.getString("widget_change_percent", "0.00")
-            val bid = widgetData.getString("widget_bid", "0.00")
-            val ask = widgetData.getString("widget_ask", "0.00")
-            val high = widgetData.getString("widget_high", "0.00")
-            val low = widgetData.getString("widget_low", "0.00")
+            // Get markets data from SharedPreferences
+            val marketsJson = widgetData.getString("widget_markets_data", "[]")
+            val marketsCount = widgetData.getString("widget_markets_count", "0")?.toIntOrNull() ?: 0
             val lastUpdate = widgetData.getString("widget_last_update", "")
-
-            // Update UI
-            views.setTextViewText(R.id.widget_symbol, symbol)
-            views.setTextViewText(R.id.widget_price, "$$price")
-            views.setTextViewText(R.id.widget_bid, bid)
-            views.setTextViewText(R.id.widget_ask, ask)
-            views.setTextViewText(R.id.widget_high, high)
-            views.setTextViewText(R.id.widget_low, low)
-
-            // Format change and change percent
-            val changeValue = change?.toDoubleOrNull() ?: 0.0
-            val changePercentValue = changePercent?.toDoubleOrNull() ?: 0.0
-            val isPositive = changeValue >= 0
-
-            val changeText = if (isPositive) "+${change ?: "0.00"}" else (change ?: "0.00")
-            val changePercentText = if (isPositive) "(+${changePercent ?: "0.00"}%)" else "(${changePercent ?: "0.00"}%)"
-            
-            val changeColor = if (isPositive) Color.parseColor("#4CAF50") else Color.parseColor("#F44336")
-            
-            views.setTextViewText(R.id.widget_change, changeText)
-            views.setTextViewText(R.id.widget_change_percent, changePercentText)
-            views.setTextColor(R.id.widget_change, changeColor)
-            views.setTextColor(R.id.widget_change_percent, changeColor)
-
-            // Format last update time
-            val updateText = formatLastUpdate(lastUpdate ?: "")
-            views.setTextViewText(R.id.widget_last_update, "Updated: $updateText")
 
             // Setup refresh button click
             val refreshIntent = Intent(context, XAUUSDWidgetProvider::class.java).apply {
@@ -101,7 +72,76 @@ class XAUUSDWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.header_layout, launchPendingIntent)
 
+            // Parse dan render market cards
+            try {
+                val marketsArray = JSONArray(marketsJson)
+                
+                // Clear container
+                views.removeAllViews(R.id.markets_container)
+                
+                // Add market cards
+                for (i in 0 until minOf(marketsArray.length(), 5)) { // Max 5 cards untuk fit
+                    val market = marketsArray.getJSONObject(i)
+                    val cardView = createMarketCard(context, market)
+                    views.addView(R.id.markets_container, cardView)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            // Format last update time
+            val updateText = formatLastUpdate(lastUpdate ?: "")
+            views.setTextViewText(R.id.widget_last_update, "Updated: $updateText")
+
             appWidgetManager.updateAppWidget(appWidgetId, views)
+        }
+
+        private fun createMarketCard(context: Context, market: JSONObject): RemoteViews {
+            val cardView = RemoteViews(context.packageName, R.layout.market_card_item)
+            
+            val symbol = market.optString("symbol", "N/A")
+            val bid = market.optString("bid", "0")
+            val ask = market.optString("ask", "0")
+            val rsi = market.optString("rsi", "0")
+            val trend = market.optString("ma_trend", "neutral")
+            val recommendation = market.optString("recommendation", "neutral")
+
+            // Set symbol
+            cardView.setTextViewText(R.id.card_symbol, symbol)
+            
+            // Set bid/ask
+            cardView.setTextViewText(R.id.card_bid, bid)
+            cardView.setTextViewText(R.id.card_ask, ask)
+            
+            // Set RSI with color
+            cardView.setTextViewText(R.id.card_rsi, rsi)
+            val rsiValue = rsi.toDoubleOrNull() ?: 50.0
+            val rsiColor = when {
+                rsiValue > 70 -> "#F44336" // Overbought - red
+                rsiValue < 30 -> "#4CAF50" // Oversold - green
+                else -> "#FFEB3B"          // Neutral - yellow
+            }
+            cardView.setTextColor(R.id.card_rsi, Color.parseColor(rsiColor))
+            
+            // Set trend with color
+            cardView.setTextViewText(R.id.card_trend, trend)
+            val trendColor = when (trend.lowercase()) {
+                "bullish" -> "#4CAF50"
+                "bearish" -> "#F44336"
+                else -> "#FF9800"
+            }
+            cardView.setTextColor(R.id.card_trend, Color.parseColor(trendColor))
+            
+            // Set recommendation with color
+            cardView.setTextViewText(R.id.card_recommendation, recommendation)
+            val recColor = when (recommendation.lowercase()) {
+                "buy" -> "#4CAF50"
+                "sell" -> "#F44336"
+                else -> "#FF9800"
+            }
+            cardView.setTextColor(R.id.card_recommendation, Color.parseColor(recColor))
+            
+            return cardView
         }
 
         private fun formatLastUpdate(isoDate: String?): String {

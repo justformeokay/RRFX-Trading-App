@@ -12,6 +12,7 @@ import 'package:rrfx/src/controllers/trading_account_controller.dart';
 import 'package:rrfx/src/helpers/formatters/masking_email.dart';
 import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/views/accounts/index.dart';
+import 'package:rrfx/src/views/authentications/manage_passcode_page.dart';
 import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
 import 'package:rrfx/src/views/settings/daftar_bank_saya.dart';
 import 'package:rrfx/src/views/settings/delete_account.dart';
@@ -126,11 +127,22 @@ class _SettingsState extends State<Settings> {
                   prefs.remove('selectedLeverage');
                   Get.log("✅ [LOGOUT] SharedPreferences cleared");
                   
-                  // Clear GetStorage (includes favorite symbols)
+                  // Clear GetStorage (includes favorite symbols) - but preserve passcode
                   Get.log("🗑️ [LOGOUT] Clearing GetStorage...");
                   final storage = GetStorage();
+                  
+                  // Save passcode before erasing storage
+                  final savedPasscodeData = storage.read('app_passcode');
+                  Get.log("💾 [LOGOUT] Saving passcode data before erase: $savedPasscodeData");
+                  
                   await storage.erase();
-                  Get.log("✅ [LOGOUT] GetStorage cleared");
+                  
+                  // Restore passcode after erasing storage
+                  if (savedPasscodeData != null) {
+                    await storage.write('app_passcode', savedPasscodeData);
+                    Get.log("✅ [LOGOUT] Passcode restored after erase");
+                  }
+                  Get.log("✅ [LOGOUT] GetStorage cleared (passcode preserved)");
                   
                   // Clear controllers
                   Get.log("🗑️ [LOGOUT] Disposing controllers...");
@@ -158,7 +170,7 @@ class _SettingsState extends State<Settings> {
                 textButton: "Ya"
               );
             },
-            child: Icon(MingCute.exit_line, color: CustomColor.secondaryColor),
+            child: Icon(Iconsax.logout_1_outline, color: CustomColor.secondaryColor),
           )
         ]
       ),
@@ -249,7 +261,7 @@ class _SettingsState extends State<Settings> {
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
-                                  Clarity.camera_solid,
+                                  Iconsax.camera_outline,
                                   color: Colors.white,
                                   size: 18,
                                 ),
@@ -281,7 +293,7 @@ class _SettingsState extends State<Settings> {
                       ),
                       IconButton(
                         onPressed: () => Get.to(() => const EditProfile()),
-                        icon: const Icon(Clarity.pencil_line),
+                        icon: const Icon(Iconsax.edit_outline),
                       ),
                     ],
                   );
@@ -304,7 +316,7 @@ class _SettingsState extends State<Settings> {
                         context,
                         "Withdrawal",
                         enabled: isLoading.value || !haveRealAccount.value ? false : true,
-                        Bootstrap.box_arrow_up,
+                        Iconsax.arrow_up_2_outline,
                         onTap: (){
                           if(isLoading.value){
                             return;
@@ -322,7 +334,7 @@ class _SettingsState extends State<Settings> {
                         context,
                         enabled: isLoading.value || !haveRealAccount.value ? false : true,
                         "Deposit",
-                        Bootstrap.box_arrow_in_down,
+                        Iconsax.arrow_down_1_outline,
                         onTap: (){
                           if(isLoading.value){
                             return;
@@ -340,7 +352,7 @@ class _SettingsState extends State<Settings> {
                         context,
                         "Transfer",
                         enabled: isLoading.value || !haveRealAccount.value ? false : true,
-                        BoxIcons.bx_transfer_alt,
+                        Iconsax.transaction_minus_outline,
                         onTap: () {
                           if(isLoading.value){
                             return;
@@ -387,6 +399,19 @@ class _SettingsState extends State<Settings> {
                   ],
                 ),
                 SizedBox(height: 30),
+                
+                // Security Section
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Text("Keamanan", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                SizedBox(height: 12),
+                SettingComponents.listTileItem(context, "Kelola Passcode", "Ubah passcode atau atur biometric", Iconsax.lock_outline, onTap: () async {
+                  Get.to(() => const ManagePasscodePage());
+                }),
+                SizedBox(height: 30),
           
                 // All Items
                 Row(
@@ -396,17 +421,17 @@ class _SettingsState extends State<Settings> {
                   ],
                 ),
                 SizedBox(height: 12),
-                SettingComponents.listTileItem(context, "Daftar Akun Trading Saya", "Informasi mengenai Daftar Akun Trading saya", MingCute.cube_3d_line, onTap: () async {
+                SettingComponents.listTileItem(context, "Daftar Akun Trading Saya", "Informasi mengenai Daftar Akun Trading saya", Iconsax.wallet_outline, onTap: () async {
                   Get.to(() => const Accounts());
                 }),
-                SettingComponents.listTileItem(context, "Bank Saya", "Informasi mengenai bank saya", Iconsax.bank_outline, onTap: () async {
+                SettingComponents.listTileItem(context, "Bank Saya", "Informasi mengenai bank saya", Iconsax.money_2_outline, onTap: () async {
                   Get.to(() => const DaftarBankSaya());
                 }),
                 Obx(
                   () => ListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.brightness_6, color: Theme.of(context).colorScheme.onSurface),
+                    leading: Icon(Iconsax.moon_outline, color: Theme.of(context).colorScheme.onSurface),
                     subtitle: Text(
                       "Ubah tema ke Mode Gelap",
                       style: GoogleFonts.inter(
@@ -433,31 +458,31 @@ class _SettingsState extends State<Settings> {
                     enabled: isLoading.value || !haveRealAccount.value ? false : true,
                     "Riwayat Deposit Withdrawal", 
                     "Semua riwayat deposit akun trading anda", 
-                    AntDesign.transaction_outline, 
+                    Iconsax.note_outline, 
                     onTap: haveRealAccount.value ? () => Get.to(() => const DepositWithdrawalHistory()) : () {
                       showNoRealAccountPopup();
                     }),
                 ),
-                SettingComponents.listTileItem(context, "Tickets", "Help your problem", LineAwesome.headset_solid, onTap: () async {
+                SettingComponents.listTileItem(context, "Tickets", "Help your problem", Iconsax.headphone_outline, onTap: () async {
                   Get.to(() => const TicketRooms());
                 }),
-                SettingComponents.listTileItem(context, "FAQ", "All Frequently Asking Question", Bootstrap.question_circle, onTap: (){
+                SettingComponents.listTileItem(context, "FAQ", "All Frequently Asking Question", Iconsax.quote_down_square_outline, onTap: (){
                   Get.to(() => const Faq());
                 }),
-                SettingComponents.listTileItem(context, "About", "Information about this App", FontAwesome.app_store_brand, onTap: (){
+                SettingComponents.listTileItem(context, "About", "Information about this App", Iconsax.info_circle_outline, onTap: (){
                   Get.to(() => const AboutApp());
                 }),
-                SettingComponents.listTileItem(context, "Invite Link", "Ajak rekan anda bergabung dengan RRFX", Bootstrap.link_45deg, onTap: (){
+                SettingComponents.listTileItem(context, "Invite Link", "Ajak rekan anda bergabung dengan RRFX", Iconsax.link_circle_outline, onTap: (){
                   Get.to(() => const InviteLink());
                 }),
                 SettingComponents.listTileItem(context, "Request IB", "Mari bergabung sebagai Introducing Broker",
                   enabled: false,
-                  Bootstrap.person_plus,   // ✅ Ikon spesifik untuk IB
+                  Iconsax.user_add_outline,
                   onTap: () {
                     Get.to(() => const RequestIBPage());
                   },
                 ),
-                SettingComponents.listTileItem(context, "Hapus Akun", "Hapus Akun Saya ", enabled: false, MingCute.delete_2_line, onTap: (){
+                SettingComponents.listTileItem(context, "Hapus Akun", "Hapus Akun Saya ", enabled: false, Iconsax.trash_outline, onTap: (){
                   Get.to(() => const DeleteAccountPage());
                 }),
               ],

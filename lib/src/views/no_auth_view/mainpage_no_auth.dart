@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:rrfx/src/components/colors/default.dart';
+import 'package:rrfx/src/components/languages/language_variable.dart';
 import 'package:rrfx/src/controllers/firebase_api_controller.dart';
 import 'package:rrfx/src/helpers/handlers/permissions.dart';
-import 'package:rrfx/src/views/markets/views/markets_meta_5.dart';
 import 'package:rrfx/src/views/no_auth_view/explore/explore_no_auth.dart';
 import 'package:rrfx/src/views/no_auth_view/history/history_no_auth.dart';
 import 'package:rrfx/src/views/no_auth_view/markets/markets_meta_5_no_auth.dart';
@@ -81,11 +82,13 @@ class _MainpageWithoutLoginState extends State<MainpageWithoutLogin> {
 
             items: <BottomNavigationBarItem>[
               BottomNavigationBarItem(
-                icon: Icon(ZondIcons.explore),
-                label: "Explore",
+                icon: Icon(Iconsax.home_outline),
+                activeIcon: Icon(Iconsax.home_bold),
+                label: LanguageGlobalVar.HOME.tr,
               ),
               BottomNavigationBarItem(
-                icon: Icon(Bootstrap.globe_asia_australia),
+                icon: Icon(Iconsax.global_outline),
+                activeIcon: Icon(Iconsax.global_bold),
                 label: "Market",
               ),
               BottomNavigationBarItem(
@@ -99,7 +102,8 @@ class _MainpageWithoutLoginState extends State<MainpageWithoutLogin> {
                 label: "History",
               ),
               BottomNavigationBarItem(
-                icon: Icon(BoxIcons.bxl_squarespace),
+                icon: Icon(Iconsax.setting_outline),
+                activeIcon: Icon(Iconsax.setting_bold),
                 label: "Lainnya",
               ),
             ],

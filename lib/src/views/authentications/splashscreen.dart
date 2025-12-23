@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
+import 'package:rrfx/src/service/passcode_service.dart';
 import 'package:rrfx/src/views/authentications/failed_version_app.dart';
 import 'package:rrfx/src/views/authentications/server_error_page.dart';
+import 'package:rrfx/src/views/authentications/verify_passcode_page.dart';
 import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rrfx/src/components/alerts/default.dart';
@@ -74,6 +76,17 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
 
     bool loggedIn = await getLoggedIn();
     if (loggedIn) {
+      // Check if passcode is set up
+      final isPasscodeSetup = await PasscodeService.isPasscodeSetup();
+      
+      if (isPasscodeSetup) {
+        // Passcode sudah setup, minta user untuk verifikasi
+        _finishTransition(() {
+          Get.offAll(() => const VerifyPasscodePage());
+        });
+        return;
+      }
+      
       Map<String, dynamic> result = await authService.get("profile/info");
       if (result['statusCode'] == 200) {
         bool resultProfile = await homeController.profile();

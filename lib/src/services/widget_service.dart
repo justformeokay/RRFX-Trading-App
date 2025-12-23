@@ -6,19 +6,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
 class WidgetService {
-  static const String _widgetName = 'XAUUSDWidgetProvider';
-  static const String _taskName = 'updateXAUUSDWidget';
+  static const String _widgetName = 'MarketAnalysisWidgetProvider';
+  static const String _taskName = 'updateMarketAnalysisWidget';
   
-  // Keys untuk data widget
-  static const String keySymbol = 'widget_symbol';
-  static const String keyPrice = 'widget_price';
-  static const String keyChange = 'widget_change';
-  static const String keyChangePercent = 'widget_change_percent';
+  // Keys untuk data widget - untuk multiple markets
+  static const String keyMarketsData = 'widget_markets_data';
   static const String keyLastUpdate = 'widget_last_update';
-  static const String keyBid = 'widget_bid';
-  static const String keyAsk = 'widget_ask';
-  static const String keyHigh = 'widget_high';
-  static const String keyLow = 'widget_low';
+  static const String keyMarketsCount = 'widget_markets_count';
+  
+  // API Endpoint untuk multi-market analysis
+  static const String _apiEndpoint = 'https://api-mt5.techcrm.net/v5-terminal-analis/analysis_main?timeframe=H1';
 
   /// Initialize widget service
   static Future<void> initialize() async {
@@ -44,65 +41,31 @@ class WidgetService {
     );
   }
 
-  /// Update widget data
+  /// Update widget data untuk multiple markets
   static Future<bool> updateWidget({
-    required String symbol,
-    required double price,
-    required double change,
-    required double changePercent,
-    double? bid,
-    double? ask,
-    double? high,
-    double? low,
+    required List<Map<String, dynamic>> marketsData,
   }) async {
     try {
-      await HomeWidget.saveWidgetData<String>(keySymbol, symbol);
+      // Simpan data markets sebagai JSON string
+      final marketsJson = json.encode(marketsData);
+      await HomeWidget.saveWidgetData<String>(keyMarketsData, marketsJson);
+      
+      // Simpan jumlah markets
       await HomeWidget.saveWidgetData<String>(
-        keyPrice,
-        price.toStringAsFixed(2),
+        keyMarketsCount,
+        marketsData.length.toString(),
       );
-      await HomeWidget.saveWidgetData<String>(
-        keyChange,
-        change.toStringAsFixed(2),
-      );
-      await HomeWidget.saveWidgetData<String>(
-        keyChangePercent,
-        changePercent.toStringAsFixed(2),
-      );
+      
+      // Simpan waktu last update
       await HomeWidget.saveWidgetData<String>(
         keyLastUpdate,
         DateTime.now().toIso8601String(),
       );
-      
-      if (bid != null) {
-        await HomeWidget.saveWidgetData<String>(
-          keyBid,
-          bid.toStringAsFixed(2),
-        );
-      }
-      if (ask != null) {
-        await HomeWidget.saveWidgetData<String>(
-          keyAsk,
-          ask.toStringAsFixed(2),
-        );
-      }
-      if (high != null) {
-        await HomeWidget.saveWidgetData<String>(
-          keyHigh,
-          high.toStringAsFixed(2),
-        );
-      }
-      if (low != null) {
-        await HomeWidget.saveWidgetData<String>(
-          keyLow,
-          low.toStringAsFixed(2),
-        );
-      }
 
       // Update widget UI
       await HomeWidget.updateWidget(
         androidName: _widgetName,
-        iOSName: 'XAUUSDWidget',
+        iOSName: 'MarketAnalysisWidget',
       );
 
       return true;
@@ -112,21 +75,40 @@ class WidgetService {
     }
   }
 
-  /// Fetch XAUUSD data dari API
-  static Future<Map<String, dynamic>?> fetchXAUUSDData() async {
+  /// Fetch market analysis data dari API untuk multiple markets
+  static Future<List<Map<String, dynamic>>?> fetchMarketsData() async {
     try {
-      // Ganti dengan endpoint API Anda yang sesuai
       final response = await http.get(
-        Uri.parse('${GlobalVariable.mainURL}/market/xauusd'),
+        Uri.parse(_apiEndpoint),
         headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
-        return json.decode(response.body);
+        final data = json.decode(response.body);
+        final message = data['message'] as List?;
+        
+        if (message != null && message.isNotEmpty) {
+          // Transform API response ke format widget
+          return message.map((item) {
+            final analysis = item['analysis'] ?? {};
+            final currentPrice = analysis['current_price'] ?? {};
+            final signals = analysis['signals'] ?? {};
+            
+            return {
+              'symbol': item['symbol'] ?? 'N/A',
+              'bid': currentPrice['bid']?.toString() ?? '0',
+              'ask': currentPrice['ask']?.toString() ?? '0',
+              'recommendation': analysis['recommendation'] ?? 'neutral',
+              'rsi': analysis['indicators']?['rsi']?.toString() ?? '0',
+              'ma_trend': signals['ma_trend'] ?? 'neutral',
+              'last_update': analysis['last_update'] ?? '',
+            };
+          }).toList();
+        }
       }
       return null;
     } catch (e) {
-      print('Error fetching XAUUSD data: $e');
+      print('Error fetching markets data: $e');
       return null;
     }
   }
@@ -138,19 +120,9 @@ class WidgetService {
 
   /// Manual update widget
   static Future<void> manualUpdate() async {
-    final data = await fetchXAUUSDData();
-    if (data != null) {
-      await updateWidget(
-        symbol: data['symbol'] ?? 'XAUUSD',
-        price: double.tryParse(data['price']?.toString() ?? '0') ?? 0,
-        change: double.tryParse(data['change']?.toString() ?? '0') ?? 0,
-        changePercent:
-            double.tryParse(data['changePercent']?.toString() ?? '0') ?? 0,
-        bid: double.tryParse(data['bid']?.toString() ?? '0'),
-        ask: double.tryParse(data['ask']?.toString() ?? '0'),
-        high: double.tryParse(data['high']?.toString() ?? '0'),
-        low: double.tryParse(data['low']?.toString() ?? '0'),
-      );
+    final data = await fetchMarketsData();
+    if (data != null && data.isNotEmpty) {
+      await updateWidget(marketsData: data);
     }
   }
 }
@@ -160,20 +132,10 @@ class WidgetService {
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     try {
-      // Fetch dan update widget data
-      final data = await WidgetService.fetchXAUUSDData();
-      if (data != null) {
-        await WidgetService.updateWidget(
-          symbol: data['symbol'] ?? 'XAUUSD',
-          price: double.tryParse(data['price']?.toString() ?? '0') ?? 0,
-          change: double.tryParse(data['change']?.toString() ?? '0') ?? 0,
-          changePercent:
-              double.tryParse(data['changePercent']?.toString() ?? '0') ?? 0,
-          bid: double.tryParse(data['bid']?.toString() ?? '0'),
-          ask: double.tryParse(data['ask']?.toString() ?? '0'),
-          high: double.tryParse(data['high']?.toString() ?? '0'),
-          low: double.tryParse(data['low']?.toString() ?? '0'),
-        );
+      // Fetch dan update widget data untuk semua markets
+      final data = await WidgetService.fetchMarketsData();
+      if (data != null && data.isNotEmpty) {
+        await WidgetService.updateWidget(marketsData: data);
       }
       return Future.value(true);
     } catch (e) {

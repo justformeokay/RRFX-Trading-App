@@ -503,7 +503,7 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
         children: [
           _buttonMenuItem(icon: FontAwesome.plus_solid, appName: 'Buat Akun', context: context, onTap: () => AuthDirectionPopup.show()),
           _buttonMenuItem(icon: FontAwesome.bolt_solid, appName: 'Signals', context: context, onTap: () => AuthDirectionPopup.show()),
-          _buttonMenuItem(icon: Iconsax.gift_outline, appName: 'Rewards', context: context, onTap: () => Get.to(() => RedeemRewardsPage(isLoggedIn: false))),
+          _buttonMenuItem(icon: Iconsax.gift_outline, appName: 'Rewards', context: context, onTap: () => AuthDirectionPopup.show()),
           _buttonMenuItem(icon: FontAwesome.rss_solid, appName: 'News', context: context, onTap: () => Get.to(() => NewsPage())),
           _buttonMenuItem(icon: Clarity.analytics_line, appName: 'Market Analysis', context: context, onTap: () => Get.to(() => const MarketAnalysisPage())),
         ]

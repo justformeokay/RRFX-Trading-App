@@ -68,6 +68,8 @@
 	<string>Aplikasi membutuhkan akses kamera untuk mengambil foto dan video.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Aplikasi membutuhkan akses ke kontak untuk fitur berbagi.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Aplikasi menggunakan Face ID untuk autentikasi keamanan akun Anda.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Aplikasi ini memerlukan akses Local Network untuk debugging Flutter.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

@@ -32,7 +32,6 @@ class _MainpageState extends State<Mainpage> {
   static final List<Widget> _widgetOptions = <Widget>[
     const IndexV2(),
     const MarketsMeta5View(),
-    // const ChartTab(),
     const WebViewChartView(),
     const TransactionTab(),
     const Settings(),
@@ -79,11 +78,13 @@ class _MainpageState extends State<Mainpage> {
 
             items: <BottomNavigationBarItem>[
               BottomNavigationBarItem(
-                icon: Icon(ZondIcons.explore),
+                icon: Icon(Iconsax.home_outline),
+                activeIcon: Icon(Iconsax.home_bold),
                 label: LanguageGlobalVar.HOME.tr,
               ),
               BottomNavigationBarItem(
-                icon: Icon(Bootstrap.globe_asia_australia),
+                icon: Icon(Iconsax.global_outline),
+                activeIcon: Icon(Iconsax.global_bold),
                 label: "Market",
               ),
               BottomNavigationBarItem(
@@ -97,7 +98,8 @@ class _MainpageState extends State<Mainpage> {
                 label: "History",
               ),
               BottomNavigationBarItem(
-                icon: Icon(BoxIcons.bxl_squarespace),
+                icon: Icon(Iconsax.setting_outline),
+                activeIcon: Icon(Iconsax.setting_bold),
                 label: "Lainnya",
               ),
             ],

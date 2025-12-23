@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="140dp"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="10dp"
+    android:layout_marginEnd="8dp"
+    android:background="@drawable/market_card_background"
+    android:gravity="center">
+
+    <!-- Symbol -->
+    <TextView
+        android:id="@+id/card_symbol"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="EURUSD"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="4dp" />
+
+    <!-- Price (Bid/Ask) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginBottom="6dp">
+
+        <TextView
+            android:id="@+id/card_bid"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="1.1728"
+            android:textColor="#4CAF50"
+            android:textSize="12sp"
+            android:gravity="center" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="/"
+            android:textColor="#CCCCCC"
+            android:textSize="12sp"
+            android:layout_marginHorizontal="4dp" />
+
+        <TextView
+            android:id="@+id/card_ask"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="1.17284"
+            android:textColor="#F44336"
+            android:textSize="12sp"
+            android:gravity="center" />
+    </LinearLayout>
+
+    <!-- RSI -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="6dp">
+
+        <TextView
+            android:layout_width="35dp"
+            android:layout_height="wrap_content"
+            android:text="RSI:"
+            android:textColor="#B0B0B0"
+            android:textSize="10sp" />
+
+        <TextView
+            android:id="@+id/card_rsi"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="58.49"
+            android:textColor="#FFEB3B"
+            android:textSize="10sp"
+            android:gravity="end" />
+    </LinearLayout>
+
+    <!-- Trend -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="6dp">
+
+        <TextView
+            android:layout_width="35dp"
+            android:layout_height="wrap_content"
+            android:text="Trend:"
+            android:textColor="#B0B0B0"
+            android:textSize="10sp" />
+
+        <TextView
+            android:id="@+id/card_trend"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="bearish"
+            android:textColor="#FF9800"
+            android:textSize="10sp"
+            android:gravity="end" />
+    </LinearLayout>
+
+    <!-- Recommendation -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="40dp"
+            android:layout_height="wrap_content"
+            android:text="Signal:"
+            android:textColor="#B0B0B0"
+            android:textSize="10sp" />
+
+        <TextView
+            android:id="@+id/card_recommendation"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="neutral"
+            android:textColor="#4CAF50"
+            android:textSize="10sp"
+            android:gravity="end"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+</LinearLayout>

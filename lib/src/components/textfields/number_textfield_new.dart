@@ -39,7 +39,7 @@ class _NumberTextfieldNewState extends State<NumberTextfieldNew> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isReadOnly = widget.readOnly ?? false;
+    final bool isReadOnly = widget.readOnly;
     final colorScheme = Theme.of(context).colorScheme;
     final disabledBorderColor = colorScheme.onSurface.withOpacity(0.12);
     final borderColor = isReadOnly ? disabledBorderColor : CustomColor.textThemeDarkSoftColor;

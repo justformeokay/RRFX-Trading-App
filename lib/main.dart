@@ -53,6 +53,8 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _setSystemUIOverlayStyle();
+      // Trigger network speed check saat app pertama kali di-launch
+      networkController.checkNetworkSpeed();
     });
     ever(widget.themeController.isDark, (_) {
       _setSystemUIOverlayStyle();
