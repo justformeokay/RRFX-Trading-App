@@ -53,6 +53,7 @@ class PersonalDetail {
     this.urlPhoto,
     this.status,
     this.ver,
+    this.passcode,
   });
   String? id;
   String? name;
@@ -70,6 +71,7 @@ class PersonalDetail {
   String? urlPhoto;
   String? status;
   String? ver;
+  bool? passcode;
 
   PersonalDetail.fromJson(Map<String, dynamic> json){
     id = json['id'];
@@ -88,5 +90,6 @@ class PersonalDetail {
     urlPhoto = json['url_photo'];
     status = json['status'];
     ver = json['ver'];
+    passcode = json['passcode'] ?? false;
   }
 }

@@ -9,6 +9,7 @@ import 'package:rrfx/src/controllers/device_utilities_controller.dart';
 import 'package:rrfx/src/models/auth/country_code_model.dart';
 import 'package:rrfx/src/service/auth_service.dart';
 import 'package:rrfx/src/service/passcode_service.dart';
+import 'package:rrfx/src/views/authentications/locked_page.dart';
 import 'package:rrfx/src/views/authentications/otp_page.dart';
 import 'package:rrfx/src/views/authentications/setup_passcode_page.dart';
 import 'package:rrfx/src/views/authentications/suspended_page.dart';
@@ -86,26 +87,37 @@ class AuthController extends GetxController {
       final result = jsonDecode(response.body);
       isLoading(false);
 
-      if (response.statusCode != 200) {
-        Get.log("❌ [AUTH] Login failed - status code not 200");
-        responseMessage(result['message'] ?? "Login gagal");
+      // ✅ Check API response status first (regardless of HTTP status code)
+      if (result['status'] == false) {
+        Get.log("❌ [AUTH] Login failed - API status false");
+        
+        // Check if account is locked
+        final message = result['message'] ?? "";
+        if (message.toLowerCase().contains("locked")) {
+          Get.log("🔒 [AUTH] Account is locked - Going to LockedPage");
+          Get.offAll(() => const LockedPage());
+          return;
+        }
+        
+        CustomScaffoldMessanger.showAppSnackBar(
+          context,
+          message: message.isNotEmpty 
+              ? message
+              : "Sign in gagal, mohon cek ulang Email atau Password anda apakah sudah benar",
+        );
         return;
       }
 
-      if (result['status'] == false) {
-        Get.log("❌ [AUTH] Login failed - status false in response");
-        CustomScaffoldMessanger.showAppSnackBar(
-          context,
-          message:
-              "Sign in gagal, mohon cek ulang Email atau Password anda apakah sudah benar",
-        );
+      if (response.statusCode != 200) {
+        Get.log("❌ [AUTH] Login failed - HTTP status code not 200: ${response.statusCode}");
+        responseMessage(result['message'] ?? "Login gagal");
         return;
       }
       
       responseMessage(result['message'] ?? "Login berhasil");
       final status = result['response']?['status'] ?? "";
       final hasPasscode = result['response']?['passcode'] ?? false;
-      statusAccount(status);
+      statusAccount(status.toLowerCase());
       final accessToken = result['response']?['access_token'];
       final refreshToken = result['response']?['refresh_token'];
       
@@ -137,12 +149,12 @@ class AuthController extends GetxController {
       Get.log("👤 [AUTH] Profile data: ${homeController.profileModel.value?.toJson()}");
 
       Get.log("🚀 [AUTH] Routing based on status: $status and passcode: $hasPasscode");
-      switch (status) {
+      switch (statusAccount.value) {
         case "active":
           Get.log("✅ [AUTH] Status: active - Checking passcode...");
           await preferences.setBool('loggedIn', true);
           
-          // Check if passcode already exists on server
+          // ✅ Check if passcode already exists on server
           if (hasPasscode) {
             Get.log("✅ [AUTH] Passcode exists on server - Going to VerifyPasscodePage");
             Get.offAll(() => const VerifyPasscodePage());
@@ -156,15 +168,16 @@ class AuthController extends GetxController {
           Get.offAll(() => const SuspendedAccountPage());
           break;
         case "otp":
-          Get.log("📱 [AUTH] Status: otp - Going to OtpPage");
-          Get.to(() => const OtpPage());
+          Get.log("📱 [AUTH] Status: otp - Going to OtpPage (user baru, belum verifikasi OTP)");
+          Get.offAll(() => const OtpPage());
           break;
         case "verification":
-          Get.log("📧 [AUTH] Status: verification - Going to VerificationAccountPage");
+          Get.log("📧 [AUTH] Status: verification - Going to VerificationAccountPage (user baru, belum verifikasi akun)");
           Get.log("👤 [AUTH] Profile before navigation: ${homeController.profileModel.value?.email ?? 'NULL'}");
-          Get.to(() => const VerificationAccountPage());
+          Get.offAll(() => const VerificationAccountPage());
           break;
         default:
+          Get.log("❌ [AUTH] Unknown status: $status");
           responseMessage("Status akun tidak dikenali, silakan hubungi admin");
       }
     } catch (e) {

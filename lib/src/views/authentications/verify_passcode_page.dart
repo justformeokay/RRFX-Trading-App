@@ -359,6 +359,7 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
                                             ? 'Akun Anda terkunci sementara karena terlalu banyak percobaan yang gagal.'
                                             : 'Passcode yang Anda masukkan tidak sesuai. Silahkan coba lagi.',
                                         remainingAttempts: controller.remainingAttempts.value,
+                                        attemptCount: controller.lastAttemptCount.value,
                                         isLocked: controller.isLocked.value,
                                         lockTimeRemaining: controller.lockTimeRemaining.value,
                                       );

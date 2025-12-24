@@ -11,6 +11,7 @@ class PasscodeController extends GetxController {
   RxInt remainingAttempts = 5.obs;
   RxBool isLocked = false.obs;
   RxInt lockTimeRemaining = 0.obs;
+  RxInt lastAttemptCount = 0.obs; // Track attempt count from API
   
   // Biometric
   RxBool useBiometric = false.obs;
@@ -167,10 +168,18 @@ class PasscodeController extends GetxController {
     }
     
     isLoading.value = true;
-    final success = await PasscodeService.verifyPasscodeWithServer(enteredPasscode.value);
+    final response = await PasscodeService.verifyPasscodeWithServer(enteredPasscode.value);
     isLoading.value = false;
     
-    print('[PasscodeController] verifyPasscode result: $success');
+    print('[PasscodeController] verifyPasscode response: $response');
+    
+    final success = response['status'] == true;
+    final attempt = response['attempt'] ?? 0;
+    
+    // Store the attempt count from API response
+    lastAttemptCount.value = attempt;
+    
+    print('[PasscodeController] Success: $success, Attempt from API: $attempt');
     
     if (!success) {
       remainingAttempts.value--;

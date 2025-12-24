@@ -15,6 +15,7 @@ class ProfileModel {
     required this.urlPhoto,
     required this.status,
     required this.ver,
+    required this.passcode
   });
 
   late final String? name;
@@ -32,6 +33,7 @@ class ProfileModel {
   late final String? urlPhoto;
   late final String? status;
   late final String? ver;
+  late final bool? passcode;
 
   ProfileModel.fromJson(Map<String, dynamic> json) {
     name = json['name'];
@@ -49,6 +51,7 @@ class ProfileModel {
     urlPhoto = json['url_photo'];
     status = json['status'];
     ver = json['ver'];
+    passcode = json['passcode'];
   }
 
   Map<String, dynamic> toJson() {
@@ -68,6 +71,7 @@ class ProfileModel {
       'url_photo': urlPhoto,
       'status': status,
       'ver': ver,
+      'passcode': passcode,
     };
   }
 }

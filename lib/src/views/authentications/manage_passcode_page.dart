@@ -303,13 +303,15 @@ class _ManagePasscodePageState extends State<ManagePasscodePage>
 
                                     setState(() => isLoading = true);
 
-                                    final isValid = await PasscodeService
+                                    final response = await PasscodeService
                                         .verifyPasscodeWithServer(
                                           currentPasscodeController.text,
                                         );
 
                                     setState(() => isLoading = false);
 
+                                    final isValid = response['status'] == true;
+                                    
                                     if (isValid) {
                                       Get.back();
                                       // Navigate to change passcode page

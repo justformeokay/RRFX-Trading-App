@@ -222,7 +222,8 @@ class PasscodeService {
   }
 
   /// Verify passcode with server API
-  static Future<bool> verifyPasscodeWithServer(String passcode) async {
+  /// Returns a Map with 'status' (bool) and 'attempt' (int from API response)
+  static Future<Map<String, dynamic>> verifyPasscodeWithServer(String passcode) async {
     try {
       print('[PasscodeService] Verifying passcode with server...');
       
@@ -244,14 +245,30 @@ class PasscodeService {
       // Check if response is successful
       if (response['status'] == true) {
         print('[PasscodeService] ✅ Passcode verified successfully');
-        return true;
+        return {
+          'status': true,
+          'attempt': 0,
+        };
       } else {
         print('[PasscodeService] ❌ Passcode verification failed: ${response['message']}');
-        return false;
+        
+        // Extract attempt from response
+        int attempt = 1;
+        if (response['response'] != null && response['response']['attempt'] != null) {
+          attempt = response['response']['attempt'];
+        }
+        
+        return {
+          'status': false,
+          'attempt': attempt,
+        };
       }
     } catch (e) {
       print('[PasscodeService] ❌ Error verifying passcode with server: $e');
-      return false;
+      return {
+        'status': false,
+        'attempt': 0,
+      };
     }
   }
 

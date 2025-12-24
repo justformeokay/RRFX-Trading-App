@@ -7,6 +7,7 @@ class PasscodeErrorDialog {
     BuildContext context, {
     required String message,
     required int remainingAttempts,
+    int attemptCount = 0,
     bool isLocked = false,
     int? lockTimeRemaining,
   }) async {
@@ -18,6 +19,7 @@ class PasscodeErrorDialog {
         return _PasscodeErrorDialogContent(
           message: message,
           remainingAttempts: remainingAttempts,
+          attemptCount: attemptCount,
           isLocked: isLocked,
           lockTimeRemaining: lockTimeRemaining,
         );
@@ -29,12 +31,14 @@ class PasscodeErrorDialog {
 class _PasscodeErrorDialogContent extends StatefulWidget {
   final String message;
   final int remainingAttempts;
+  final int attemptCount;
   final bool isLocked;
   final int? lockTimeRemaining;
 
   const _PasscodeErrorDialogContent({
     required this.message,
     required this.remainingAttempts,
+    required this.attemptCount,
     required this.isLocked,
     this.lockTimeRemaining,
   });
@@ -236,7 +240,7 @@ class _PasscodeErrorDialogContentState
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: Colors.black,
                         ),
                       ),
                     ),

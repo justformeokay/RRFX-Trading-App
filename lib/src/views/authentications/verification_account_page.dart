@@ -17,7 +17,8 @@ import 'package:rrfx/src/controllers/authentication.dart';
 import 'package:rrfx/src/controllers/home.dart';
 import 'package:rrfx/src/helpers/formatters/clean_phone_number.dart';
 import 'package:rrfx/src/helpers/variables/global_variables.dart';
-import 'package:rrfx/src/views/authentications/success_verification.dart';
+import 'package:rrfx/src/views/authentications/setup_passcode_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class VerificationAccountPage extends StatefulWidget {
   const VerificationAccountPage({super.key});
@@ -262,6 +263,7 @@ class _VerificationAccountPageState extends State<VerificationAccountPage> {
               child: Obx(
                 () => DefaultButton.defaultElevatedButton(
                   onPressed: authController.isLoading.value ? null : () async {
+                    SharedPreferences prefs = await SharedPreferences.getInstance();
                     if(_formKey.currentState!.validate()){
                       await authController.verificationAccount(
                         gender: genderController.text,
@@ -269,7 +271,9 @@ class _VerificationAccountPageState extends State<VerificationAccountPage> {
                       ).then((result){
                         if(result){
                           CustomScaffoldMessanger.showAppSnackBar(context, message: authController.responseMessage.value, type: SnackBarType.success);
-                          Get.offAll(() => const VerificationSuccessPage());
+                          // ✅ Navigate to OtpPage instead of VerificationSuccessPage
+                          prefs.setBool('loggedIn', true);
+                          Get.offAll(() => const SetupPasscodePage());
                         }else{
                           CustomScaffoldMessanger.showAppSnackBar(context, message: authController.responseMessage.value, type: SnackBarType.error);
                         }

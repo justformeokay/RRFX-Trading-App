@@ -3,6 +3,7 @@ import 'package:rrfx/src/controllers/authentication.dart';
 import 'package:rrfx/src/service/passcode_service.dart';
 import 'package:rrfx/src/views/authentications/failed_version_app.dart';
 import 'package:rrfx/src/views/authentications/server_error_page.dart';
+import 'package:rrfx/src/views/authentications/setup_passcode_page.dart';
 import 'package:rrfx/src/views/authentications/verify_passcode_page.dart';
 import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -75,43 +76,64 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
     }
 
     bool loggedIn = await getLoggedIn();
+    
+    // ✅ If user is logged in, fetch profile and check passcode from API response
     if (loggedIn) {
-      // Check if passcode is set up
-      final isPasscodeSetup = await PasscodeService.isPasscodeSetup();
+      Get.log("📡 [SPLASH] User logged in - Fetching profile from API...");
       
-      if (isPasscodeSetup) {
-        // Passcode sudah setup, minta user untuk verifikasi
-        _finishTransition(() {
-          Get.offAll(() => const VerifyPasscodePage());
-        });
-        return;
-      }
+      // Fetch profile dari API
+      bool resultProfile = await homeController.profile();
       
-      Map<String, dynamic> result = await authService.get("profile/info");
-      if (result['statusCode'] == 200) {
-        bool resultProfile = await homeController.profile();
-        if (!resultProfile) {
-          _finishTransition(() {
-            CustomAlert.alertError(
-              context,
-              message: homeController.responseMessage.value,
-              onTap: () {
-                Get.offAll(() => const MainpageWithoutLogin());
-              },
-            );
-          });
-          return;
-        }
+      if (!resultProfile) {
+        Get.log("❌ [SPLASH] Failed to fetch profile");
         _finishTransition(() {
-          Get.offAll(() => const Mainpage());
+          CustomAlert.alertError(
+            context,
+            message: homeController.responseMessage.value,
+            onTap: () {
+              Get.offAll(() => const MainpageWithoutLogin());
+            },
+          );
         });
         return;
       }
 
-      _finishTransition(() {
-        Get.offAll(() => const MainpageWithoutLogin());
-      });
+      // ✅ Check passcode dari API response
+      final profileData = homeController.profileModel.value;
+      if (profileData == null) {
+        Get.log("❌ [SPLASH] Profile data is NULL");
+        _finishTransition(() {
+          Get.offAll(() => const MainpageWithoutLogin());
+        });
+        return;
+      }
+
+      Get.log("✅ [SPLASH] Profile fetched successfully");
+
+      
+      // ✅ Cek passcode dari API response (bukan dari local storage)
+      final hasPasscode = profileData.passcode ?? true;
+      
+      Get.log("🔐 [SPLASH] Passcode status from API: $hasPasscode");
+      
+      if (hasPasscode) {
+        // ✅ Passcode sudah setup, HARUS verifikasi passcode
+        Get.log("✅ [SPLASH] Passcode already setup (from API) - Redirecting to VerifyPasscodePage");
+        _finishTransition(() {
+          Get.offAll(() => const VerifyPasscodePage());
+        });
+        return;
+      } else {
+        // ✅ Passcode belum setup, arahkan ke SetupPasscodePage
+        Get.log("🔐 [SPLASH] Passcode not setup yet (from API) - Redirecting to SetupPasscodePage");
+        _finishTransition(() {
+          Get.offAll(() => const SetupPasscodePage());
+        });
+        return;
+      }
     } else {
+      // ✅ User belum login
+      Get.log("📱 [SPLASH] User not logged in - Going to MainpageWithoutLogin");
       _finishTransition(() {
         Get.offAll(() => const MainpageWithoutLogin());
       });

@@ -42,11 +42,11 @@ class NetworkController extends GetxController {
   Future<void> checkNetworkSpeed() async {
     if (isCheckingSpeed.value) return;
     
-    isCheckingSpeed.value = true;
+    // isCheckingSpeed.value = true;
     
     try {
       // Tampilkan loading dialog
-      NetworkSpeedDialog.showNetworkSpeedCheckingDialog();
+      // NetworkSpeedDialog.showNetworkSpeedCheckingDialog();
       
       // Warm up - skip first request (usually slower due to DNS/connection setup)
       try {
@@ -66,8 +66,8 @@ class NetworkController extends GetxController {
         networkSpeed.value = speed;
         print('🌐 Network Latency: ${speed}ms');
         
-        // Jika network speed > 300ms, tampilkan warning dialog
-        if (speed > 300) {
+        // Jika network speed > 500ms, tampilkan warning dialog
+        if (speed > 500) {
           await Future.delayed(const Duration(milliseconds: 300));
           NetworkSpeedDialog.showUnstableConnectionDialog(speed);
         }
@@ -79,7 +79,7 @@ class NetworkController extends GetxController {
         Get.back();
       } catch (_) {}
     } finally {
-      isCheckingSpeed.value = false;
+      // isCheckingSpeed.value = false;
     }
   }
 
