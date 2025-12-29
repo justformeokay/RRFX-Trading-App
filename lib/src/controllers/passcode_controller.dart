@@ -50,6 +50,22 @@ class PasscodeController extends GetxController {
       biometricAvailable.value = false;
     }
   }
+
+  /// Refresh biometric status (digunakan ketika kembali dari halaman setup)
+  Future<void> refreshBiometricStatus() async {
+    try {
+      final canCheck = await _biometricService.canCheckBiometrics();
+      final isDeviceSupported = await _biometricService.deviceSupportsBiometric();
+      biometricAvailable.value = canCheck && isDeviceSupported;
+      
+      isBiometricEnabled.value = await PasscodeService.isBiometricEnabled();
+      biometricType.value = await PasscodeService.getBiometricType() ?? 'Biometric';
+      
+      print('[PasscodeController] Biometric status refreshed - available: ${biometricAvailable.value}, enabled: ${isBiometricEnabled.value}');
+    } catch (e) {
+      print('[PasscodeController] Error refreshing biometric status: $e');
+    }
+  }
   
   /// Generate randomized keypad (0-9)
   void generateRandomKeypad() {

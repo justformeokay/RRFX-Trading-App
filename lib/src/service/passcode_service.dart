@@ -101,20 +101,52 @@ class PasscodeService {
     String? biometricType,
   }) async {
     try {
+      print('[PasscodeService] updateBiometricStatus called with enabled=$enabled, biometricType=$biometricType');
+      
       final passcode = await getPasscode();
-      if (passcode == null) return false;
+      print('[PasscodeService] Current passcode model: $passcode');
+      
+      // Jika passcode tidak ada di local storage, buat model baru dengan placeholder
+      // (ini terjadi karena passcode disimpan di server, bukan local)
+      final PasscodeModel updatedModel;
+      
+      if (passcode == null) {
+        print('[PasscodeService] Passcode not found, creating new model with biometric flags only');
+        updatedModel = PasscodeModel(
+          passcode: 'SERVER_STORED', // Placeholder karena disimpan di server
+          createdAt: DateTime.now(),
+          isSetup: true,
+          useBiometric: enabled,
+          biometricType: biometricType,
+        );
+      } else {
+        updatedModel = passcode.copyWith(
+          useBiometric: enabled,
+          biometricType: biometricType,
+        );
+      }
 
-      final updatedModel = passcode.copyWith(
-        useBiometric: enabled,
-        biometricType: biometricType,
-      );
+      print('[PasscodeService] Updated model: useBiometric=${updatedModel.useBiometric}, biometricType=${updatedModel.biometricType}');
 
       final box = GetStorage();
+      print('[PasscodeService] GetStorage initialized');
+      
       await box.write(_passcodeKey, updatedModel.toJson());
+      print('[PasscodeService] Data written to storage');
+
+      // Verify it was saved
+      final saved = box.read(_passcodeKey);
+      print('[PasscodeService] Verification read from storage: $saved');
+
+      if (saved != null) {
+        final verifiedModel = PasscodeModel.fromJson(saved as Map<String, dynamic>);
+        print('[PasscodeService] Verified saved model: useBiometric=${verifiedModel.useBiometric}, biometricType=${verifiedModel.biometricType}');
+      }
 
       return true;
     } catch (e) {
-      print('Error updating biometric status: $e');
+      print('[PasscodeService] ERROR updating biometric status: $e');
+      print('[PasscodeService] Error type: ${e.runtimeType}');
       return false;
     }
   }

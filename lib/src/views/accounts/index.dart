@@ -45,23 +45,6 @@ class _AccountsState extends State<Accounts> {
         haveRealAccount.value = true;
       }
     });
-    // tradingController.getTradingAccount().then((result){
-    //   if(!result){
-    //     CustomScaffoldMessanger.showAppSnackBar(context, message: tradingController.responseMessage.value, type: SnackBarType.error);
-    //   }else{
-    //     if(tradingController.tradingAccountModels.value?.response.real?.isNotEmpty == true){
-    //       haveDemoAccount(true);
-    //       haveRealAccount(true);
-    //     }else{
-    //       haveRealAccount(false);
-    //       if(tradingController.tradingAccountModels.value?.response.demo?.isNotEmpty == true){
-    //         haveDemoAccount(true);
-    //       }else{
-    //         haveDemoAccount(false);
-    //       }
-    //     }
-    //   }
-    // });
   }
 
   @override
@@ -108,10 +91,10 @@ class _AccountsState extends State<Accounts> {
                           mainAxisAlignment: MainAxisAlignment.start,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("List Trading", style: GoogleFonts.inter(fontSize: 50, fontWeight: FontWeight.w700, color: CustomColor.secondaryColor, height: 0.5)),
-                            Text("account", style: GoogleFonts.inter(fontSize: 50, fontWeight: FontWeight.w700, color: Theme.of(context).textTheme.titleLarge?.color)),
+                            Text("List Trading", style: GoogleFonts.inter(fontSize: 30, fontWeight: FontWeight.w700, color: CustomColor.secondaryColor, height: 0.5)),
+                            Text("account", style: GoogleFonts.inter(fontSize: 30, fontWeight: FontWeight.w700, color: Theme.of(context).textTheme.titleLarge?.color)),
                             const SizedBox(height: 5.0),
-                            Text("Daftar akun trading yang anda miliki. Anda dapat menggunakan untuk trading dengan platform MetaTrader 5 dan RRFX App.", style: TextStyle(color: CustomColor.textThemeLightSoftColor, fontSize: 15)),
+                            Text("Daftar akun trading yang anda miliki. Anda dapat menggunakan untuk trading dengan platform MetaTrader 5 dan RRFX App.", style: TextStyle(color: CustomColor.textThemeLightSoftColor, fontSize: 12)),
                           ],
                         ),
                       ),

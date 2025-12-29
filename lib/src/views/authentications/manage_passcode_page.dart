@@ -79,18 +79,33 @@ class _ManagePasscodePageState extends State<ManagePasscodePage>
               ? passcodeController.biometricType.value
               : 'Biometric';
           
-          await PasscodeService.updateBiometricStatus(
+          print('[ManagePasscode] Attempting to update biometric status with type: $biometricTypeName');
+          
+          final success = await PasscodeService.updateBiometricStatus(
             true,
             biometricType: biometricTypeName,
           );
 
-          setState(() {
-            isBiometricEnabled = true;
-            biometricType = biometricTypeName;
-            isLoading = false;
-          });
+          print('[ManagePasscode] updateBiometricStatus result: $success');
 
-          _showSuccess('Biometric berhasil diaktifkan');
+          if (success) {
+            // Update controller state juga
+            passcodeController.isBiometricEnabled.value = true;
+            
+            setState(() {
+              isBiometricEnabled = true;
+              biometricType = biometricTypeName;
+              isLoading = false;
+            });
+
+            _showSuccess('Biometric berhasil diaktifkan');
+            print('[ManagePasscode] Biometric status updated in storage and controller');
+          } else {
+            setState(() {
+              isLoading = false;
+            });
+            _showError('Gagal menyimpan status biometric');
+          }
         } else {
           setState(() {
             isLoading = false;
@@ -99,15 +114,26 @@ class _ManagePasscodePageState extends State<ManagePasscodePage>
         }
       } else {
         // Disable biometric - tidak perlu verifikasi, langsung disable
-        await PasscodeService.updateBiometricStatus(false);
+        final success = await PasscodeService.updateBiometricStatus(false);
 
-        setState(() {
-          isBiometricEnabled = false;
-          biometricType = null;
-          isLoading = false;
-        });
+        if (success) {
+          // Update controller state juga
+          passcodeController.isBiometricEnabled.value = false;
+          
+          setState(() {
+            isBiometricEnabled = false;
+            biometricType = null;
+            isLoading = false;
+          });
 
-        _showSuccess('Biometric berhasil dinonaktifkan');
+          _showSuccess('Biometric berhasil dinonaktifkan');
+          print('[ManagePasscode] Biometric status disabled in storage and controller');
+        } else {
+          setState(() {
+            isLoading = false;
+          });
+          _showError('Gagal menonaktifkan biometric');
+        }
       }
     } catch (e) {
       print('[ManagePasscode] Error: $e');

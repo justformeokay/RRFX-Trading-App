@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Import ini dibutuhkan untuk SystemChrome
+import 'dart:io';
 import 'package:get/get.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:deriv_chart/generated/l10n.dart' as chart_l10n;
@@ -20,6 +21,9 @@ final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<Scaffol
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
+  
+  // ✅ Setup custom HTTP client untuk handle image loading dengan status code 300
+  HttpOverrides.global = _MyHttpOverrides();
   
   // ✅ Initialize Firebase & Notifications
   await initFirebaseAndNotifications();
@@ -111,5 +115,14 @@ class _MyAppState extends State<MyApp> {
         ),
       );
     });
+  }
+}
+
+/// Custom HTTP overrides untuk handle image loading dengan status code 300
+class _MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
   }
 }

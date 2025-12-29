@@ -5,7 +5,6 @@ import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/dialogs/passcode_error_dialog.dart';
 import 'package:rrfx/src/controllers/passcode_controller.dart';
 import 'package:rrfx/src/service/passcode_service.dart';
-import 'package:rrfx/src/views/authentications/reset_passcode_page.dart';
 import 'package:rrfx/src/views/mainpage.dart';
 
 class VerifyPasscodePage extends StatefulWidget {
@@ -26,6 +25,12 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
     super.initState();
     _initializeAnimations();
     controller.remainingAttempts.value = 5;
+    _refreshBiometricStatus();
+  }
+
+  /// Refresh biometric status saat page ditampilkan
+  Future<void> _refreshBiometricStatus() async {
+    await controller.refreshBiometricStatus();
   }
 
   void _initializeAnimations() {
@@ -310,11 +315,11 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
                           ],
                         ),
                         SizedBox(height: 16),
-                        // Row 4 - 0, delete, submit
+                        // Row 4 - fingerprint, 0, delete
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            _buildEmptySpace(),
+                            _buildFingerprintButton(),
                             _buildKeyButton(controller.randomKeypad[9]),
                             _buildDeleteButton(),
                           ],
@@ -326,7 +331,6 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
                 // Submit button
                 Obx(() {
                   final passcode = controller.enteredPasscode.value;
-
                   return SizedBox(
                     width: double.infinity,
                     height: 52,
@@ -415,7 +419,8 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
             ),
           ),
         ),
-      ),    ),    );
+      ))
+    );
   }
 
   Widget _buildKeyButton(int number) {
@@ -469,8 +474,57 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
     );
   }
 
-  Widget _buildEmptySpace() {
-    return SizedBox(width: 70, height: 70);
+  Widget _buildFingerprintButton() {
+    return Obx(() {
+      // Hanya tampil jika biometric sudah diaktifkan AND tersedia
+      if (!controller.isBiometricEnabled.value || !controller.biometricAvailable.value) {
+        return SizedBox(width: 70, height: 70);
+      }
+
+      return GestureDetector(
+        onTap: controller.isLocked.value || controller.isLoading.value
+            ? null
+            : () async {
+                final success = await controller.authenticateWithBiometric();
+                if (success) {
+                  Get.offAll(() => Mainpage());
+                } else {
+                  Get.snackbar(
+                    '❌ Biometric Gagal',
+                    'Verifikasi biometric gagal. Silakan coba lagi atau gunakan passcode',
+                    backgroundColor: Colors.red,
+                    colorText: Colors.white,
+                    duration: const Duration(seconds: 3),
+                  );
+                }
+              },
+        child: Container(
+          width: 70,
+          height: 70,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: CustomColor.secondaryColor.withOpacity(0.1),
+          ),
+          child: Center(
+            child: controller.isLoading.value
+                ? SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                          CustomColor.secondaryColor),
+                    ),
+                  )
+                : Icon(
+                    Icons.fingerprint_rounded,
+                    color: CustomColor.secondaryColor,
+                    size: 28,
+                  ),
+          ),
+        ),
+      );
+    });
   }
 
   void _showResetPasscodeDialog(BuildContext context) {
@@ -555,7 +609,7 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
                         child: Text(
                           "Batal",
                           style: GoogleFonts.inter(
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: CustomColor.textThemeLightSoftColor,
                           ),
@@ -568,8 +622,7 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
                     Expanded(
                       child: StatefulBuilder(
                         builder: (context, setState) {
-                          bool isLoading = false;
-
+                          // bool isLoading = false;
                           return ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: CustomColor.secondaryColor,
@@ -579,167 +632,149 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
                               ),
                               elevation: 0,
                             ),
-                            onPressed: isLoading
-                                ? null
-                                : () async {
-                                    setState(() => isLoading = true);
+                            onPressed: () async {
+                              final result = await PasscodeService.requestPasscodeReset();
+                              if (mounted) {
+                                Get.back();
 
-                                    final result =
-                                        await PasscodeService.requestPasscodeReset();
-
-                                    setState(() => isLoading = false);
-
-                                    if (mounted) {
-                                      Get.back();
-
-                                      if (result['status']) {
-                                        Get.dialog(
-                                          Dialog(
-                                            backgroundColor: Colors.transparent,
-                                            elevation: 0,
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                color: Theme.of(context)
-                                                    .scaffoldBackgroundColor,
-                                                borderRadius:
-                                                    BorderRadius.circular(20),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black
-                                                        .withOpacity(0.1),
-                                                    blurRadius: 20,
-                                                    spreadRadius: 5,
-                                                  ),
-                                                ],
-                                              ),
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(24.0),
-                                                child: Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    // Success Icon
-                                                    Container(
-                                                      width: 80,
-                                                      height: 80,
-                                                      decoration:
-                                                          BoxDecoration(
-                                                        shape: BoxShape.circle,
-                                                        color: Colors.green
-                                                            .withOpacity(0.1),
-                                                      ),
-                                                      child: Icon(
-                                                        Icons.check_circle,
-                                                        size: 40,
-                                                        color: Colors.green,
-                                                      ),
-                                                    ),
-                                                    SizedBox(height: 24),
-                                                    Text(
-                                                      "Berhasil!",
-                                                      style: GoogleFonts.inter(
-                                                        fontSize: 20,
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                        color: Theme.of(context)
-                                                            .textTheme
-                                                            .titleLarge
-                                                            ?.color,
-                                                      ),
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                    ),
-                                                    SizedBox(height: 12),
-                                                    Text(
-                                                      result['message'] ??
-                                                          'Link reset passcode telah dikirim ke email Anda.',
-                                                      style: GoogleFonts.inter(
-                                                        fontSize: 14,
-                                                        fontWeight:
-                                                            FontWeight.w400,
-                                                        color: CustomColor
-                                                            .textThemeLightSoftColor,
-                                                        height: 1.5,
-                                                      ),
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                    ),
-                                                    SizedBox(height: 28),
-                                                    SizedBox(
-                                                      width: double.infinity,
-                                                      child: ElevatedButton(
-                                                        style:
-                                                            ElevatedButton.styleFrom(
-                                                          backgroundColor:
-                                                              CustomColor
-                                                                  .secondaryColor,
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .symmetric(
-                                                                  vertical: 14),
-                                                          shape:
-                                                              RoundedRectangleBorder(
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        12),
-                                                          ),
-                                                          elevation: 0,
-                                                        ),
-                                                        onPressed: () =>
-                                                            Get.back(),
-                                                        child: Text(
-                                                          "Tutup",
-                                                          style:
-                                                              GoogleFonts.inter(
-                                                            fontSize: 14,
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            color: Colors.white,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
+                                if (result['status']) {
+                                  Get.dialog(
+                                    Dialog(
+                                      backgroundColor: Colors.transparent,
+                                      elevation: 0,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context)
+                                              .scaffoldBackgroundColor,
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black
+                                                  .withOpacity(0.1),
+                                              blurRadius: 20,
+                                              spreadRadius: 5,
+                                            ),
+                                          ],
+                                        ),
+                                        child: Padding(
+                                          padding:
+                                              const EdgeInsets.all(24.0),
+                                          child: Column(
+                                            mainAxisSize:
+                                                MainAxisSize.min,
+                                            children: [
+                                              // Success Icon
+                                              Container(
+                                                width: 80,
+                                                height: 80,
+                                                decoration:
+                                                    BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  color: Colors.green
+                                                      .withOpacity(0.1),
+                                                ),
+                                                child: Icon(
+                                                  Icons.check_circle,
+                                                  size: 40,
+                                                  color: Colors.green,
                                                 ),
                                               ),
-                                            ),
+                                              SizedBox(height: 24),
+                                              Text(
+                                                "Berhasil!",
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 20,
+                                                  fontWeight:
+                                                      FontWeight.w700,
+                                                  color: Theme.of(context)
+                                                      .textTheme
+                                                      .titleLarge
+                                                      ?.color,
+                                                ),
+                                                textAlign:
+                                                    TextAlign.center,
+                                              ),
+                                              SizedBox(height: 12),
+                                              Text(
+                                                result['message'] ??
+                                                    'Link reset passcode telah dikirim ke email Anda.',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 14,
+                                                  fontWeight:
+                                                      FontWeight.w400,
+                                                  color: CustomColor
+                                                      .textThemeLightSoftColor,
+                                                  height: 1.5,
+                                                ),
+                                                textAlign:
+                                                    TextAlign.center,
+                                              ),
+                                              SizedBox(height: 28),
+                                              SizedBox(
+                                                width: double.infinity,
+                                                child: ElevatedButton(
+                                                  style:
+                                                      ElevatedButton.styleFrom(
+                                                    backgroundColor:
+                                                        CustomColor
+                                                            .secondaryColor,
+                                                    padding:
+                                                        const EdgeInsets
+                                                            .symmetric(
+                                                            vertical: 14),
+                                                    shape:
+                                                        RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius
+                                                              .circular(
+                                                                  12),
+                                                    ),
+                                                    elevation: 0,
+                                                  ),
+                                                  onPressed: () =>
+                                                      Get.back(),
+                                                  child: Text(
+                                                    "Tutup",
+                                                    style:
+                                                        GoogleFonts.inter(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          barrierDismissible: false,
-                                        );
-                                      } else {
-                                        Get.snackbar(
-                                          '❌ Gagal',
-                                          result['message'] ??
-                                              'Gagal mengirim request reset passcode.',
-                                          backgroundColor: Colors.red,
-                                          colorText: Colors.white,
-                                          duration:
-                                              const Duration(seconds: 3),
-                                        );
-                                      }
-                                    }
-                                  },
-                            child: isLoading
-                                ? SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
+                                        ),
                                       ),
                                     ),
-                                  )
-                                : Text(
-                                    "Ya, Reset Passcode",
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
-                                  ),
+                                    barrierDismissible: false,
+                                  );
+                                } else {
+                                  Get.snackbar(
+                                    '❌ Gagal',
+                                    result['message'] ??
+                                        'Gagal mengirim request reset passcode.',
+                                    backgroundColor: Colors.red,
+                                    colorText: Colors.white,
+                                    duration:
+                                        const Duration(seconds: 3),
+                                  );
+                                }
+                              }
+                            },
+                            child: Text(
+                              "Lanjutkan",
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black,
+                              ),
+                            ),
                           );
                         },
                       ),

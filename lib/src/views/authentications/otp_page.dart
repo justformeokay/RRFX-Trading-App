@@ -13,7 +13,6 @@ import 'package:rrfx/src/controllers/authentication.dart';
 import 'package:rrfx/src/controllers/home.dart';
 import 'package:rrfx/src/controllers/resend_otp_controller.dart';
 import 'package:rrfx/src/helpers/formatters/masking_email.dart';
-import 'package:rrfx/src/views/authentications/setup_passcode_page.dart';
 import 'package:rrfx/src/views/authentications/verification_account_page.dart';
 
 class OtpPage extends StatefulWidget {

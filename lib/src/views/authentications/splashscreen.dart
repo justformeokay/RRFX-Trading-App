@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
-import 'package:rrfx/src/service/passcode_service.dart';
 import 'package:rrfx/src/views/authentications/failed_version_app.dart';
+import 'package:rrfx/src/views/authentications/locked_page.dart';
 import 'package:rrfx/src/views/authentications/server_error_page.dart';
 import 'package:rrfx/src/views/authentications/setup_passcode_page.dart';
 import 'package:rrfx/src/views/authentications/verify_passcode_page.dart';
@@ -12,7 +12,6 @@ import 'package:rrfx/src/controllers/two_factory_auth.dart';
 import 'package:get/get.dart';
 import 'package:rrfx/src/controllers/home.dart';
 import 'package:rrfx/src/service/auth_service.dart';
-import 'package:rrfx/src/views/mainpage.dart';
 
 class Splashscreen extends StatefulWidget {
   const Splashscreen({super.key});
@@ -83,6 +82,17 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
       
       // Fetch profile dari API
       bool resultProfile = await homeController.profile();
+      
+      print("Result Profile: $resultProfile");
+      
+      // ✅ Check if account is locked
+      if (homeController.responseMessage.value == "Account Locked") {
+        Get.log("🔒 [SPLASH] Account is locked");
+        _finishTransition(() {
+          Get.offAll(() => const LockedPage());
+        });
+        return;
+      }
       
       if (!resultProfile) {
         Get.log("❌ [SPLASH] Failed to fetch profile");
