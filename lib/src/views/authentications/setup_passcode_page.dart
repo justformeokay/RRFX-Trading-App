@@ -89,12 +89,13 @@ class _SetupPasscodePageState extends State<SetupPasscodePage> with TickerProvid
                   controller.isConfirming.value
                       ? "Masukkan passcode yang sama untuk konfirmasi"
                       : "Passcode akan melindungi akun Anda",
+                  textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: CustomColor.textThemeLightSoftColor,
                   ),
                 )),
-                SizedBox(height: size.height * 0.08),
+                SizedBox(height: size.height * 0.06),
                 // Passcode dots dengan animasi
                 Obx(() {
                   final passcode = controller.isConfirming.value
@@ -150,7 +151,7 @@ class _SetupPasscodePageState extends State<SetupPasscodePage> with TickerProvid
                     }),
                   );
                 }),
-                SizedBox(height: size.height * 0.12),
+                SizedBox(height: size.height * 0.06),
                 // Keypad
                 Expanded(
                   child: Obx(() {
@@ -226,7 +227,7 @@ class _SetupPasscodePageState extends State<SetupPasscodePage> with TickerProvid
                               Text(
                                 'Aktifkan ${controller.biometricType.value}?',
                                 style: GoogleFonts.inter(
-                                  fontSize: 14,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: Theme.of(context).textTheme.titleLarge?.color,
                                 ),
@@ -235,7 +236,7 @@ class _SetupPasscodePageState extends State<SetupPasscodePage> with TickerProvid
                               Text(
                                 'Akses lebih cepat tanpa perlu memasukkan passcode',
                                 style: GoogleFonts.inter(
-                                  fontSize: 12,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.w400,
                                   color: CustomColor.textThemeLightSoftColor,
                                 ),
