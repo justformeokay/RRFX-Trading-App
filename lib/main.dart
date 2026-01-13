@@ -3,7 +3,6 @@ import 'package:flutter/services.dart'; // Import ini dibutuhkan untuk SystemChr
 import 'dart:io';
 import 'package:get/get.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:deriv_chart/generated/l10n.dart' as chart_l10n;
 import 'package:get_storage/get_storage.dart';
 import 'package:rrfx/src/controllers/network_controller.dart';
 import 'package:rrfx/src/controllers/theme_controller.dart';
@@ -19,19 +18,27 @@ import 'src/views/authentications/splashscreen.dart';
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 void main() async {
+  // Wajib pertama
   WidgetsFlutterBinding.ensureInitialized();
-  await GetStorage.init();
   
-  // ✅ Setup custom HTTP client untuk handle image loading dengan status code 300
+  // Inisialisasi Storage
+  try { await GetStorage.init(); } catch (e) { print(e); }
+  
+  // Custom HTTP
   HttpOverrides.global = _MyHttpOverrides();
   
-  // ✅ Initialize Firebase & Notifications
-  await initFirebaseAndNotifications();
+  // Firebase
+  try { await initFirebaseAndNotifications(); } catch (e) { print(e); }
   
   final themeController = Get.put(ThemeController());
 
+  // Inisialisasi DeepLink secara async
   final deepLinkService = DeepLinkService();
-  deepLinkService.init();
+  try {
+    await deepLinkService.init(); // Sekarang tidak akan error 'type void' lagi
+  } catch (e) {
+    print('DeepLink init warning: $e');
+  }
 
   runApp(MyApp(
     themeController: themeController,
@@ -105,7 +112,6 @@ class _MyAppState extends State<MyApp> {
           darkTheme: CustomTheme.defaultDarkTheme(),
           themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
           localizationsDelegates: const [
-            chart_l10n.ChartLocalization.delegate,
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,

@@ -20,6 +20,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rrfx/src/controllers/home.dart';
 import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/models/auth/personal_model.dart';
+import 'dart:async';
 
 class AuthController extends GetxController {
   RxBool isLoading = false.obs;
@@ -356,9 +357,21 @@ class AuthController extends GetxController {
 
   /// Send OTP WhatsApp API
   Future<Map<String, dynamic>> getVersionApp({String? version}) async {
-    String? appVersion = await DeviceUtilitiesController.getAppVersion();
+    String? appVersion = '1.0'; // Default fallback (format: major.minor)
+    
+    try {
+      // Add timeout untuk getAppVersion karena package_info_plus bisa hang
+      appVersion = await DeviceUtilitiesController.getAppVersion()
+          .timeout(const Duration(seconds: 5), onTimeout: () => '1.0');
+    } catch (e) {
+      print('⚠️ [AUTH] getAppVersion error: $e, using fallback version');
+      appVersion = '1.0';
+    }
+
     try {
       isLoading(true);
+      
+      // Add timeout untuk HTTP request
       http.Response response = await http.post(
         Uri.tryParse("${GlobalVariable.mainURL}/public/check-version")!,
         headers: {
@@ -366,7 +379,9 @@ class AuthController extends GetxController {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: {'version': appVersion, 'device': jsonEncode(deviceInfo)},
-      );
+      ).timeout(const Duration(seconds: 15), onTimeout: () {
+        throw TimeoutException('Version check timeout');
+      });
 
       isLoading(false);
 

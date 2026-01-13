@@ -17,24 +17,37 @@ class NetworkController extends GetxController {
     _checkConnection();
 
     // listen perubahan koneksi
-    Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
-      hasConnection.value = !results.contains(ConnectivityResult.none);
-      
-      // Cek network speed ketika ada perubahan koneksi
-      if (hasConnection.value) {
-        checkNetworkSpeed();
-      }
-    });
+    try {
+      Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+        hasConnection.value = !results.contains(ConnectivityResult.none);
+        
+        // Cek network speed ketika ada perubahan koneksi
+        if (hasConnection.value) {
+          checkNetworkSpeed();
+        }
+      });
+    } catch (e) {
+      print('⚠️ [NETWORK] Connectivity listener error: $e');
+      // Assume connected if listener fails
+      hasConnection.value = true;
+    }
   }
 
   Future<void> _checkConnection() async {
-    final results = await Connectivity().checkConnectivity();
-    hasConnection.value = !results.contains(ConnectivityResult.none);
-    
-    // Cek network speed setelah koneksi terdeteksi
-    if (hasConnection.value) {
-      await Future.delayed(const Duration(milliseconds: 500));
-      checkNetworkSpeed();
+    try {
+      final results = await Connectivity().checkConnectivity()
+          .timeout(const Duration(seconds: 5), onTimeout: () => [ConnectivityResult.wifi]);
+      hasConnection.value = !results.contains(ConnectivityResult.none);
+      
+      // Cek network speed setelah koneksi terdeteksi
+      if (hasConnection.value) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        checkNetworkSpeed();
+      }
+    } catch (e) {
+      print('⚠️ [NETWORK] Connection check error: $e');
+      // Assume connected if check fails
+      hasConnection.value = true;
     }
   }
 

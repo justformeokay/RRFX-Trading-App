@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 
 class CustomTheme{
@@ -34,15 +33,15 @@ class CustomTheme{
       brightness: Brightness.light,
       useMaterial3: true,
         textTheme: TextTheme(
-            bodyLarge: GoogleFonts.inter(color: Colors.black),
-          bodyMedium: GoogleFonts.inter(color: Colors.black54),
-          bodySmall: GoogleFonts.inter(color: Colors.black45),
-          titleLarge: GoogleFonts.inter(color: Colors.black),
-          titleMedium: GoogleFonts.inter(color: Colors.black54),
-          titleSmall: GoogleFonts.inter(color: Colors.black45),
-          displayLarge: GoogleFonts.inter(color: Colors.black),
-          displayMedium: GoogleFonts.inter(color: Colors.black54),
-          displaySmall: GoogleFonts.inter(color: Colors.black45),
+            bodyLarge: TextStyle(color: Colors.black, fontFamily: 'system'),
+          bodyMedium: TextStyle(color: Colors.black54, fontFamily: 'system'),
+          bodySmall: TextStyle(color: Colors.black45, fontFamily: 'system'),
+          titleLarge: TextStyle(color: Colors.black, fontFamily: 'system'),
+          titleMedium: TextStyle(color: Colors.black54, fontFamily: 'system'),
+          titleSmall: TextStyle(color: Colors.black45, fontFamily: 'system'),
+          displayLarge: TextStyle(color: Colors.black, fontFamily: 'system'),
+          displayMedium: TextStyle(color: Colors.black54, fontFamily: 'system'),
+          displaySmall: TextStyle(color: Colors.black45, fontFamily: 'system'),
         ),
       dividerTheme: defaultDividerThemeDark(),
       iconButtonTheme: defaultIconButtonThemeLight()
@@ -79,15 +78,15 @@ class CustomTheme{
       brightness: Brightness.dark,
       useMaterial3: true,
       textTheme: TextTheme(
-        bodyLarge: GoogleFonts.inter(color: Colors.white),
-        bodyMedium: GoogleFonts.inter(color: Colors.white70),
-        bodySmall: GoogleFonts.inter(color: Colors.white60),
-        titleLarge: GoogleFonts.inter(color: Colors.white),
-        titleMedium: GoogleFonts.inter(color: Colors.white70),
-        titleSmall: GoogleFonts.inter(color: Colors.white60),
-        displayLarge: GoogleFonts.inter(color: Colors.white),
-        displayMedium: GoogleFonts.inter(color: Colors.white70),
-        displaySmall: GoogleFonts.inter(color: Colors.white60),
+        bodyLarge: TextStyle(color: Colors.white, fontFamily: 'system'),
+        bodyMedium: TextStyle(color: Colors.white70, fontFamily: 'system'),
+        bodySmall: TextStyle(color: Colors.white60, fontFamily: 'system'),
+        titleLarge: TextStyle(color: Colors.white, fontFamily: 'system'),
+        titleMedium: TextStyle(color: Colors.white70, fontFamily: 'system'),
+        titleSmall: TextStyle(color: Colors.white60, fontFamily: 'system'),
+        displayLarge: TextStyle(color: Colors.white, fontFamily: 'system'),
+        displayMedium: TextStyle(color: Colors.white70, fontFamily: 'system'),
+        displaySmall: TextStyle(color: Colors.white60, fontFamily: 'system'),
       ),
       dividerTheme: defaultDividerThemeDark(),
       iconButtonTheme: defaultIconButtonThemeDark()
@@ -105,7 +104,7 @@ class CustomTheme{
       ),
       centerTitle: true,
       elevation: 0,
-      titleTextStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: CustomColor.textThemeLightColor),
+      titleTextStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: CustomColor.textThemeLightColor),
     );
   }
 
@@ -118,7 +117,7 @@ class CustomTheme{
       ),
       centerTitle: true,
       elevation: 0,
-      titleTextStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
+      titleTextStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
     );
   }
   // ======== End Appbar Theme Section ==========
@@ -170,7 +169,7 @@ class CustomTheme{
             borderRadius: BorderRadius.circular(12)
         ),
         iconColor: CustomColor.textThemeLightColor,
-        textStyle: GoogleFonts.inter(
+        textStyle: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.bold,
           color: CustomColor.backgroundLightColor
@@ -199,7 +198,7 @@ class CustomTheme{
     return SegmentedButtonThemeData(
       style: ButtonStyle(
         side: WidgetStatePropertyAll(BorderSide(color: CustomColor.secondaryColor)),
-        textStyle: WidgetStatePropertyAll(GoogleFonts.inter(color: CustomColor.textThemeDarkSoftColor)),
+        textStyle: WidgetStatePropertyAll(TextStyle(color: CustomColor.textThemeDarkSoftColor)),
         backgroundColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return CustomColor.backgroundIconSoftDark;
@@ -215,7 +214,7 @@ class CustomTheme{
     return SegmentedButtonThemeData(
       style: ButtonStyle(
         side: WidgetStatePropertyAll(BorderSide(color: CustomColor.secondaryColor)),
-        textStyle: WidgetStatePropertyAll(GoogleFonts.inter()),
+        textStyle: WidgetStatePropertyAll(TextStyle()),
         backgroundColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return CustomColor.backgroundIcon;

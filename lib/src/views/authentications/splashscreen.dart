@@ -48,16 +48,31 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
   }
 
   Future<void> _startAppFlow() async {
-    Map<String, dynamic> versionCheck = await authController.getVersionApp();
+    try {
+      print('🚀 [SPLASH] Starting app flow...');
+      
+      // Add timeout untuk keseluruhan splash flow
+      Map<String, dynamic> versionCheck = await authController.getVersionApp()
+          .timeout(const Duration(seconds: 30), onTimeout: () {
+        print('⏱️ [SPLASH] getVersionApp timeout, continue anyway');
+        return {
+          'success': true, // Continue ke next screen meski timeout
+          'isServerError': false,
+          'message': 'Version check timeout'
+        };
+      });
 
-    // Check if it's a server error
-    if (versionCheck['isServerError'] == true) {
-      _finishTransition(() {
-        Get.offAll(
-          () => ServerErrorPage(
-            onRetry: () {
-              Get.offAll(() => const Splashscreen());
-            },
+      print('📱 [SPLASH] Version check result: $versionCheck');
+
+      // Check if it's a server error
+      if (versionCheck['isServerError'] == true) {
+        print('❌ [SPLASH] Server error detected');
+        _finishTransition(() {
+          Get.offAll(
+            () => ServerErrorPage(
+              onRetry: () {
+                Get.offAll(() => const Splashscreen());
+              },
             errorMessage: versionCheck['message'],
           ),
         );
@@ -137,6 +152,14 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
     } else {
       // ✅ User belum login
       Get.log("📱 [SPLASH] User not logged in - Going to MainpageWithoutLogin");
+      _finishTransition(() {
+        Get.offAll(() => const MainpageWithoutLogin());
+      });
+    }
+    } catch (e, stacktrace) {
+      print('❌ [SPLASH] Error in _startAppFlow: $e');
+      print('Stack: $stacktrace');
+      // Default fallback ke login page
       _finishTransition(() {
         Get.offAll(() => const MainpageWithoutLogin());
       });

@@ -18,7 +18,7 @@ dependencies:
   permission_handler: ^12.0.0+1
   flutter_inappwebview: ^6.1.5
   icons_plus: ^5.0.0
-  google_fonts: ^6.2.1
+  google_fonts: ^6.2.1  # Disabled due to iOS platform channel issues
   intl: ^0.19.0
   syncfusion_flutter_charts: ^29.1.41
   web_socket_channel: ^3.0.3

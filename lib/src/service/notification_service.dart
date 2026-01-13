@@ -13,9 +13,14 @@ Future<void> firebaseBackgroundHandler(RemoteMessage message) async {
 }
 
 Future<void> initFirebaseAndNotifications() async {
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  FirebaseMessaging.onBackgroundMessage(firebaseBackgroundHandler);
+    FirebaseMessaging.onBackgroundMessage(firebaseBackgroundHandler);
+  } catch (e) {
+    print('❌ Firebase initialization error: $e');
+    return;
+  }
 
   const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
   final settings = InitializationSettings(android: androidSettings);
