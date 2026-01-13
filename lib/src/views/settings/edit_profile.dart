@@ -53,7 +53,31 @@ class _EditProfileState extends State<EditProfile> {
   RxString selectedDateBirth = "".obs;
   RxBool editingMode = false.obs;
   RxBool isLoading = false.obs;
+  RxBool isProfileComplete = false.obs;
   final _formKey = GlobalKey<FormState>();
+
+  // Check if all profile data is complete
+  void checkProfileCompleteness() {
+    final profile = userController.profileModel.value;
+    
+    bool isComplete = 
+      (profile?.name?.isNotEmpty ?? false) &&
+      (profile?.phone?.isNotEmpty ?? false) &&
+      (profile?.email?.isNotEmpty ?? false) &&
+      (profile?.gender?.isNotEmpty ?? false) &&
+      (profile?.tglLahir?.isNotEmpty ?? false) &&
+      (profile?.tglLahir != "0000-00-00") &&
+      (profile?.tmptLahir?.isNotEmpty ?? false) &&
+      (provinsiController.text.isNotEmpty) &&
+      (kabupatenController.text.isNotEmpty) &&
+      (kecamatanController.text.isNotEmpty) &&
+      (desaController.text.isNotEmpty) &&
+      (profile?.address?.isNotEmpty ?? false) &&
+      (profile?.country?.isNotEmpty ?? false) &&
+      (zipController.text.isNotEmpty);
+    
+    isProfileComplete.value = isComplete;
+  }
 
   void setUserPlace(){
     wilayahController.getProvinsi().then((resultProvince){
@@ -122,6 +146,8 @@ class _EditProfileState extends State<EditProfile> {
                 break;
               }
             }
+            // Check profile completeness after loading all location data
+            checkProfileCompleteness();
           });
         });
       });
@@ -204,6 +230,9 @@ class _EditProfileState extends State<EditProfile> {
     } else {
       editingMode(true);
     }
+    
+    // Check profile completeness after setting all controllers
+    checkProfileCompleteness();
   }
 
 
@@ -243,11 +272,14 @@ class _EditProfileState extends State<EditProfile> {
           title: "Edit Profilku",
           autoImplyLeading: true,
           actions: [
-            SizedBox(
-              height: 30,
-              child: Obx(
-                () => CustomOutlinedButton.defaultOutlinedButton(
-                  title: userController.isLoading.value ? "Processing..." : "Simpan",
+            Obx(
+              () => isProfileComplete.value 
+                ? SizedBox.shrink()
+                : SizedBox(
+                    height: 30,
+                    child: Obx(
+                      () => CustomOutlinedButton.defaultOutlinedButton(
+                        title: userController.isLoading.value ? "Processing..." : "Simpan",
                   onPressed: userController.isLoading.value ? null : () async {
                     if (_formKey.currentState!.validate()) {
                       if (jenisKelamin.text == "Laki-laki") jenisKelamin.text = "laki-laki";
@@ -297,7 +329,8 @@ class _EditProfileState extends State<EditProfile> {
                     }
                   }
                 ),
-              ),
+                    ),
+                  ),
             ),
             const SizedBox(width: 10)
           ]
@@ -329,15 +362,18 @@ class _EditProfileState extends State<EditProfile> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Form(
                 key: _formKey,
-                child: UtilitiesWidget.titleContent(
-                  title: "Edit Profile Saya",
-                  subtitle: "Mohon untuk penuhi semua field profile anda agar anda bisa melakukan pembuatan akun trading",
-                  children: [
+                child: Obx(
+                  () => UtilitiesWidget.titleContent(
+                    title: "Edit Profile Saya",
+                    subtitle: isProfileComplete.value 
+                        ? "✅ Profile Anda sudah lengkap! Semua data telah terisi dengan baik."
+                        : "Mohon untuk penuhi semua field profile anda agar anda bisa melakukan pembuatan akun trading",
+                    children: [
                     NameTextField(controller: nameController, fieldName: "Nama Lengkap", hintText: "Nama Lengkap Saya", labelText: "Nama Lengkap Saya", useValidator: false, readOnly: true),
                     EmailTextField(controller: emailController, fieldName: "Alamat Email", hintText: "Alamat Email", labelText: "Alamat Email", readOnly: true, useValidator: false, useCustomOnchange: false),
                     PhoneTextField(controller: phoneController, fieldName: "Nomor WhatsApp", hintText: "Nomor WhatsApp", labelText: "Nomor WhatsApp", useValidator: false, readOnly: true),
                     Obx(
-                      () => VoidTextField(controller: jenisKelamin, readOnly: editingMode.value ? false : jenisKelamin.text.isNotEmpty, useValidator: false, fieldName: "Jenis Kelamin", hintText: "Jenis Kelamin", labelText: "Jenis Kelamin", iconData: Bootstrap.gender_ambiguous, onPressed: () async {
+                      () => VoidTextField(controller: jenisKelamin, readOnly: isProfileComplete.value ? true : (editingMode.value ? false : jenisKelamin.text.isNotEmpty), useValidator: false, fieldName: "Jenis Kelamin", hintText: "Jenis Kelamin", labelText: "Jenis Kelamin", iconData: Bootstrap.gender_ambiguous, onPressed: isProfileComplete.value ? null : () async {
                         CustomMaterialBottomSheets.defaultBottomSheet(context, isScrolledController: false, size: size, title: "Pilih jenis kelamin", children: List.generate(2, (i){
                           if(i == 0){
                             return ListTile(
@@ -361,7 +397,7 @@ class _EditProfileState extends State<EditProfile> {
                     Obx(
                       () => VoidTextField(
                         iconData: Clarity.calendar_line,
-                        readOnly:  editingMode.value ? false : tanggalLahir.text.isNotEmpty,
+                        readOnly: isProfileComplete.value ? true : (editingMode.value ? false : tanggalLahir.text.isNotEmpty),
                         controller: tanggalLahir,
                         fieldName: "Tanggal Lahir",
                         hintText: "Tanggal Lahir",
@@ -376,7 +412,7 @@ class _EditProfileState extends State<EditProfile> {
                       ),
                     ),
 
-                    Obx(() => NameTextFieldNewVersion(controller: tempatLahir, readOnly: editingMode.value ? false : tempatLahir.text.isNotEmpty, fieldName: "Tempat Lahir", hintText: "Tempat Lahir", labelText: "Tempat Lahir", useValidator: true, iconData: CupertinoIcons.placemark)),
+                    Obx(() => NameTextFieldNewVersion(controller: tempatLahir, readOnly: isProfileComplete.value ? true : (editingMode.value ? false : tempatLahir.text.isNotEmpty), fieldName: "Tempat Lahir", hintText: "Tempat Lahir", labelText: "Tempat Lahir", useValidator: true, iconData: CupertinoIcons.placemark)),
                     Obx(
                       () => VoidTextField(
                         onPressed: wilayahController.isLoading.value || provinsiController.text.isNotEmpty  ? null : (){
@@ -392,7 +428,7 @@ class _EditProfileState extends State<EditProfile> {
                             );
                           }));
                         },
-                        controller: provinsiController, readOnly: provinsiController.text.isNotEmpty, fieldName: "Provinsi", hintText: "Provinsi", labelText: "Provinsi", iconData: CupertinoIcons.placemark),
+                        controller: provinsiController, readOnly: isProfileComplete.value ? true : provinsiController.text.isNotEmpty, fieldName: "Provinsi", hintText: "Provinsi", labelText: "Provinsi", iconData: CupertinoIcons.placemark),
                     ),
                     Obx(
                       () => VoidTextField(
@@ -409,7 +445,7 @@ class _EditProfileState extends State<EditProfile> {
                             );
                           }));
                         },
-                        controller: kabupatenController, readOnly: kabupatenController.text.isNotEmpty, fieldName: "Kabupaten", hintText: "Kabupaten", labelText: "Kabupaten", iconData: CupertinoIcons.placemark),
+                        controller: kabupatenController, readOnly: isProfileComplete.value ? true : kabupatenController.text.isNotEmpty, fieldName: "Kabupaten", hintText: "Kabupaten", labelText: "Kabupaten", iconData: CupertinoIcons.placemark),
                     ),
                     Obx(
                       () => VoidTextField(
@@ -426,7 +462,7 @@ class _EditProfileState extends State<EditProfile> {
                             );
                           }));
                         },
-                        controller: kecamatanController, readOnly: kecamatanController.text.isNotEmpty, fieldName: "Kecamatan", hintText: "Kecamatan", labelText: "Kecamatan", iconData: CupertinoIcons.placemark),
+                        controller: kecamatanController, readOnly: isProfileComplete.value ? true : kecamatanController.text.isNotEmpty, fieldName: "Kecamatan", hintText: "Kecamatan", labelText: "Kecamatan", iconData: CupertinoIcons.placemark),
                     ),
                     Obx(
                       () => VoidTextField(
@@ -443,10 +479,10 @@ class _EditProfileState extends State<EditProfile> {
                             );
                           }));
                         },
-                        controller: desaController, readOnly: desaController.text.isNotEmpty, fieldName: "Desa", hintText: "Desa", labelText: "Desa", iconData: CupertinoIcons.placemark),
+                        controller: desaController, readOnly: isProfileComplete.value ? true : desaController.text.isNotEmpty, fieldName: "Desa", hintText: "Desa", labelText: "Desa", iconData: CupertinoIcons.placemark),
                     ),
-                    Obx(() => DescriptiveTextField(controller: addressController, readOnly: editingMode.value ? false : addressController.text.isNotEmpty, fieldName: "Alamat Lengkap", hintText: "Alamat Lengkap Saya", labelText: "Alamat Lengkap Saya", useValidator: false, iconData: CupertinoIcons.placemark,)),
-                    Obx(() => NameTextField(controller: countryController, readOnly: editingMode.value ? false : countryController.text.isNotEmpty, fieldName: "Country", hintText: "Country", labelText: "Country", useValidator: false, iconData: Icons.flag_outlined)),
+                    Obx(() => DescriptiveTextField(controller: addressController, readOnly: isProfileComplete.value ? true : (editingMode.value ? false : addressController.text.isNotEmpty), fieldName: "Alamat Lengkap", hintText: "Alamat Lengkap Saya", labelText: "Alamat Lengkap Saya", useValidator: false, iconData: CupertinoIcons.placemark,)),
+                    Obx(() => NameTextField(controller: countryController, readOnly: isProfileComplete.value ? true : (editingMode.value ? false : countryController.text.isNotEmpty), fieldName: "Country", hintText: "Country", labelText: "Country", useValidator: false, iconData: Icons.flag_outlined)),
                     NumberTextField(readOnly: true, controller: zipController, fieldName: "Kode Pos", hintText: "Kode Pos", labelText: "Kode Pos", maxLength: 5, useValidator: false),
                     // SizedBox(
                     //   width: double.infinity,
@@ -460,6 +496,7 @@ class _EditProfileState extends State<EditProfile> {
                     const SizedBox(height: 40.0),
                   ]
                 ),
+                  ),
               )
             ),
           ),

@@ -289,7 +289,7 @@ class _CreateMT5PasswordPageState extends State<CreateMT5PasswordPage> {
                                 ? (isDark
                                     ? Colors.white38
                                     : Colors.black38)
-                                : (isDark ? Colors.black : Colors.white),
+                                : Colors.black,
                           ),
                         ),
                   ),

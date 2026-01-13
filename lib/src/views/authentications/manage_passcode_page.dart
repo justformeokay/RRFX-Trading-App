@@ -580,8 +580,8 @@ class _ManagePasscodePageState extends State<ManagePasscodePage>
               ),
               SizedBox(height: size.height * 0.06),
               // Biometric Section
-              if (passcodeController.biometricAvailable.value)
-                SlideTransition(
+              Obx(() => passcodeController.biometricAvailable.value
+                ? SlideTransition(
                   position: Tween<Offset>(
                     begin: const Offset(0, 0.3),
                     end: Offset.zero,
@@ -684,7 +684,9 @@ class _ManagePasscodePageState extends State<ManagePasscodePage>
                       ],
                     ),
                   ),
-                ),
+                )
+                : SizedBox.shrink(),
+              ),
             ],
           ),
         ),

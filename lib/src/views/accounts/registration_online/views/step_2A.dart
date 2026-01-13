@@ -165,21 +165,34 @@ class _ProductViewState extends State<ProductView> {
                                 print("Selected Komisi: ${controller.komisiSelected.value}");
                               },
                               child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                margin: const EdgeInsets.only(bottom: 10),
-                                padding: const EdgeInsets.all(16),
+                                duration: const Duration(milliseconds: 300),
+                                margin: const EdgeInsets.only(bottom: 16),
+                                padding: const EdgeInsets.all(18),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? CustomColor.secondaryColor.withOpacity(0.15) : (isDark ? Colors.grey[900] : Colors.white),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all( color: isSelected ? CustomColor.secondaryColor : Colors.transparent, width: 0.3),
-                                  boxShadow: [
-                                    if (!isDark)
-                                      BoxShadow(
-                                        color: Colors.black12,
-                                        blurRadius: 6,
-                                        offset: const Offset(2, 3),
-                                      ),
-                                  ],
+                                  gradient: isSelected
+                                      ? LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            CustomColor.secondaryColor.withOpacity(0.12),
+                                            CustomColor.secondaryColor.withOpacity(0.05),
+                                          ],
+                                        )
+                                      : LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            isDark ? Colors.grey[850]! : Colors.white,
+                                            isDark ? Colors.grey[800]! : Colors.grey[50]!,
+                                          ],
+                                        ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? CustomColor.secondaryColor.withOpacity(0.6)
+                                        : Colors.grey.withOpacity(0.2),
+                                    width: isSelected ? 2.5 : 1.5,
+                                  ),
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,36 +208,42 @@ class _ProductViewState extends State<ProductView> {
                                             style: TextStyle(
                                               fontWeight:
                                                   FontWeight.bold,
-                                              fontSize: 16,
+                                              fontSize: 18,
                                               color: isSelected
                                                   ? CustomColor
                                                       .secondaryColor
                                                   : (isDark
                                                       ? Colors.white
-                                                      : Colors.black),
+                                                      : Colors.black87),
                                             ),
                                             overflow:
                                                 TextOverflow.ellipsis,
                                           ),
                                         ),
                                         if (isSelected)
-                                          const Icon(
-                                            Icons.check_circle,
-                                            color:
-                                                CustomColor.secondaryColor,
-                                            size: 22,
+                                          Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(
+                                              color: CustomColor.secondaryColor,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Iconsax.verify_bold,
+                                              color: Colors.white,
+                                              size: 18,
+                                            ),
                                           ),
                                       ],
                                     ),
-                                    const SizedBox(height: 8),
-                                    _infoRow("Rate", product.rate, MingCute.exchange_dollar_line),
-                                    _infoRow("Currency", product.currency, Bootstrap.currency_exchange),
-                                    _infoRow("Komisi", product.komisi, Clarity.dollar_bill_line),
-                                    _infoRow("Leverage", product.leverage, MingCute.trending_up_line),
-                                    _infoRow("Free Swap", product.freeswap, MingCute.space_line),
-                                    _infoRow("Spread", product.spread, MingCute.wave_line),
-                                    _infoRow("Min Deposit", product.minimumDeposit, MingCute.currency_dollar_2_line),
-                                    _infoRow("Min Trade", product.minimumTrade, MingCute.coin_line),
+                                    const SizedBox(height: 14),
+                                    _infoRow("Rate", product.rate, Iconsax.dollar_circle_outline),
+                                    _infoRow("Currency", product.currency, Iconsax.global_outline),
+                                    _infoRow("Komisi", product.komisi, Iconsax.money_2_outline),
+                                    _infoRow("Leverage", "1:${product.leverage}", Iconsax.arrow_up_3_outline),
+                                    _infoRow("Free Swap", product.freeswap, Iconsax.flash_1_outline),
+                                    _infoRow("Spread", product.spread, Iconsax.activity_outline),
+                                    _infoRow("Min Deposit", product.minimumDeposit, Iconsax.wallet_add_outline),
+                                    _infoRow("Min Trade", product.minimumTrade, Iconsax.box_tick_outline),
                                   ],
                                 ),
                               ),
@@ -349,11 +368,11 @@ class _ProductViewState extends State<ProductView> {
 
   Widget _infoRow(String label, String value, IconData icon) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: CustomColor.secondaryColor),
-          const SizedBox(width: 10),
+          Icon(icon, size: 22, color: CustomColor.secondaryColor),
+          const SizedBox(width: 12),
           Expanded(
             flex: 3,
             child: Text(
@@ -361,6 +380,7 @@ class _ProductViewState extends State<ProductView> {
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
+                color: Colors.grey,
               ),
             ),
           ),
@@ -369,7 +389,11 @@ class _ProductViewState extends State<ProductView> {
             child: Text(
               value,
               textAlign: TextAlign.end,
-              style: const TextStyle(fontSize: 14),
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+              ),
             ),
           ),
         ],

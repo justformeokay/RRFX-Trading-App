@@ -7,7 +7,6 @@ import 'package:rrfx/src/views/authentications/setup_passcode_page.dart';
 import 'package:rrfx/src/views/authentications/verify_passcode_page.dart';
 import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:rrfx/src/components/alerts/default.dart';
 import 'package:rrfx/src/controllers/two_factory_auth.dart';
 import 'package:get/get.dart';
 import 'package:rrfx/src/controllers/home.dart';
@@ -97,13 +96,7 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
       if (!resultProfile) {
         Get.log("❌ [SPLASH] Failed to fetch profile");
         _finishTransition(() {
-          CustomAlert.alertError(
-            context,
-            message: homeController.responseMessage.value,
-            onTap: () {
-              Get.offAll(() => const MainpageWithoutLogin());
-            },
-          );
+          Get.offAll(() => const MainpageWithoutLogin());
         });
         return;
       }

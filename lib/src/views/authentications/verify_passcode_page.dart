@@ -106,61 +106,61 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
                 ),
                 SizedBox(height: 16),
                 // Biometric Button
-                Obx(() {
-                  if (controller.isBiometricEnabled.value && controller.biometricAvailable.value) {
-                    return Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            CustomColor.secondaryColor.withOpacity(0.1),
-                            CustomColor.secondaryColor.withOpacity(0.05),
-                          ],
-                        ),
-                        border: Border.all(
-                          color: CustomColor.secondaryColor.withOpacity(0.3),
-                          width: 2,
-                        ),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: controller.isLoading.value
-                              ? null
-                              : () async {
-                                  final success = await controller.authenticateWithBiometric();
-                                  if (success) {
-                                    Get.offAll(() => Mainpage());
-                                  }
-                                },
-                          customBorder: const CircleBorder(),
-                          child: controller.isLoading.value
-                              ? Center(
-                                  child: SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                          CustomColor.secondaryColor),
-                                    ),
-                                  ),
-                                )
-                              : Icon(
-                                  Icons.fingerprint_rounded,
-                                  color: CustomColor.secondaryColor,
-                                  size: 32,
-                                ),
-                        ),
-                      ),
-                    );
-                  }
-                  return SizedBox.shrink();
-                }),
+                // Obx(() {
+                //   if (controller.isBiometricEnabled.value && controller.biometricAvailable.value) {
+                //     return Container(
+                //       width: 60,
+                //       height: 60,
+                //       decoration: BoxDecoration(
+                //         shape: BoxShape.circle,
+                //         gradient: LinearGradient(
+                //           begin: Alignment.topLeft,
+                //           end: Alignment.bottomRight,
+                //           colors: [
+                //             CustomColor.secondaryColor.withOpacity(0.1),
+                //             CustomColor.secondaryColor.withOpacity(0.05),
+                //           ],
+                //         ),
+                //         border: Border.all(
+                //           color: CustomColor.secondaryColor.withOpacity(0.3),
+                //           width: 2,
+                //         ),
+                //       ),
+                //       child: Material(
+                //         color: Colors.transparent,
+                //         child: InkWell(
+                //           onTap: controller.isLoading.value
+                //               ? null
+                //               : () async {
+                //                   final success = await controller.authenticateWithBiometric();
+                //                   if (success) {
+                //                     Get.offAll(() => Mainpage());
+                //                   }
+                //                 },
+                //           customBorder: const CircleBorder(),
+                //           child: controller.isLoading.value
+                //               ? Center(
+                //                   child: SizedBox(
+                //                     width: 24,
+                //                     height: 24,
+                //                     child: CircularProgressIndicator(
+                //                       strokeWidth: 2,
+                //                       valueColor: AlwaysStoppedAnimation<Color>(
+                //                           CustomColor.secondaryColor),
+                //                     ),
+                //                   ),
+                //                 )
+                //               : Icon(
+                //                   Icons.fingerprint_rounded,
+                //                   color: CustomColor.secondaryColor,
+                //                   size: 32,
+                //                 ),
+                //         ),
+                //       ),
+                //     );
+                //   }
+                //   return SizedBox.shrink();
+                // }),
                 SizedBox(height: size.height * 0.06),
                 // Passcode dots dengan animasi
                 Obx(() {
@@ -327,7 +327,7 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
                       ],
                   );
                 }),
-                SizedBox(height: 10),
+                SizedBox(height: 32),
                 // Submit button
                 Obx(() {
                   final passcode = controller.enteredPasscode.value;

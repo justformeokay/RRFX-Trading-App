@@ -2,7 +2,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:intl/intl.dart';
@@ -27,464 +26,6 @@ import 'package:rrfx/src/views/accounts/registration_online/controllers/statemen
 import 'package:rrfx/src/views/accounts/registration_online/controllers/step_controller.dart';
 import 'package:rrfx/src/views/accounts/registration_online/repository/regol_repository.dart';
 import 'package:rrfx/src/views/accounts/registration_online/views/step_5.dart';
-
-// class Step4 extends StatefulWidget {
-//   const Step4({super.key});
-
-//   @override
-//   State<Step4> createState() => _Step4State();
-// }
-
-// class _Step4State extends State<Step4> {
-//   final _formKey = GlobalKey<FormState>();
-
-//   /// controller data diri
-//   final nameCtrl = TextEditingController();
-//   final tempatLahirCtrl = TextEditingController();
-//   final tanggalLahirCtrl = TextEditingController();
-
-//   /// controller alamat
-//   final provinsi = TextEditingController();
-//   final kabupaten = TextEditingController();
-//   final kecamatan = TextEditingController();
-//   final desa = TextEditingController();
-//   final kodePos = TextEditingController();
-//   final alamat = TextEditingController();
-//   final rt = TextEditingController();
-//   final rw = TextEditingController();
-
-//   /// controller identitas
-//   final nikCtrl = TextEditingController();
-//   final tipeIdentitasCtrl = TextEditingController();
-
-//   /// GetX
-//   final wilayah = Get.put(WilayahController());
-//   final regol = Get.put(RegolController());
-//   final statement = Get.put(StatementController());
-//   final _regolRepository = Get.find<RegolRepository>();
-//   final progressCtrl = Get.put(ProgressAccountController());
-//   final stepCtrl = Get.put(StepController());
-//   final homeCtrl = Get.put(HomeController());
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     _initData();
-//   }
-
-//   /// 🔥 Inisialisasi data awal lebih singkat & rapi
-//   Future<void> _initData() async {
-//     await progressCtrl.fetchProgressAccount();
-//     await homeCtrl.profile();
-
-//     // Prefill dari API
-//     _fillFormWithExistingData();
-
-//     // Load provinsi
-//     await wilayah.getProvinsi();
-//   }
-
-//   void _fillFormWithExistingData() {
-//     final data = progressCtrl.progressData.value?.response;
-
-//     nameCtrl.text = homeCtrl.profileModel.value?.name ?? '';
-//     tempatLahirCtrl.text = data?.placeOfBirth ?? "";
-//     alamat.text = data?.address ?? "";
-
-//     final birth = data?.dateOfBirth;
-//     if (birth != null) {
-//       final d = DateFormat("yyyy-MM-dd").parse(birth);
-//       tanggalLahirCtrl.text = DateFormat("EEEE, dd MMMM yyyy", "id_ID").format(d);
-//     }
-
-//     tipeIdentitasCtrl.text = data?.idType ?? "";
-//     nikCtrl.text = data?.idNumber ?? "";
-
-//     provinsi.text = data?.province ?? "";
-//     kabupaten.text = data?.city ?? "";
-//     kecamatan.text = data?.district ?? "";
-//     desa.text = data?.village ?? "";
-//     kodePos.text = data?.postalCode ?? "";
-//   }
-
-//   @override
-//   void dispose() {
-//     nameCtrl.dispose();
-//     tempatLahirCtrl.dispose();
-//     tanggalLahirCtrl.dispose();
-//     provinsi.dispose();
-//     kabupaten.dispose();
-//     kecamatan.dispose();
-//     desa.dispose();
-//     kodePos.dispose();
-//     alamat.dispose();
-//     nikCtrl.dispose();
-//     tipeIdentitasCtrl.dispose();
-//     super.dispose();
-//   }
-
-//   // ============================================================
-//   // ===================   BUILD UI   ===========================
-//   // ============================================================
-
-//   @override
-//   Widget build(BuildContext context) {
-//     final theme = Theme.of(context);
-
-//     return Scaffold(
-//       backgroundColor: theme.colorScheme.surface,
-//       appBar: AppBar(
-//         forceMaterialTransparency: true,
-//         title: Text(
-//           "Step 4",
-//           style: GoogleFonts.openSans(
-//             textStyle: TextStyle(
-//               color: theme.colorScheme.onSurface,
-//               fontSize: 18,
-//               fontWeight: FontWeight.w600,
-//             ),
-//           ),
-//         ),
-//         elevation: 1,
-//         iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
-//       ),
-//       body: Form(
-//         key: _formKey,
-//         child: SingleChildScrollView(
-//           padding: const EdgeInsets.all(20),
-//           child: Column(
-//             crossAxisAlignment: CrossAxisAlignment.start,
-//             children: [
-//               _sectionTitle("Informasi Pribadi"),
-//               _field(nameCtrl, "Nama Lengkap", true, Icons.person_outline),
-//               _field(tempatLahirCtrl, "Tempat Lahir", true, Icons.place_outlined),
-//               _tanggalPicker(),
-
-//               const SizedBox(height: 26),
-//               _sectionTitle("Alamat Domisili"),
-//               _wilayahSection(),
-
-//               const SizedBox(height: 26),
-//               _sectionTitle("Informasi Identitas"),
-//               _tipeIdentitasSelector(),
-//               _nikField(),
-
-//               const SizedBox(height: 26),
-//               _sectionTitle("Pernyataan"),
-//               _statementCheck(),
-
-//               const SizedBox(height: 26),
-//               _nextButton(),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-
-//   // ============================================================
-//   // =====================  SECTIONS  ===========================
-//   // ============================================================
-
-//   Widget _sectionTitle(String title) => Text(
-//         title,
-//         style: Get.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-//       );
-
-//   // ----------------- FIELD GENERIC --------------------
-
-//   Widget _field(TextEditingController c, String label, bool required, IconData icon) {
-//     return VoidTextField(
-//       controller: c,
-//       requiredField: required,
-//       labelText: label,
-//       iconData: icon,
-//       hintText: label,
-//       fieldName: label,
-//     );
-//   }
-
-//   // ----------------- TANGGAL LAHIR --------------------
-
-//   Widget _tanggalPicker() {
-//     return VoidTextField(
-//       controller: tanggalLahirCtrl,
-//       requiredField: true,
-//       readOnly: true,
-//       labelText: "Tanggal Lahir",
-//       iconData: Icons.calendar_month_outlined,
-//       onPressed: () async {
-//         final DateTime? picked = await showDatePicker(
-//           context: context,
-//           initialDate: DateTime(2000),
-//           firstDate: DateTime(1950),
-//           lastDate: DateTime.now(),
-//         );
-
-//         if (picked != null) {
-//           tanggalLahirCtrl.text =
-//               DateFormat("EEEE, dd MMMM yyyy", "id_ID").format(picked);
-//         }
-//       },
-//     );
-//   }
-
-//   // ============================================================
-//   // =====================  WILAYAH SECTION =====================
-//   // ============================================================
-
-//   Widget _wilayahSection() {
-//     return Column(
-//       children: [
-//         _wilayahPicker(
-//           label: "Provinsi",
-//           controller: provinsi,
-//           list: wilayah.listProvinsiModel.value?.response,
-//           canTap: true,
-//           onSelected: (item) async {
-//             wilayah.selectedProvince.value = item;
-//             _resetKabupaten();
-//             await wilayah.getKabupatenKota();
-//           },
-//         ),
-
-//         _wilayahPicker(
-//           label: "Kabupaten",
-//           controller: kabupaten,
-//           list: wilayah.listKotaModel.value?.response,
-//           canTap: wilayah.hasProvince,
-//           onSelected: (item) async {
-//             wilayah.selectedCity.value = item;
-//             _resetKecamatan();
-//             await wilayah.getKecamatan();
-//           },
-//         ),
-
-//         _wilayahPicker(
-//           label: "Kecamatan",
-//           controller: kecamatan,
-//           list: wilayah.listKecamatanModel.value?.response,
-//           canTap: wilayah.hasCity,
-//           onSelected: (item) async {
-//             wilayah.selectedDistrict.value = item;
-//             _resetDesa();
-//             await wilayah.getDesa();
-//           },
-//         ),
-
-//         _wilayahPicker(
-//           label: "Desa",
-//           controller: desa,
-//           list: wilayah.listDesaModel.value?.response,
-//           canTap: wilayah.hasDistrict,
-//           onSelected: (item) {
-//             wilayah.selectedSubDistrict.value = item;
-//             kodePos.text = item.postalCode ?? "";
-//           },
-//         ),
-
-//         _field(kodePos, "Kode POS", true, Icons.local_post_office_outlined),
-//         _field(alamat, "Alamat Lengkap", true, Icons.home_outlined),
-//       ],
-//     );
-//   }
-
-//   // Reset wilayah anak
-//   void _resetKabupaten() {
-//     kabupaten.clear();
-//     kecamatan.clear();
-//     desa.clear();
-//     kodePos.clear();
-//     wilayah.resetCity();
-//   }
-
-//   void _resetKecamatan() {
-//     kecamatan.clear();
-//     desa.clear();
-//     kodePos.clear();
-//     wilayah.resetDistrict();
-//   }
-
-//   void _resetDesa() {
-//     desa.clear();
-//     kodePos.clear();
-//     wilayah.resetSubDistrict();
-//   }
-
-//   // ============================================================
-//   // ====================  PICKER WILAYAH =======================
-//   // ============================================================
-
-//   Widget _wilayahPicker({
-//     required String label,
-//     required TextEditingController controller,
-//     required List<dynamic>? list,
-//     required bool canTap,
-//     required Function(dynamic item) onSelected,
-//   }) {
-//     return VoidTextField(
-//       controller: controller,
-//       requiredField: true,
-//       readOnly: !canTap,
-//       labelText: label,
-//       hintText: label,
-//       iconData: Icons.location_on_outlined,
-//       onPressed: !canTap
-//           ? null
-//           : () {
-//               CustomMaterialBottomSheets.defaultBottomSheet(
-//                 context,
-//                 size: MediaQuery.of(context).size,
-//                 title: "Pilih $label",
-//                 children: List.generate(list?.length ?? 0, (i) {
-//                   final item = list![i];
-//                   return ListTile(
-//                     leading: const Icon(Icons.location_city_outlined),
-//                     title: Text(item.name ?? "-"),
-//                     onTap: () {
-//                       Navigator.pop(context);
-//                       controller.text = item.name;
-//                       onSelected(item);
-//                     },
-//                   );
-//                 }),
-//               );
-//             },
-//     );
-//   }
-
-//   // ============================================================
-//   // ==================== IDENTITAS SECTION =====================
-//   // ============================================================
-
-//   Widget _tipeIdentitasSelector() {
-//     return VoidTextField(
-//       controller: tipeIdentitasCtrl,
-//       requiredField: true,
-//       readOnly: true,
-//       labelText: "Tipe Identitas",
-//       hintText: "Pilih tipe identitas",
-//       iconData: Icons.badge_outlined,
-//       onPressed: () {
-//         CustomMaterialBottomSheets.defaultBottomSheet(
-//           context,
-//           title: "Pilih Tipe Identitas",
-//           children: [
-//             _identityTile("KTP", 16),
-//             _identityTile("PASSPORT", 9),
-//             _identityTile("KITAS", 20),
-//           ],
-//         );
-//       },
-//     );
-//   }
-
-//   Widget _identityTile(String label, int maxLen) {
-//     return ListTile(
-//       title: Text(label),
-//       onTap: () {
-//         tipeIdentitasCtrl.text = label;
-//         nikCtrl.text = "";
-//         nikCtrl.selection = TextSelection.collapsed(offset: 0);
-//         Navigator.pop(context);
-//       },
-//     );
-//   }
-
-//   Widget _nikField() {
-//     return VoidTextField(
-//       controller: nikCtrl,
-//       requiredField: true,
-//       labelText: "Nomor Identitas",
-//       hintText: "Isi nomor sesuai identitas",
-//       iconData: Icons.credit_card_outlined,
-//     );
-//   }
-
-//   // ============================================================
-//   // ================ PERNYATAAN SETUJU =========================
-//   // ============================================================
-
-//   Widget _statementCheck() {
-//     return Obx(() {
-//       return CheckboxListTile(
-//         value: statement.selectedStatement.value,
-//         onChanged: (v) => statement.selectedStatement.value = v ?? false,
-//         title: const Text("Saya menyatakan bahwa data yang saya isi benar."),
-//         controlAffinity: ListTileControlAffinity.leading,
-//       );
-//     });
-//   }
-
-//   // ============================================================
-//   // ======================= NEXT BUTTON =========================
-//   // ============================================================
-
-//   Widget _nextButton() {
-//     return Obx(() {
-//       final loading = regol.isLoading.value;
-
-//       return SizedBox(
-//         width: double.infinity,
-//         child: ElevatedButton(
-//           onPressed: loading ? null : _submit,
-//           style: ElevatedButton.styleFrom(
-//             padding: const EdgeInsets.symmetric(vertical: 14),
-//             backgroundColor: loading ? Colors.grey : Colors.blue,
-//           ),
-//           child: loading
-//               ? const CircularProgressIndicator(color: Colors.white)
-//               : const Text(
-//                   "Lanjut Ke Langkah 5",
-//                   style: TextStyle(fontWeight: FontWeight.w600),
-//                 ),
-//         ),
-//       );
-//     });
-//   }
-
-//   // ============================================================
-//   // ======================   SUBMIT   ==========================
-//   // ============================================================
-
-//   Future<void> _submit() async {
-//     if (!_formKey.currentState!.validate()) {
-//       AppSnackbar.error("Harap isi semua field wajib!");
-//       return;
-//     }
-
-//     if (!statement.selectedStatement.value) {
-//       AppSnackbar.error("Anda harus menyetujui pernyataan.");
-//       return;
-//     }
-
-//     final birth = DateFormat("yyyy-MM-dd").format(
-//       DateFormat("EEEE, dd MMMM yyyy", "id_ID").parse(tanggalLahirCtrl.text),
-//     );
-
-//     final res = await _regolRepository.step4(
-//       alamatRumah: alamat.text,
-//       desa: desa.text,
-//       kabupatenKota: kabupaten.text,
-//       kecamatan: kecamatan.text,
-//       kodePos: kodePos.text,
-//       namaLengkap: nameCtrl.text,
-//       nomorIdentitas: nikCtrl.text,
-//       provinsi: provinsi.text,
-//       rt: rt.text,
-//       rw: rw.text,
-//       tempatLahir: tempatLahirCtrl.text,
-//       tanggalLahir: tanggalLahirCtrl.text, // gunakan yang sudah diformat
-//       tipeIdentitas: tipeIdentitasCtrl.text
-//     );
-
-//     if (res) {
-//       Get.to(() => const Step5());
-//     }
-//   }
-// }
-
-
 
 class Step4 extends StatefulWidget {
   const Step4({super.key});
@@ -533,6 +74,12 @@ class _Step4State extends State<Step4> {
   RxBool selectedStatement = true.obs;
   RxBool imageLoaded = false.obs;
 
+  // Loading states for cascading dropdowns
+  RxBool provinsiLoading = true.obs;
+  RxBool kabupatenLoading = false.obs;
+  RxBool kecamatanLoading = false.obs;
+  RxBool desaLoading = false.obs;
+
   @override
 void initState() {
   super.initState();
@@ -578,6 +125,8 @@ void initState() {
       if (!resultProvince) {
         CustomScaffoldMessanger.showAppSnackBar(context, message: wilayahController.responseMessage.value, type: SnackBarType.error);
       }
+      // Enable provinsi field ketika data sudah didapat
+      provinsiLoading.value = false;
     });
     await controller.fetchAccounts();
     if (controller.accounts.isEmpty) {
@@ -696,100 +245,153 @@ void initState() {
                   const SizedBox(height: 10.0),
                   // Province
                   Obx(
-                    () => VoidTextField(requiredField: true, controller: provinsi, readOnly: false, fieldName: "Provinsi", hintText: "Provinsi", labelText: "Provinsi", iconData: Clarity.map_line, onPressed: wilayahController.isLoading.value ? null :(){
-                      CustomMaterialBottomSheets.defaultBottomSheet(context, size: size, title: "Pilih Provinsi Anda", children: List.generate(wilayahController.listProvinsiModel.value?.response?.length ?? 0, (i){
-                        return ListTile(
-                          leading: Icon(Icons.location_city_outlined, color: CustomColor.textThemeDarkSoftColor),
-                          title: Text(wilayahController.listProvinsiModel.value?.response?[i].name ?? "-"),
-                          onTap: (){
-                            wilayahController.selectedCity.value = '';
-                            wilayahController.selectedDistrict.value = '';
-                            wilayahController.selectedSubDistrict.value = '';
-                            kabupatenKota.clear();
-                            kecamatan.clear();
-                            desa.clear();
-                            kodePos.clear();
-                            Navigator.pop(context);
-                            provinsi.text = wilayahController.listProvinsiModel.value?.response?[i].name ?? "-";
-                            wilayahController.selectedProvince.value = provinsi.text;
-                            wilayahController.getKabupatenKota();
-                          },
-                        );
-                      }));
-                    }),
+                    () => VoidTextField(
+                      requiredField: true, 
+                      controller: provinsi, 
+                      readOnly: provinsiLoading.value, 
+                      fieldName: "Provinsi", 
+                      hintText: provinsiLoading.value ? "Memuat data..." : "Provinsi", 
+                      labelText: "Provinsi", 
+                      iconData: Clarity.map_line, 
+                      onPressed: provinsiLoading.value ? null : () {
+                        CustomMaterialBottomSheets.defaultBottomSheet(context, size: size, title: "Pilih Provinsi Anda", children: List.generate(wilayahController.listProvinsiModel.value?.response?.length ?? 0, (i){
+                          return ListTile(
+                            leading: Icon(Icons.location_city_outlined, color: CustomColor.textThemeDarkSoftColor),
+                            title: Text(wilayahController.listProvinsiModel.value?.response?[i].name ?? "-"),
+                            onTap: (){
+                              wilayahController.selectedCity.value = '';
+                              wilayahController.selectedDistrict.value = '';
+                              wilayahController.selectedSubDistrict.value = '';
+                              kabupatenKota.clear();
+                              kecamatan.clear();
+                              desa.clear();
+                              kodePos.clear();
+                              Navigator.pop(context);
+                              provinsi.text = wilayahController.listProvinsiModel.value?.response?[i].name ?? "-";
+                              wilayahController.selectedProvince.value = provinsi.text;
+                              
+                              // Enable kabupaten dan start loading
+                              kabupatenLoading.value = true;
+                              wilayahController.getKabupatenKota().then((_) {
+                                kabupatenLoading.value = false;
+                              });
+                            },
+                          );
+                        }));
+                      },
+                    ),
                   ),
               
                   // Kabupaten
                   Obx(
-                    () => VoidTextField(requiredField: true, controller: kabupatenKota, readOnly: wilayahController.selectedProvince.value == "" ? true : false, fieldName: "Kabupaten", hintText: "Kabupaten", labelText: "Kabupaten", iconData: Clarity.map_line, onPressed: wilayahController.isLoading.value ? null : (){
-                      if(wilayahController.selectedProvince.value == ''){
-                        CustomScaffoldMessanger.showAppSnackBar(context, message: "Mohon pilih Provinsi terlebih dahulu");
-                        return;
-                      }
-                      CustomMaterialBottomSheets.defaultBottomSheet(context, size: size, title: "Pilih Kabupaten Anda", children: List.generate(wilayahController.listKotaModel.value?.response?.length ?? 0, (i){
-                        return ListTile(
-                          leading: Icon(Icons.location_city_outlined, color: CustomColor.textThemeDarkSoftColor),
-                          title: Text(wilayahController.listKotaModel.value?.response?[i].name ?? "-"),
-                          onTap: (){
-                            wilayahController.selectedDistrict.value = '';
-                            wilayahController.selectedSubDistrict.value = '';
-                            kecamatan.clear();
-                            desa.clear();
-                            kodePos.clear();
-                            Navigator.pop(context);
-                            kabupatenKota.text = wilayahController.listKotaModel.value?.response?[i].name ?? "-";
-                            wilayahController.selectedCity.value = kabupatenKota.text;
-                            wilayahController.getKecamatan();
-                          },
-                        );
-                      }));
-                    }),
+                    () => VoidTextField(
+                      requiredField: true, 
+                      controller: kabupatenKota, 
+                      readOnly: kabupatenLoading.value || wilayahController.selectedProvince.value == "", 
+                      fieldName: "Kabupaten", 
+                      hintText: kabupatenLoading.value ? "Memuat data..." : "Kabupaten", 
+                      labelText: "Kabupaten", 
+                      iconData: Clarity.map_line, 
+                      onPressed: (kabupatenLoading.value || wilayahController.selectedProvince.value == "") ? null : () {
+                        if(wilayahController.selectedProvince.value == ''){
+                          CustomScaffoldMessanger.showAppSnackBar(context, message: "Mohon pilih Provinsi terlebih dahulu");
+                          return;
+                        }
+                        CustomMaterialBottomSheets.defaultBottomSheet(context, size: size, title: "Pilih Kabupaten Anda", children: List.generate(wilayahController.listKotaModel.value?.response?.length ?? 0, (i){
+                          return ListTile(
+                            leading: Icon(Icons.location_city_outlined, color: CustomColor.textThemeDarkSoftColor),
+                            title: Text(wilayahController.listKotaModel.value?.response?[i].name ?? "-"),
+                            onTap: (){
+                              wilayahController.selectedDistrict.value = '';
+                              wilayahController.selectedSubDistrict.value = '';
+                              kecamatan.clear();
+                              desa.clear();
+                              kodePos.clear();
+                              Navigator.pop(context);
+                              kabupatenKota.text = wilayahController.listKotaModel.value?.response?[i].name ?? "-";
+                              wilayahController.selectedCity.value = kabupatenKota.text;
+                              
+                              // Enable kecamatan dan start loading
+                              kecamatanLoading.value = true;
+                              wilayahController.getKecamatan().then((_) {
+                                kecamatanLoading.value = false;
+                              });
+                            },
+                          );
+                        }));
+                      },
+                    ),
                   ),
               
                   // Kecamatan
                   Obx(
-                    () => VoidTextField(requiredField: true, controller: kecamatan, readOnly: wilayahController.selectedCity.value == "" ? true : false, fieldName: "Kecamatan", hintText: "Kecamatan", labelText: "Kecamatan", iconData: Clarity.map_line, onPressed: wilayahController.isLoading.value ? null : (){
-                      if(wilayahController.selectedCity.value == ''){
-                        CustomScaffoldMessanger.showAppSnackBar(context, message: "Mohon pilih Kabupaten terlebih dahulu");
-                        return;
-                      }
-                      CustomMaterialBottomSheets.defaultBottomSheet(context, size: size, title: "Pilih Kecamatan Anda", children: List.generate(wilayahController.listKecamatanModel.value?.response?.length ?? 0, (i){
-                        return ListTile(
-                          leading: Icon(Icons.location_city_outlined, color: CustomColor.textThemeDarkSoftColor),
-                          title: Text(wilayahController.listKecamatanModel.value?.response?[i].name ?? "-"),
-                          onTap: (){
-                            wilayahController.selectedSubDistrict.value = '';
-                            desa.clear();
-                            kodePos.clear();
-                            Navigator.pop(context);
-                            kecamatan.text = wilayahController.listKecamatanModel.value?.response?[i].name ?? "-";
-                            wilayahController.selectedDistrict.value = kecamatan.text;
-                            wilayahController.getDesa();
-                          },
-                        );
-                      }));
-                    }),
+                    () => VoidTextField(
+                      requiredField: true, 
+                      controller: kecamatan, 
+                      readOnly: kecamatanLoading.value || wilayahController.selectedCity.value == "", 
+                      fieldName: "Kecamatan", 
+                      hintText: kecamatanLoading.value ? "Memuat data..." : "Kecamatan", 
+                      labelText: "Kecamatan", 
+                      iconData: Clarity.map_line, 
+                      onPressed: (kecamatanLoading.value || wilayahController.selectedCity.value == "") ? null : () {
+                        if(wilayahController.selectedCity.value == ''){
+                          CustomScaffoldMessanger.showAppSnackBar(context, message: "Mohon pilih Kabupaten terlebih dahulu");
+                          return;
+                        }
+                        CustomMaterialBottomSheets.defaultBottomSheet(context, size: size, title: "Pilih Kecamatan Anda", children: List.generate(wilayahController.listKecamatanModel.value?.response?.length ?? 0, (i){
+                          return ListTile(
+                            leading: Icon(Icons.location_city_outlined, color: CustomColor.textThemeDarkSoftColor),
+                            title: Text(wilayahController.listKecamatanModel.value?.response?[i].name ?? "-"),
+                            onTap: (){
+                              wilayahController.selectedSubDistrict.value = '';
+                              desa.clear();
+                              kodePos.clear();
+                              Navigator.pop(context);
+                              kecamatan.text = wilayahController.listKecamatanModel.value?.response?[i].name ?? "-";
+                              wilayahController.selectedDistrict.value = kecamatan.text;
+                              
+                              // Enable desa dan start loading
+                              desaLoading.value = true;
+                              wilayahController.getDesa().then((_) {
+                                desaLoading.value = false;
+                              });
+                            },
+                          );
+                        }));
+                      },
+                    ),
                   ),
               
                   // Desa
-                  VoidTextField(requiredField: true, controller: desa, fieldName: "Desa", readOnly: wilayahController.selectedDistrict.value == "" ? true : false, iconData: Icons.holiday_village_rounded, hintText: "Desa", labelText: "Desa", onPressed: (){
-                    if(wilayahController.selectedDistrict.value == ''){
-                      CustomScaffoldMessanger.showAppSnackBar(context, message: "Mohon pilih Kecamatan terlebih dahulu");
-                      return;
-                    }
-                    CustomMaterialBottomSheets.defaultBottomSheet(context, size: size, title: "Pilih Desa Anda", children: List.generate(wilayahController.listDesaModel.value?.response?.length ?? 0, (i){
-                      return ListTile(
-                        leading: Icon(Icons.location_city_outlined, color: CustomColor.textThemeDarkSoftColor),
-                        title: Text(wilayahController.listDesaModel.value?.response?[i].name ?? "-"),
-                        onTap: (){
-                          Navigator.pop(context);
-                          desa.text = wilayahController.listDesaModel.value?.response?[i].name ?? "-";
-                          wilayahController.selectedSubDistrict.value = desa.text;
-                          kodePos.text = wilayahController.listDesaModel.value?.response?[i].postalCode ?? "-";
-                        },
-                      );
-                    }));
-                  }),
+                  Obx(
+                    () => VoidTextField(
+                      requiredField: true, 
+                      controller: desa, 
+                      fieldName: "Desa", 
+                      readOnly: desaLoading.value || wilayahController.selectedDistrict.value == "", 
+                      iconData: Icons.holiday_village_rounded, 
+                      hintText: desaLoading.value ? "Memuat data..." : "Desa", 
+                      labelText: "Desa", 
+                      onPressed: (desaLoading.value || wilayahController.selectedDistrict.value == "") ? null : () {
+                        if(wilayahController.selectedDistrict.value == ''){
+                          CustomScaffoldMessanger.showAppSnackBar(context, message: "Mohon pilih Kecamatan terlebih dahulu");
+                          return;
+                        }
+                        CustomMaterialBottomSheets.defaultBottomSheet(context, size: size, title: "Pilih Desa Anda", children: List.generate(wilayahController.listDesaModel.value?.response?.length ?? 0, (i){
+                          return ListTile(
+                            leading: Icon(Icons.location_city_outlined, color: CustomColor.textThemeDarkSoftColor),
+                            title: Text(wilayahController.listDesaModel.value?.response?[i].name ?? "-"),
+                            onTap: (){
+                              Navigator.pop(context);
+                              desa.text = wilayahController.listDesaModel.value?.response?[i].name ?? "-";
+                              wilayahController.selectedSubDistrict.value = desa.text;
+                              kodePos.text = wilayahController.listDesaModel.value?.response?[i].postalCode ?? "-";
+                            },
+                          );
+                        }));
+                      },
+                    ),
+                  ),
               
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
