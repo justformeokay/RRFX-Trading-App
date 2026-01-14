@@ -6,6 +6,7 @@ import 'package:rrfx/src/components/dialogs/passcode_error_dialog.dart';
 import 'package:rrfx/src/controllers/passcode_controller.dart';
 import 'package:rrfx/src/service/passcode_service.dart';
 import 'package:rrfx/src/views/mainpage.dart';
+import 'dart:io' show Platform;
 
 class VerifyPasscodePage extends StatefulWidget {
   const VerifyPasscodePage({super.key});
@@ -481,6 +482,13 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
         return SizedBox(width: 70, height: 70);
       }
 
+      // Tentukan icon berdasarkan platform
+      final IconData bioIcon = Platform.isIOS 
+          ? Icons.face_rounded  // Face ID untuk iOS
+          : Icons.fingerprint_rounded;  // Fingerprint untuk Android
+      
+      final String bioLabel = Platform.isIOS ? 'Face ID' : 'Fingerprint';
+
       return GestureDetector(
         onTap: controller.isLocked.value || controller.isLoading.value
             ? null
@@ -490,37 +498,40 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
                   Get.offAll(() => Mainpage());
                 } else {
                   Get.snackbar(
-                    '❌ Biometric Gagal',
-                    'Verifikasi biometric gagal. Silakan coba lagi atau gunakan passcode',
+                    '❌ $bioLabel Gagal',
+                    'Verifikasi $bioLabel gagal. Silakan coba lagi atau gunakan passcode',
                     backgroundColor: Colors.red,
                     colorText: Colors.white,
                     duration: const Duration(seconds: 3),
                   );
                 }
               },
-        child: Container(
-          width: 70,
-          height: 70,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: CustomColor.secondaryColor.withOpacity(0.1),
-          ),
-          child: Center(
-            child: controller.isLoading.value
-                ? SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                          CustomColor.secondaryColor),
+        child: Tooltip(
+          message: bioLabel,
+          child: Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: CustomColor.secondaryColor.withOpacity(0.1),
+            ),
+            child: Center(
+              child: controller.isLoading.value
+                  ? SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            CustomColor.secondaryColor),
+                      ),
+                    )
+                  : Icon(
+                      bioIcon,
+                      color: CustomColor.secondaryColor,
+                      size: 28,
                     ),
-                  )
-                : Icon(
-                    Icons.fingerprint_rounded,
-                    color: CustomColor.secondaryColor,
-                    size: 28,
-                  ),
+            ),
           ),
         ),
       );

@@ -807,7 +807,6 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
   }
 }
 
-// ---------------- BALANCE SECTION --------------------
 class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double totalSwap;
   final double totalCommission;
@@ -820,10 +819,10 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
   });
 
   @override
-  double get minExtent => 170;
+  double get minExtent => 140;
 
   @override
-  double get maxExtent => 180;
+  double get maxExtent => 150;
 
   final accountController = Get.find<AccountController>();
 
@@ -837,7 +836,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
 
     return Container(
       color: theme.scaffoldBackgroundColor,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
@@ -846,13 +845,6 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
             () => _balanceRow(
               "Account ID",
               accountController.selectedAccount.value?.login ?? "N/A",
-              context,
-            ),
-          ),
-          Obx(
-            () => _balanceRow(
-              "Deposit",
-              accountController.selectedAccount.value?.totalDepositUsd ?? "0",
               context,
             ),
           ),
@@ -873,28 +865,28 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   Widget _balanceRow(String label, String value, BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 1.5),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: GoogleFonts.roboto(
-            fontSize: 14,
+            fontSize: 12,
             color: Theme.of(context).textTheme.bodyLarge?.color,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
           )),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 6),
               child: Text(
-                '. ' * 100,
+                '. ' * 80,
                 maxLines: 1,
                 overflow: TextOverflow.clip,
                 style: GoogleFonts.roboto(
-                  letterSpacing: 1,
-                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
+                  fontWeight: FontWeight.w800,
                   color: Theme.of(
                     context,
-                  ).textTheme.bodyMedium?.color?.withOpacity(0.3),
+                  ).textTheme.bodyMedium?.color?.withOpacity(0.2),
                 ),
               ),
             ),
@@ -902,9 +894,9 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
           Text(
             value,
             style: GoogleFonts.roboto(
-              fontSize: 14,
+              fontSize: 12,
               color: Get.textTheme.bodyLarge?.color,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             )
           ),
         ],

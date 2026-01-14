@@ -1,20 +1,15 @@
-// controllers/chart_controller.dart
-
 import 'dart:async';
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:rrfx/src/experimentals/charts/models/ohlc_data.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:deriv_chart/deriv_chart.dart';
 import '../models/ticker_model.dart';
 
 class ChartControllerExperimentals extends GetxController {
   // --- States ---
   final isLoading = true.obs;
-  final ohlcDataDeriv = <Candle>[].obs;
 
   // Parameter Chart
   final selectedAccountType = 'demo'.obs;
@@ -80,13 +75,12 @@ class ChartControllerExperimentals extends GetxController {
         final chartResponse = ChartResponse.fromJson(jsonResponse);
 
         // Konversi data OHLC ke model Candle untuk DerivChart
-        ohlcDataDeriv.value =
-            chartResponse.chartData.map((data) => data.toCandle()).toList();
+        // ohlcDataDeriv.value = chartResponse.chartData.map((data) => data.toCandle()).toList();
 
         // Update currentPrice dengan Close price bar terakhir
-        if (ohlcDataDeriv.isNotEmpty) {
-          currentPrice.value = ohlcDataDeriv.last.close;
-        }
+        // if (ohlcDataDeriv.isNotEmpty) {
+        //   currentPrice.value = ohlcDataDeriv.last.close;
+        // }
       } else {
         Get.snackbar(
           'Error',

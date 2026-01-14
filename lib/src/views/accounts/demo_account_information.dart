@@ -10,7 +10,6 @@ import 'package:rrfx/src/models/trades/trading_account_models.dart';
 import 'package:rrfx/src/views/advance_charts/webview_chart_view.dart';
 import 'package:rrfx/src/views/advance_charts/widgets/market_selector_sheet.dart';
 import 'package:rrfx/src/views/chart/controllers/chart_controller.dart';
-import 'package:rrfx/src/views/chart/views/market_bottom_sheet.dart';
 
 class DemoAccountInformation extends StatefulWidget {
   const DemoAccountInformation({super.key, this.loginID});

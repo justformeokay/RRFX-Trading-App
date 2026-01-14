@@ -1,12 +1,6 @@
-import 'dart:convert';
-import 'dart:math';
-import 'package:deriv_chart/deriv_chart.dart';
 import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
 import 'package:rrfx/src/controllers/two_factory_auth.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
-import 'package:rrfx/src/controllers/websocket_controller.dart';
-import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/models/trades/candle_model.dart';
 import 'package:rrfx/src/models/trades/ohlc_models.dart';
 import 'package:rrfx/src/models/trades/open_order_model.dart';
@@ -14,7 +8,6 @@ import 'package:rrfx/src/models/trades/symbol_model.dart';
 import 'package:rrfx/src/models/trades/trading_account_model_v2.dart';
 import 'package:rrfx/src/models/trades/trading_account_models.dart';
 import 'package:rrfx/src/service/auth_service.dart';
-
 import '../models/trades/trading_order_history_model.dart';
 
 class OHLCDataModel {
@@ -34,7 +27,7 @@ class TradingController extends GetxController {
   Rxn<SymbolModels> symbolModel = Rxn<SymbolModels>();
   Rxn<OHLCModels> ohlcModels = Rxn<OHLCModels>();
   RxList<OHLCDataModel> ohlcData = <OHLCDataModel>[].obs;
-  RxList<Candle> ohlcDataDeriv = <Candle>[].obs;
+  // RxList<Candle> ohlcDataDeriv = <Candle>[].obs;
   Rxn<TradingAccountModels> tradingAccountModels = Rxn<TradingAccountModels>();
   Rxn<ClosedOrderModel> tradingHistoryModel = Rxn<ClosedOrderModel>();
   Rxn<OpenOrderModel> openOrderModel = Rxn<OpenOrderModel>();
@@ -48,12 +41,12 @@ class TradingController extends GetxController {
   RxDouble minPrice = 0.0.obs;
   RxDouble maxPrice = 0.0.obs;
   RxList allTradingAccounts = [].obs;
-  static final Random _random = Random(42);
+  // static final Random _random = Random(42);
 
   // WebSocket controller untuk realtime updates
-  MarketWebSocketController? _wsController;
-  String? _currentSymbol;
-  bool _isListening = false;
+  // MarketWebSocketController? _wsController;
+  // String? _currentSymbol;
+  // bool _isListening = false;
 
   @override
   void onInit() {
@@ -61,48 +54,48 @@ class TradingController extends GetxController {
     // WebSocket listener akan di-setup saat getMarketForDerivChartV4 dipanggil pertama kali
   }
 
-  void _ensureWebSocketListener() {
-    if (_isListening) return; // Sudah listening, skip
+  // void _ensureWebSocketListener() {
+  //   if (_isListening) return; // Sudah listening, skip
 
-    // Get WebSocket controller instance
-    try {
-      _wsController = Get.find<MarketWebSocketController>();
-      _listenToWebSocketUpdates();
-      _isListening = true;
-      // print('✅ WebSocket listener initialized for TradingController');
-    } catch (e) {
-      // print('⚠️ WebSocket controller not available yet: $e');
-    }
-  }
+  //   // Get WebSocket controller instance
+  //   try {
+  //     _wsController = Get.find<MarketWebSocketController>();
+  //     _listenToWebSocketUpdates();
+  //     _isListening = true;
+  //     // print('✅ WebSocket listener initialized for TradingController');
+  //   } catch (e) {
+  //     // print('⚠️ WebSocket controller not available yet: $e');
+  //   }
+  // }
 
-  void _listenToWebSocketUpdates() {
-    if (_wsController == null) return;
+  // void _listenToWebSocketUpdates() {
+  //   if (_wsController == null) return;
 
-    // Listen to WebSocket market data updates
-    ever(_wsController!.marketData, (data) {
-      if (_currentSymbol == null || ohlcDataDeriv.isEmpty) return;
+  //   // Listen to WebSocket market data updates
+  //   ever(_wsController!.marketData, (data) {
+  //     // if (_currentSymbol == null || ohlcDataDeriv.isEmpty) return;
 
-      // Cari data untuk symbol yang sedang aktif
-      final marketData = data[_currentSymbol];
-      if (marketData != null) {
-        // Update candle terakhir dengan bid price dari WebSocket
-        final lastCandle = ohlcDataDeriv.last;
-        final updatedCandle = Candle(
-          epoch: lastCandle.epoch,
-          open: lastCandle.open,
-          high: lastCandle.high > marketData.bid ? lastCandle.high : marketData.bid,
-          low: lastCandle.low < marketData.bid ? lastCandle.low : marketData.bid,
-          close: marketData.bid, // Close = bid price dari WebSocket
-        );
+  //     // Cari data untuk symbol yang sedang aktif
+  //     final marketData = data[_currentSymbol];
+  //     if (marketData != null) {
+  //       // Update candle terakhir dengan bid price dari WebSocket
+  //       // final lastCandle = ohlcDataDeriv.last;
+  //       // final updatedCandle = Candle(
+  //       //   epoch: lastCandle.epoch,
+  //       //   open: lastCandle.open,
+  //       //   high: lastCandle.high > marketData.bid ? lastCandle.high : marketData.bid,
+  //       //   low: lastCandle.low < marketData.bid ? lastCandle.low : marketData.bid,
+  //       //   close: marketData.bid, // Close = bid price dari WebSocket
+  //       // );
 
-        // Replace candle terakhir
-        ohlcDataDeriv[ohlcDataDeriv.length - 1] = updatedCandle;
-        // print(
-        //   '📊 Updated last candle for $_currentSymbol - close: ${marketData.bid}',
-        // );
-      }
-    });
-  }
+  //       // Replace candle terakhir
+  //       // ohlcDataDeriv[ohlcDataDeriv.length - 1] = updatedCandle;
+  //       // print(
+  //       //   '📊 Updated last candle for $_currentSymbol - close: ${marketData.bid}',
+  //       // );
+  //     }
+  //   });
+  // }
 
   Future<bool> getSymbols({String? loginID}) async {
     try {
@@ -191,267 +184,266 @@ class TradingController extends GetxController {
     }
   }
 
-  Future<bool> getMarketForDerivChartV3({
-    String? loginID,
-    String? symbol,
-    String? timeframe,
-  }) async {
-    try {
-      symbol = symbol ?? GlobalVariable.symbolHardCode[0];
-      final Map<String, dynamic> result = await authService.get(
-        "market/price-history?account=$loginID&timeframe=$timeframe&symbol=$symbol",
-      );
-      if (result['status'] != true) {
-        return false;
-      }
+  // Future<bool> getMarketForDerivChartV3({
+  //   String? loginID,
+  //   String? symbol,
+  //   String? timeframe,
+  // }) async {
+  //   try {
+  //     symbol = symbol ?? GlobalVariable.symbolHardCode[0];
+  //     final Map<String, dynamic> result = await authService.get(
+  //       "market/price-history?account=$loginID&timeframe=$timeframe&symbol=$symbol",
+  //     );
+  //     if (result['status'] != true) {
+  //       return false;
+  //     }
 
-      final List<dynamic> json =
-          result['response'].map((e) => e as Map<String, dynamic>).toList();
-      List<Candle> newCandles = [];
-      for (var i in json) {
-        try {
-          final candle = Candle(
-            epoch: DateTime.parse(i['time']).millisecondsSinceEpoch ~/ 1000,
-            open: double.parse(i['open'].toString()),
-            high: double.parse(i['high'].toString()),
-            low: double.parse(i['low'].toString()),
-            close: double.parse(i['close'].toString()),
-          );
-          newCandles.add(candle);
-        } catch (_) {
-          continue;
-        }
-      }
+  //     final List<dynamic> json =
+  //         result['response'].map((e) => e as Map<String, dynamic>).toList();
+  //     List<Candle> newCandles = [];
+  //     for (var i in json) {
+  //       try {
+  //         final candle = Candle(
+  //           epoch: DateTime.parse(i['time']).millisecondsSinceEpoch ~/ 1000,
+  //           open: double.parse(i['open'].toString()),
+  //           high: double.parse(i['high'].toString()),
+  //           low: double.parse(i['low'].toString()),
+  //           close: double.parse(i['close'].toString()),
+  //         );
+  //         newCandles.add(candle);
+  //       } catch (_) {
+  //         continue;
+  //       }
+  //     }
 
-      // Sort by epoch (asc)
-      newCandles.sort((a, b) => a.epoch.compareTo(b.epoch));
+  //     // Sort by epoch (asc)
+  //     newCandles.sort((a, b) => a.epoch.compareTo(b.epoch));
 
-      // Clear & replace
-      ohlcDataDeriv.clear();
-      ohlcDataDeriv.addAll(newCandles);
+  //     // Clear & replace
+  //     ohlcDataDeriv.clear();
+  //     ohlcDataDeriv.addAll(newCandles);
 
-      // Optional: limit data
-      if (ohlcDataDeriv.length > 500) {
-        ohlcDataDeriv.removeRange(0, ohlcDataDeriv.length - 500);
-      }
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
+  //     // Optional: limit data
+  //     if (ohlcDataDeriv.length > 500) {
+  //       ohlcDataDeriv.removeRange(0, ohlcDataDeriv.length - 500);
+  //     }
+  //     return true;
+  //   } catch (e) {
+  //     return false;
+  //   }
+  // }
 
-  Future<bool> getMarketForDerivChartV2({
-    String? loginID,
-    String? timeFrame,
-    String? symbol,
-  }) async {
-    try {
-      final Map<String, dynamic> result = await authService.get(
-        "market/price-history?account=$loginID&timeframe=$timeFrame&symbol=${symbol ?? 'AUDCAD.db'}",
-      );
-      if (result['status'] != true) {
-        return false;
-      }
-      final List<dynamic> json =
-          result['response'].map((e) => e as Map<String, dynamic>).toList();
-      List<Candle> newCandles = [];
-      for (var i in json) {
-        try {
-          final candle = Candle(
-            epoch: DateTime.parse(i['time']).millisecondsSinceEpoch ~/ 1000,
-            open: double.parse(i['open'].toString()),
-            high: double.parse(i['high'].toString()),
-            low: double.parse(i['low'].toString()),
-            close: double.parse(i['close'].toString()),
-          );
-          newCandles.add(candle);
-        } catch (_) {
-          continue;
-        }
-      }
-      newCandles.sort((a, b) => a.epoch.compareTo(b.epoch));
+  // Future<bool> getMarketForDerivChartV2({
+  //   String? loginID,
+  //   String? timeFrame,
+  //   String? symbol,
+  // }) async {
+  //   try {
+  //     final Map<String, dynamic> result = await authService.get(
+  //       "market/price-history?account=$loginID&timeframe=$timeFrame&symbol=${symbol ?? 'AUDCAD.db'}",
+  //     );
+  //     if (result['status'] != true) {
+  //       return false;
+  //     }
+  //     final List<dynamic> json =
+  //         result['response'].map((e) => e as Map<String, dynamic>).toList();
+  //     List<Candle> newCandles = [];
+  //     for (var i in json) {
+  //       try {
+  //         final candle = Candle(
+  //           epoch: DateTime.parse(i['time']).millisecondsSinceEpoch ~/ 1000,
+  //           open: double.parse(i['open'].toString()),
+  //           high: double.parse(i['high'].toString()),
+  //           low: double.parse(i['low'].toString()),
+  //           close: double.parse(i['close'].toString()),
+  //         );
+  //         newCandles.add(candle);
+  //       } catch (_) {
+  //         continue;
+  //       }
+  //     }
+  //     newCandles.sort((a, b) => a.epoch.compareTo(b.epoch));
 
-      if (ohlcDataDeriv.isEmpty) {
-        ohlcDataDeriv.assignAll(newCandles);
-      } else {
-        final lastEpoch = ohlcDataDeriv.last.epoch;
-        final freshCandles =
-            newCandles.where((c) => c.epoch > lastEpoch).toList();
-        if (freshCandles.isNotEmpty) {
-          ohlcDataDeriv.addAll(freshCandles);
-        } else {
-          final lastNewCandle = newCandles.last;
-          if (lastNewCandle.epoch == lastEpoch) {
-            ohlcDataDeriv[ohlcDataDeriv.length - 1] = lastNewCandle;
-          }
-        }
-      }
-      if (ohlcDataDeriv.length > 500) {
-        ohlcDataDeriv.removeRange(0, ohlcDataDeriv.length - 500);
-      }
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
+  //     if (ohlcDataDeriv.isEmpty) {
+  //       ohlcDataDeriv.assignAll(newCandles);
+  //     } else {
+  //       final lastEpoch = ohlcDataDeriv.last.epoch;
+  //       final freshCandles =
+  //           newCandles.where((c) => c.epoch > lastEpoch).toList();
+  //       if (freshCandles.isNotEmpty) {
+  //         ohlcDataDeriv.addAll(freshCandles);
+  //       } else {
+  //         final lastNewCandle = newCandles.last;
+  //         if (lastNewCandle.epoch == lastEpoch) {
+  //           ohlcDataDeriv[ohlcDataDeriv.length - 1] = lastNewCandle;
+  //         }
+  //       }
+  //     }
+  //     if (ohlcDataDeriv.length > 500) {
+  //       ohlcDataDeriv.removeRange(0, ohlcDataDeriv.length - 500);
+  //     }
+  //     return true;
+  //   } catch (e) {
+  //     return false;
+  //   }
+  // }
 
-  Future<bool> getMarketForDerivChartV4({
-    String? loginID,
-    String? timeFrame,
-    String? symbol,
-    String? accountType,
-  }) async {
-    try {
-      // Simpan symbol saat ini untuk WebSocket updates
-      _currentSymbol = symbol;
+  // Future<bool> getMarketForDerivChartV4({
+  //   String? loginID,
+  //   String? timeFrame,
+  //   String? symbol,
+  //   String? accountType,
+  // }) async {
+  //   try {
+  //     // Simpan symbol saat ini untuk WebSocket updates
+  //     _currentSymbol = symbol;
 
-      // Ensure WebSocket listener is initialized (lazy init)
-      _ensureWebSocketListener();
+  //     // Ensure WebSocket listener is initialized (lazy init)
+  //     _ensureWebSocketListener();
 
-      final response = await http.get(
-        Uri.tryParse(
-          "http://139.180.219.85:6003/chart/$accountType/$symbol?timeframe=$timeFrame",
-        )!,
-      );
-      if (response.statusCode != 200) {
-        return false;
-      }
-      final List<dynamic> json =
-          jsonDecode(
-            response.body,
-          )['chart_data'].map((e) => e as Map<String, dynamic>).toList();
-      List<Candle> newCandles = [];
-      for (var i in json) {
-        try {
-          // API v4 returns 'time' as Unix timestamp (integer), not string
-          final candle = Candle(
-            epoch: (i['time'] as num).toInt(),
-            open: double.parse(i['open'].toString()),
-            high: double.parse(i['high'].toString()),
-            low: double.parse(i['low'].toString()),
-            close: double.parse(i['close'].toString()),
-          );
-          newCandles.add(candle);
-        } catch (e) {
-          print('⚠️ Error parsing candle: $e');
-          continue;
-        }
-      }
-      newCandles.sort((a, b) => a.epoch.compareTo(b.epoch));
+  //     final response = await http.get(
+  //       Uri.tryParse(
+  //         "http://139.180.219.85:6003/chart/$accountType/$symbol?timeframe=$timeFrame",
+  //       )!,
+  //     );
+  //     if (response.statusCode != 200) {
+  //       return false;
+  //     }
+  //     final List<dynamic> json =
+  //         jsonDecode(
+  //           response.body,
+  //         )['chart_data'].map((e) => e as Map<String, dynamic>).toList();
+  //     List<Candle> newCandles = [];
+  //     for (var i in json) {
+  //       try {
+  //         // API v4 returns 'time' as Unix timestamp (integer), not string
+  //         final candle = Candle(
+  //           epoch: (i['time'] as num).toInt(),
+  //           open: double.parse(i['open'].toString()),
+  //           high: double.parse(i['high'].toString()),
+  //           low: double.parse(i['low'].toString()),
+  //           close: double.parse(i['close'].toString()),
+  //         );
+  //         newCandles.add(candle);
+  //       } catch (e) {
+  //         print('⚠️ Error parsing candle: $e');
+  //         continue;
+  //       }
+  //     }
+  //     newCandles.sort((a, b) => a.epoch.compareTo(b.epoch));
 
-      if (ohlcDataDeriv.isEmpty) {
-        ohlcDataDeriv.assignAll(newCandles);
-      } else {
-        final lastEpoch = ohlcDataDeriv.last.epoch;
-        final freshCandles =
-            newCandles.where((c) => c.epoch > lastEpoch).toList();
-        if (freshCandles.isNotEmpty) {
-          ohlcDataDeriv.addAll(freshCandles);
-        } else {
-          final lastNewCandle = newCandles.last;
-          if (lastNewCandle.epoch == lastEpoch) {
-            ohlcDataDeriv[ohlcDataDeriv.length - 1] = lastNewCandle;
-          }
-        }
-      }
-      if (ohlcDataDeriv.length > 500) {
-        ohlcDataDeriv.removeRange(0, ohlcDataDeriv.length - 500);
-      }
+  //     if (ohlcDataDeriv.isEmpty) {
+  //       ohlcDataDeriv.assignAll(newCandles);
+  //     } else {
+  //       final lastEpoch = ohlcDataDeriv.last.epoch;
+  //       final freshCandles =
+  //           newCandles.where((c) => c.epoch > lastEpoch).toList();
+  //       if (freshCandles.isNotEmpty) {
+  //         ohlcDataDeriv.addAll(freshCandles);
+  //       } else {
+  //         final lastNewCandle = newCandles.last;
+  //         if (lastNewCandle.epoch == lastEpoch) {
+  //           ohlcDataDeriv[ohlcDataDeriv.length - 1] = lastNewCandle;
+  //         }
+  //       }
+  //     }
+  //     if (ohlcDataDeriv.length > 500) {
+  //       ohlcDataDeriv.removeRange(0, ohlcDataDeriv.length - 500);
+  //     }
 
-      // Trigger immediate update dari WebSocket jika ada data
-      if (_wsController != null && symbol != null) {
-        final marketData = _wsController!.marketData[symbol];
-        if (marketData != null && ohlcDataDeriv.isNotEmpty) {
-          final lastCandle = ohlcDataDeriv.last;
-          final updatedCandle = Candle(
-            epoch: lastCandle.epoch,
-            open: lastCandle.open,
-            high:
-                lastCandle.high > marketData.bid
-                    ? lastCandle.high
-                    : marketData.bid,
-            low:
-                lastCandle.low < marketData.bid
-                    ? lastCandle.low
-                    : marketData.bid,
-            close: marketData.bid,
-          );
-          ohlcDataDeriv[ohlcDataDeriv.length - 1] = updatedCandle;
-          print('📊 Initial WS update for $symbol - close: ${marketData.bid}');
-        }
-      }
+  //     // Trigger immediate update dari WebSocket jika ada data
+  //     if (_wsController != null && symbol != null) {
+  //       final marketData = _wsController!.marketData[symbol];
+  //       if (marketData != null && ohlcDataDeriv.isNotEmpty) {
+  //         final lastCandle = ohlcDataDeriv.last;
+  //         final updatedCandle = Candle(
+  //           epoch: lastCandle.epoch,
+  //           open: lastCandle.open,
+  //           high:
+  //               lastCandle.high > marketData.bid
+  //                   ? lastCandle.high
+  //                   : marketData.bid,
+  //           low:
+  //               lastCandle.low < marketData.bid
+  //                   ? lastCandle.low
+  //                   : marketData.bid,
+  //           close: marketData.bid,
+  //         );
+  //         ohlcDataDeriv[ohlcDataDeriv.length - 1] = updatedCandle;
+  //         print('📊 Initial WS update for $symbol - close: ${marketData.bid}');
+  //       }
+  //     }
 
-      return true;
-    } catch (e) {
-      print('❌ Error in getMarketForDerivChartV4: $e');
-      return false;
-    }
-  }
+  //     return true;
+  //   } catch (e) {
+  //     print('❌ Error in getMarketForDerivChartV4: $e');
+  //     return false;
+  //   }
+  // }
 
   /// Get Market History for Deriv Chart with real-time updates
-  Future<bool> getMarketForDerivChart({
-    String? market,
-    String? timeframe,
-  }) async {
-    try {
-      market = market ?? "GOLDUD";
-      timeframe = timeframe ?? "H1";
+  // Future<bool> getMarketForDerivChart({
+  //   String? market,
+  //   String? timeframe,
+  // }) async {
+  //   try {
+  //     market = market ?? "GOLDUD";
+  //     timeframe = timeframe ?? "H1";
 
-      final Map<String, dynamic> result = await authService.get(
-        "market/price-history?symbol=$market&timeframe=$timeframe",
-      );
+  //     final Map<String, dynamic> result = await authService.get(
+  //       "market/price-history?symbol=$market&timeframe=$timeframe",
+  //     );
 
-      if (result['status'] != true) {
-        return false;
-      }
+  //     if (result['status'] != true) {
+  //       return false;
+  //     }
 
-      final List<dynamic> json =
-          result['response'].map((e) => e as Map<String, dynamic>).toList();
-      List<Candle> newCandles = [];
+  //     final List<dynamic> json =
+  //         result['response'].map((e) => e as Map<String, dynamic>).toList();
+  //     List<Candle> newCandles = [];
 
-      for (var i in json) {
-        try {
-          final candle = Candle(
-            epoch: DateTime.parse(i['date']).millisecondsSinceEpoch ~/ 1000,
-            open: double.parse(i['open'].toString()),
-            high: double.parse(i['high'].toString()),
-            low: double.parse(i['low'].toString()),
-            close: double.parse(i['close'].toString()),
-          );
-          newCandles.add(candle);
-        } catch (e) {
-          continue;
-        }
-      }
-      newCandles.sort((a, b) => a.epoch.compareTo(b.epoch));
-      ohlcDataDeriv.clear();
-      ohlcDataDeriv.addAll(newCandles);
+  //     for (var i in json) {
+  //       try {
+  //         final candle = Candle(
+  //           epoch: DateTime.parse(i['date']).millisecondsSinceEpoch ~/ 1000,
+  //           open: double.parse(i['open'].toString()),
+  //           high: double.parse(i['high'].toString()),
+  //           low: double.parse(i['low'].toString()),
+  //           close: double.parse(i['close'].toString()),
+  //         );
+  //         newCandles.add(candle);
+  //       } catch (e) {
+  //         continue;
+  //       }
+  //     }
+  //     newCandles.sort((a, b) => a.epoch.compareTo(b.epoch));
+  //     ohlcDataDeriv.clear();
+  //     ohlcDataDeriv.addAll(newCandles);
 
-      // print("Current number of candles: ${ohlcDataDeriv.length}");
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
+  //     // print("Current number of candles: ${ohlcDataDeriv.length}");
+  //     return true;
+  //   } catch (e) {
+  //     return false;
+  //   }
+  // }
 
   /// Generate a list of sample ticks.
-  static List<Tick> generateTicks({int count = 100}) {
-    final List<Tick> ticks = [];
-    final baseTimestamp =
-        DateTime.now()
-            .subtract(Duration(minutes: count))
-            .millisecondsSinceEpoch;
-    double lastQuote = 100;
+  // static List<Tick> generateTicks({int count = 100}) {
+  //   final List<Tick> ticks = [];
+  //   final baseTimestamp =
+  //       DateTime.now()
+  //           .subtract(Duration(minutes: count))
+  //           .millisecondsSinceEpoch;
+  //   double lastQuote = 100;
 
-    for (int i = 0; i < count; i++) {
-      final timestamp = baseTimestamp + i * 60000; // 1 minute intervals
-      // Random walk with some volatility
-      lastQuote += (_random.nextDouble() - 0.5) * 2.0;
-      ticks.add(Tick(epoch: timestamp, quote: lastQuote));
-    }
-
-    return ticks;
-  }
+  //   for (int i = 0; i < count; i++) {
+  //     final timestamp = baseTimestamp + i * 60000; // 1 minute intervals
+  //     // Random walk with some volatility
+  //     lastQuote += (_random.nextDouble() - 0.5) * 2.0;
+  //     ticks.add(Tick(epoch: timestamp, quote: lastQuote));
+  //   }
+  //   return ticks;
+  // }
 
   // Create Demo Trading API
   Future<bool> getTradingAccount() async {

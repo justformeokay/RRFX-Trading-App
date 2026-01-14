@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'package:home_widget/home_widget.dart';
-import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:workmanager/workmanager.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
 class WidgetService {

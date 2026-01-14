@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:deriv_chart/deriv_chart.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/controllers/trading.dart';
 import 'package:rrfx/src/service/candlestick/candle_controller.dart';
@@ -64,9 +63,9 @@ class _CandleChartPageState extends State<CandleChartPage> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (controller.candles.isEmpty) {
-          return const Center(child: Text('No candle data.'));
-        }
+        // if (controller.candles.isEmpty) {
+        //   return const Center(child: Text('No candle data.'));
+        // }
 
         return Column(
           children: [
@@ -96,13 +95,14 @@ class _CandleChartPageState extends State<CandleChartPage> {
               ],
             ),
             Expanded(
-              child: DerivChart(
-                activeSymbol: selectedSymbol.value,
-                mainSeries: CandleSeries(controller.candles),
-                pipSize: 5,
-                granularity: 3600, // 1 jam
-                loadingAnimationColor: Colors.transparent,
-              ),
+              child: SizedBox(),
+              // child: DerivChart(
+              //   activeSymbol: selectedSymbol.value,
+              //   mainSeries: CandleSeries(controller.candles),
+              //   pipSize: 5,
+              //   granularity: 3600, // 1 jam
+              //   loadingAnimationColor: Colors.transparent,
+              // ),
             ),
           ],
         );

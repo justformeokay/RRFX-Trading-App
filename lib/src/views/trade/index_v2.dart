@@ -7,7 +7,6 @@ import 'package:rrfx/src/components/colors/default.dart';
 import 'package:get/get.dart';
 import 'package:rrfx/src/controllers/websocket_controller.dart';
 import 'package:rrfx/src/helpers/formatters/currency.dart';
-import 'package:rrfx/src/helpers/formatters/regex_formatter.dart';
 
 class MetaQuotesPage extends StatefulWidget {
   const MetaQuotesPage({super.key});
@@ -104,7 +103,7 @@ class _MetaQuotesPageState extends State<MetaQuotesPage> {
                     color = Colors.blue;
                     icon = Icon(TeenyIcons.line, color: color, size: 15.0);
                   }
-                  final flags = RegexFormatter.getFlagsFromPairName(symbol);
+                  // final flags = RegexFormatter.getFlagsFromPairName(symbol);
                   return CupertinoButton(
                     onPressed: () {},
                     padding: EdgeInsets.zero,

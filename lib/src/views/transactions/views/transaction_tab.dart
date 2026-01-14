@@ -80,8 +80,6 @@ class _TransactionTabState extends State<TransactionTab> with SingleTickerProvid
           controller: _tabController,
           children: const [
             OpenTransactonMeta5(),
-            // OpenTransactionTab(),
-            // ClosedTransactionTab(),
             CloseTransactionMeta5()
           ],
         ),

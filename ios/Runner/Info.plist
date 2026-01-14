@@ -62,14 +62,14 @@
 				<key>NSIncludesSubdomains</key>
 				<true/>
 			</dict>
-			<key>luxurymatrix.com</key>
+			<key>google.com</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
+				<false/>
 				<key>NSIncludesSubdomains</key>
 				<true/>
 			</dict>
-			<key>techcrm.net</key>
+			<key>luxurymatrix.com</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
 				<true/>
@@ -83,10 +83,10 @@
 				<key>NSIncludesSubdomains</key>
 				<true/>
 			</dict>
-			<key>google.com</key>
+			<key>techcrm.net</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<false/>
+				<true/>
 				<key>NSIncludesSubdomains</key>
 				<true/>
 			</dict>
@@ -128,6 +128,7 @@
 	<array>
 		<string>fetch</string>
 		<string>remote-notification</string>
+		<string>processing</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>

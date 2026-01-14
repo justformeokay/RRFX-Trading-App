@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:deriv_chart/deriv_chart.dart';
+// import 'package:deriv_chart/deriv_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:web_socket_channel/io.dart';
@@ -211,60 +211,60 @@ class MarketWebSocketController extends GetxController
   //   }
   // }
 
-  List<Candle> generateOHLCFromTicks(String symbol, Duration interval) {
-    final List<TickModel>? ticks = tickData[symbol];
-    if (ticks == null || ticks.isEmpty) return [];
+  // List<Candle> generateOHLCFromTicks(String symbol, Duration interval) {
+  //   final List<TickModel>? ticks = tickData[symbol];
+  //   if (ticks == null || ticks.isEmpty) return [];
 
-    final List<Candle> candles = [];
-    ticks.sort((a, b) => a.datetime.compareTo(b.datetime));
+  //   // final List<Candle> candles = [];
+  //   ticks.sort((a, b) => a.datetime.compareTo(b.datetime));
 
-    DateTime start = ticks.first.datetime;
-    DateTime end = start.add(interval);
+  //   DateTime start = ticks.first.datetime;
+  //   DateTime end = start.add(interval);
 
-    double open = ticks.first.bid;
-    double high = open;
-    double low = open;
-    double close = open;
+  //   double open = ticks.first.bid;
+  //   double high = open;
+  //   double low = open;
+  //   double close = open;
 
-    for (var tick in ticks) {
-      if (tick.datetime.isBefore(end)) {
-        high = tick.bid > high ? tick.bid : high;
-        low = tick.bid < low ? tick.bid : low;
-        close = tick.bid;
-      } else {
-        candles.add(
-          Candle(
-            epoch: start.millisecondsSinceEpoch ~/ 1000,
-            open: open,
-            high: high,
-            low: low,
-            close: close,
-          ),
-        );
+  //   for (var tick in ticks) {
+  //     if (tick.datetime.isBefore(end)) {
+  //       high = tick.bid > high ? tick.bid : high;
+  //       low = tick.bid < low ? tick.bid : low;
+  //       close = tick.bid;
+  //     } else {
+  //       // candles.add(
+  //       //   Candle(
+  //       //     epoch: start.millisecondsSinceEpoch ~/ 1000,
+  //       //     open: open,
+  //       //     high: high,
+  //       //     low: low,
+  //       //     close: close,
+  //       //   ),
+  //       // );
 
-        // Mulai candle baru
-        start = end;
-        end = start.add(interval);
-        open = tick.bid;
-        high = tick.bid;
-        low = tick.bid;
-        close = tick.bid;
-      }
-    }
+  //       // Mulai candle baru
+  //       start = end;
+  //       end = start.add(interval);
+  //       open = tick.bid;
+  //       high = tick.bid;
+  //       low = tick.bid;
+  //       close = tick.bid;
+  //     }
+  //   }
 
-    // Tambah candle terakhir
-    candles.add(
-      Candle(
-        epoch: start.millisecondsSinceEpoch ~/ 1000,
-        open: open,
-        high: high,
-        low: low,
-        close: close,
-      ),
-    );
+  //   // Tambah candle terakhir
+  //   candles.add(
+  //     Candle(
+  //       epoch: start.millisecondsSinceEpoch ~/ 1000,
+  //       open: open,
+  //       high: high,
+  //       low: low,
+  //       close: close,
+  //     ),
+  //   );
 
-    return candles;
-  }
+  //   return candles;
+  // }
 
   void _scheduleReconnect() {
     if (_reconnectTimer?.isActive == true) return;

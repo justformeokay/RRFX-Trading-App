@@ -16,7 +16,6 @@ import 'package:rrfx/src/controllers/regol.dart';
 import 'package:rrfx/src/controllers/trading.dart';
 import 'package:rrfx/src/helpers/handlers/holiday.dart';
 import 'package:rrfx/src/models/trades/trading_account_models.dart';
-import 'package:rrfx/src/views/trade/deriv_chart_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Transaction extends StatefulWidget {
@@ -611,7 +610,7 @@ class _TransactionState extends State<Transaction> {
                     }
                     return ListTile(
                       onTap: (){
-                        Get.to(() => DerivChartPage(login: int.parse(allAccountTrading[selectedIndex.value].login), balance: allAccountTrading[selectedIndex.value].balance, marketName: tradingController.openOrderModel.value?.response?[index].symbol));
+                        // Get.to(() => DerivChartPage(login: int.parse(allAccountTrading[selectedIndex.value].login), balance: allAccountTrading[selectedIndex.value].balance, marketName: tradingController.openOrderModel.value?.response?[index].symbol));
                       },
                       onLongPress: () {
                         showClosePositionDialog(

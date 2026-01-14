@@ -8,7 +8,6 @@ import 'package:rrfx/src/components/bottomsheets/material_bottom_sheets.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/controllers/home.dart';
 import 'package:rrfx/src/controllers/trading.dart';
-import 'package:rrfx/src/views/trade/deriv_chart_page.dart';
 
 class Trade extends StatefulWidget {
   const Trade({super.key});
@@ -203,7 +202,7 @@ class _TradeState extends State<Trade> {
                                 ),
                                 onPressed: (){
                                   Get.back();
-                                  Get.to(() => DerivChartPage(login: accountTrading[index]['login']));
+                                  // Get.to(() => DerivChartPage(login: accountTrading[index]['login']));
                                 },
                                 child: Text("Deriv Chart", style: GoogleFonts.inter(color: Colors.white), textAlign: TextAlign.center)),
                             ),

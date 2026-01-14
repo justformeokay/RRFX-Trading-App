@@ -168,116 +168,98 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
                 ),
               )
             else if (opened.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Icon with gradient background
-                        Container(
-                          width: 120,
-                          height: 120,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                CustomColor.secondaryColor.withValues(
-                                  alpha: 0.15,
-                                ),
-                                Colors.blue.withValues(alpha: 0.15),
-                              ],
-                            ),
-                          ),
-                          child: Center(
-                            child: Icon(
-                              Iconsax.chart_21_outline,
-                              size: 60,
-                              color: CustomColor.secondaryColor,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Title
-                        Text(
-                          "No Open Positions",
-                          style: GoogleFonts.inter(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
-                          ),
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        // Description
-                        Text(
-                          "You don't have any active trading positions at the moment.",
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            height: 1.5,
-                            color: Theme.of(context).textTheme.bodySmall?.color,
-                          ),
-                        ),
-
-                        const SizedBox(height: 32),
-
-                        // Info cards
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade900
-                                    : Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color:
-                                  Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? Colors.grey.shade800
-                                      : Colors.grey.shade200,
-                              width: 1,
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              _buildInfoRow(
-                                context,
-                                icon: Iconsax.chart_outline,
-                                title: "Start Trading",
-                                description:
-                                    "Open a new position from the chart or market list",
-                              ),
-                              const SizedBox(height: 16),
-                              Divider(
-                                height: 1,
-                                color:
-                                    Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? Colors.grey.shade800
-                                        : Colors.grey.shade200,
-                              ),
-                              const SizedBox(height: 16),
-                              _buildInfoRow(
-                                context,
-                                icon: Iconsax.refresh_outline,
-                                title: "Real-time Updates",
-                                description:
-                                    "Your positions will appear here automatically",
-                              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min, // Tambahkan agar Column tidak mengambil ruang berlebih
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Icon dengan gradient
+                      Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              CustomColor.secondaryColor.withValues(alpha: 0.15),
+                              Colors.blue.withValues(alpha: 0.15),
                             ],
                           ),
                         ),
-                      ],
-                    ),
+                        child: Center(
+                          child: Icon(
+                            Iconsax.chart_21_outline,
+                            size: 60,
+                            color: CustomColor.secondaryColor,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        "No Open Positions",
+                        style: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        "You don't have any active trading positions at the moment.",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          height: 1.5,
+                          color: Theme.of(context).textTheme.bodySmall?.color,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      // Info cards
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey.shade900
+                              : Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey.shade800
+                                : Colors.grey.shade200,
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            _buildInfoRow(
+                              context,
+                              icon: Iconsax.chart_outline,
+                              title: "Start Trading",
+                              description: "Open a new position from the chart or market list",
+                            ),
+                            const SizedBox(height: 16),
+                            Divider(
+                              height: 1,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey.shade800
+                                  : Colors.grey.shade200,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildInfoRow(
+                              context,
+                              icon: Iconsax.refresh_outline,
+                              title: "Real-time Updates",
+                              description: "Your positions will appear here automatically",
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 50), // Tambahkan padding bawah ekstra agar nyaman di-scroll
+                    ],
                   ),
                 ),
               )
@@ -368,10 +350,10 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
 // ---------------- BALANCE SECTION --------------------
 class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
-  double get minExtent => 180;
+  double get minExtent => 190;
 
   @override
-  double get maxExtent => 190;
+  double get maxExtent => 200;
 
   final accountController = Get.find<AccountController>();
   final accountWS = Get.find<AccountBalanceWSController>();
@@ -390,92 +372,32 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     final theme = Theme.of(context);
 
     return Container(
       color: theme.scaffoldBackgroundColor,
       padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Obx(
-            () => _balanceRow(
-              "Account ID",
-              accountController.selectedAccount.value?.login ?? "N/A",
-              context,
-              color: Get.textTheme.bodyLarge?.color,
-            ),
-          ),
-          // Only show Profit if there are open positions
-          Obx(() {
-            final tradingController = Get.find<TradingController>();
-            final hasOpenPositions =
-                tradingController.openOrderModel.value?.response?.isNotEmpty ??
-                false;
-
-            if (!hasOpenPositions) return SizedBox.shrink();
-
-            return _balanceRow(
-              "Profit",
-              _formatProfit(accountWS.profit.value),
-              context,
-              color:
-                  accountWS.profit.value >= 0
-                      ? Colors.blue
-                      : Colors.red.shade400,
-            );
-          }),
-          Obx(
-            () => _balanceRow(
-              "Balance",
-              _formatNumber(accountController.selectedAccount.value?.balance),
-              context,
-              color: Get.textTheme.bodyLarge?.color,
-            ),
-          ),
-          Obx(
-            () => _balanceRow(
-              "Equity",
-              _formatNumber(accountController.selectedAccount.value?.equity),
-              context,
-              color: Get.textTheme.bodyLarge?.color,
-            ),
-          ),
-          Obx(
-            () => _balanceRow(
-              "Margin",
-              _formatNumber(accountController.selectedAccount.value?.margin),
-              context,
-              color: Get.textTheme.bodyLarge?.color,
-            ),
-          ),
-          Obx(
-            () => _balanceRow(
-              "Free Margin",
-              _formatNumber(
-                accountController.selectedAccount.value?.marginFree,
-              ),
-              context,
-              color: Get.textTheme.bodyLarge?.color,
-            ),
-          ),
-          Obx(
-            () => _balanceRow(
-              "Margin Level (%)",
-              accountController.selectedAccount.value?.marginFreePercent != null
-                  ? "${accountController.selectedAccount.value?.marginFreePercent}"
-                  : "N/A",
-              context,
-              color: Get.textTheme.bodyLarge?.color,
-            ),
-          ),
-        ],
+      // Tambahkan SingleChildScrollView untuk membungkus Column
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(), // Biarkan Sliver yang menangani scroll utama
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Obx(() => _balanceRow("Account ID", accountController.selectedAccount.value?.login ?? "N/A", context)),
+            Obx(() {
+              final tradingController = Get.find<TradingController>();
+              if (!(tradingController.openOrderModel.value?.response?.isNotEmpty ?? false)) return const SizedBox.shrink();
+              return _balanceRow("Profit", _formatProfit(accountWS.profit.value), context, color: accountWS.profit.value >= 0 ? Colors.blue : Colors.red.shade400);
+            }),
+            Obx(() => _balanceRow("Balance", _formatNumber(accountController.selectedAccount.value?.balance), context)),
+            Obx(() => _balanceRow("Equity", _formatNumber(accountController.selectedAccount.value?.equity), context)),
+            Obx(() => _balanceRow("Margin", _formatNumber(accountController.selectedAccount.value?.margin), context)),
+            Obx(() => _balanceRow("Free Margin", _formatNumber(accountController.selectedAccount.value?.marginFree), context)),
+            Obx(() => _balanceRow("Margin Level (%)", accountController.selectedAccount.value?.marginFreePercent?.toString() ?? "N/A", context)),
+          ],
+        ),
       ),
     );
   }
@@ -494,7 +416,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
           Text(
             "$label:",
             style: GoogleFonts.roboto(
-              fontSize: 14,
+              fontSize: 12,
               color: Theme.of(context).textTheme.bodyLarge?.color,
               fontWeight: FontWeight.w800,
             ),
@@ -519,7 +441,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
           Text(
             value,
             style: GoogleFonts.roboto(
-              fontSize: 14,
+              fontSize: 12,
               color: color,
               fontWeight: FontWeight.w900,
             ),

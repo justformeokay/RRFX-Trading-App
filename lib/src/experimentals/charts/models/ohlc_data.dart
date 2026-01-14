@@ -1,5 +1,4 @@
 // models/chart_model.dart
-import 'package:deriv_chart/deriv_chart.dart';
 
 class OhlcData {
   final int time;
@@ -26,17 +25,17 @@ class OhlcData {
     );
   }
 
-  // Konversi ke model Candle untuk deriv_chart
-  Candle toCandle() {
-    return Candle(
-      // Epoch harus dalam detik
-      epoch: time,
-      open: open,
-      high: high,
-      low: low,
-      close: close,
-    );
-  }
+  // // Konversi ke model Candle untuk deriv_chart
+  // Candle toCandle() {
+  //   return Candle(
+  //     // Epoch harus dalam detik
+  //     epoch: time,
+  //     open: open,
+  //     high: high,
+  //     low: low,
+  //     close: close,
+  //   );
+  // }
 }
 
 class ChartResponse {

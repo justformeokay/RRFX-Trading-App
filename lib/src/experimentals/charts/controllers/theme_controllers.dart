@@ -44,7 +44,7 @@ class ThemeControllerExperimentals extends GetxController {
         fontWeight: FontWeight.bold,
       ),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: colorScheme.surface,
       elevation: 2,
     ),

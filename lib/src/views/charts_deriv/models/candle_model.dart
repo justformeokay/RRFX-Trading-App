@@ -1,6 +1,4 @@
 // candle_model.dart
-import 'package:deriv_chart/deriv_chart.dart';
-
 class CandleModel {
   final DateTime time;
   final double open;
@@ -82,15 +80,15 @@ class CandleModel {
   }
 
   /// Konversi ke Candle (deriv_chart) — memerlukan package deriv_chart
-  Candle toDerivCandle() {
-    return Candle(
-      epoch: (time.millisecondsSinceEpoch / 1000).round(),
-      open: open,
-      high: high,
-      low: low,
-      close: close,
-    );
-  }
+  // Candle toDerivCandle() {
+  //   return Candle(
+  //     epoch: (time.millisecondsSinceEpoch / 1000).round(),
+  //     open: open,
+  //     high: high,
+  //     low: low,
+  //     close: close,
+  //   );
+  // }
 
   /// Optional: copyWith agar mudah update
   CandleModel copyWith({

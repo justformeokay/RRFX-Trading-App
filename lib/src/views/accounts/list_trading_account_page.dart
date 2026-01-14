@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:rrfx/src/components/alerts/default.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/controllers/trading.dart';
-import 'package:rrfx/src/views/trade/deriv_chart_page.dart';
 import 'package:rrfx/src/views/trade/index.dart';
 
 class ListTradingAccountPage extends StatefulWidget {
@@ -82,7 +81,7 @@ class _ListTradingAccountPageState extends State<ListTradingAccountPage> {
                       ),
                       onPressed: (){
                         Get.back();
-                        Get.to(() => DerivChartPage(login: accountTrading[index]['login']));
+                        // Get.to(() => DerivChartPage(login: accountTrading[index]['login']));
                       },
                       child: Text("Deriv Chart", style: GoogleFonts.inter(color: Colors.white), textAlign: TextAlign.center)),
                   ),
