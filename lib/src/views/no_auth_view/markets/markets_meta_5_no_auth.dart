@@ -6,6 +6,7 @@ import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/views/markets/controllers/market_mt5_controller.dart'; 
 import 'package:rrfx/src/views/markets/models/market_mt5_model.dart';
 import 'package:rrfx/src/views/trade/derivchart_without_loginid.dart';
+import 'package:rrfx/src/helpers/handlers/holiday.dart';
 
 // Definisi warna trading (tetap)
 const Color _upColor = Colors.blue;
@@ -152,20 +153,22 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
         ],
       ),
       body: SafeArea(
-        child: Obx(
-          () {
-            // WebSocket Status Handling
-            if (controller.isReconnecting.value) {
-              return _buildConnectingState();
-            }
-            
-            if (controller.hasConnectionError.value) {
-              return _buildErrorState();
-            }
-            
-            if (!controller.isConnected.value) {
-              return _buildDisconnectedState();
-            }
+        child: isForexHoliday()
+            ? _buildMarketHolidayState()
+            : Obx(
+                () {
+                  // WebSocket Status Handling
+                  if (controller.isReconnecting.value) {
+                    return _buildConnectingState();
+                  }
+                  
+                  if (controller.hasConnectionError.value) {
+                    return _buildErrorState();
+                  }
+                  
+                  if (!controller.isConnected.value) {
+                    return _buildDisconnectedState();
+                  }
             
             final allSymbols = controller.marketData.keys.toList();
             final filteredSymbols = _filterMarkets(controller.marketData, searchQuery.value);
@@ -275,8 +278,8 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
                 ),
               ],
             );
-          },
-        ),
+                },
+              ),
       ),
     );
   }
@@ -926,5 +929,89 @@ class MarketsMeta5NoAuth extends GetView<MarketMt5Controller> {
         ],
       ),
     );
+  }
+
+  // Market Holiday State
+  Widget _buildMarketHolidayState() {
+    final isDarkMode = Get.isDarkMode;
+    final now = DateTime.now().toUtc();
+    final dayName = _getDayName(now.weekday);
+    
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Iconsax.calendar_outline,
+              size: 64,
+              color: Colors.orange,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Market Closed',
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: isDarkMode ? Colors.white : Colors.black,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 48),
+            child: Text(
+              'The Forex market is currently closed.\n$dayName is a market holiday.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                height: 1.5,
+                color: isDarkMode ? Colors.white70 : Colors.black54,
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.orange.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Text(
+              'This page is not accessible during market holidays.\nPlease try again when the market reopens.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                height: 1.5,
+                color: Colors.orange,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper function to get day name in English
+  String _getDayName(int weekday) {
+    final days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    return days[weekday - 1];
   }
 }

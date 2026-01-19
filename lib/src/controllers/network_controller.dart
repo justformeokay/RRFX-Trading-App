@@ -79,8 +79,8 @@ class NetworkController extends GetxController {
         networkSpeed.value = speed;
         print('🌐 Network Latency: ${speed}ms');
         
-        // Jika network speed > 500ms, tampilkan warning dialog
-        if (speed > 500) {
+        // Jika network speed > 800ms, tampilkan warning dialog
+        if (speed > 800) {
           await Future.delayed(const Duration(milliseconds: 300));
           NetworkSpeedDialog.showUnstableConnectionDialog(speed);
         }

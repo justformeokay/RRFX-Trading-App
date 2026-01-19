@@ -65,7 +65,7 @@ class DefaultFirebaseOptions {
     projectId: 'rrfx-50381',
     databaseURL: 'https://rrfx-50381-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'rrfx-50381.firebasestorage.app',
-    iosBundleId: 'com.rrfx.rrfx',
+    iosBundleId: 'com.rrfx.app',
   );
 
 }

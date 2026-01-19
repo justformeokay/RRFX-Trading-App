@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
-import 'package:rrfx/src/views/authentications/failed_version_app.dart';
+import 'package:rrfx/src/service/in_app_update_service.dart';
 import 'package:rrfx/src/views/authentications/locked_page.dart';
-import 'package:rrfx/src/views/authentications/server_error_page.dart';
 import 'package:rrfx/src/views/authentications/setup_passcode_page.dart';
 import 'package:rrfx/src/views/authentications/verify_passcode_page.dart';
 import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
@@ -51,44 +50,13 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
     try {
       print('🚀 [SPLASH] Starting app flow...');
       
-      // Add timeout untuk keseluruhan splash flow
-      Map<String, dynamic> versionCheck = await authController.getVersionApp()
-          .timeout(const Duration(seconds: 30), onTimeout: () {
-        print('⏱️ [SPLASH] getVersionApp timeout, continue anyway');
-        return {
-          'success': true, // Continue ke next screen meski timeout
-          'isServerError': false,
-          'message': 'Version check timeout'
-        };
-      });
+      // ✅ Check for in-app updates from Play Store (no timeout needed)
+      print('📱 [SPLASH] Checking for app updates...');
+      await InAppUpdateService().checkForUpdate();
+      
+      print('✅ [SPLASH] Update check completed, proceeding with app flow...');
 
-      print('📱 [SPLASH] Version check result: $versionCheck');
-
-      // Check if it's a server error
-      if (versionCheck['isServerError'] == true) {
-        print('❌ [SPLASH] Server error detected');
-        _finishTransition(() {
-          Get.offAll(
-            () => ServerErrorPage(
-              onRetry: () {
-                Get.offAll(() => const Splashscreen());
-              },
-            errorMessage: versionCheck['message'],
-          ),
-        );
-      });
-      return;
-    }
-
-    // Check if version is invalid
-    if (versionCheck['success'] != true) {
-      _finishTransition(() {
-        Get.offAll(() => const FailedVersionPage(updateUrl: "https://rrfx.co.id/"));
-      });
-      return;
-    }
-
-    bool loggedIn = await getLoggedIn();
+      bool loggedIn = await getLoggedIn();
     
     // ✅ If user is logged in, fetch profile and check passcode from API response
     if (loggedIn) {

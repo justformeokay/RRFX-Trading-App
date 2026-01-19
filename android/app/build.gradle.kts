@@ -17,7 +17,7 @@ if (keystorePropertiesFile.exists()) {
 android {
     namespace = "com.rrfx.app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973"
+    ndkVersion = "28.0.12433566"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -36,6 +36,7 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         ndk {
+            debugSymbolLevel = "FULL"
             abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
         }
     }

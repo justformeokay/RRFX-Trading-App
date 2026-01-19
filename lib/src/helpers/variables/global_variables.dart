@@ -6,6 +6,9 @@ class GlobalVariable {
   // static final mainURL = "https://api-rrfx.techcrm.net";
   // static final mainURL = "https://api-rrfx.rrfx.co.id";
   static final x_api_key = "fewAHdSkx28301294cKSnczdAs";
+  
+  // Play Store URL for Force Update
+  static const playStoreUrl = "https://play.google.com/store/apps/details?id=com.rrfx.app";
   static final namaPerusahaan = "PT RRFX Investasi Berjangka";
   static final List<String> gender = [LanguageGlobalVar.MEN.tr, LanguageGlobalVar.FEMALE.tr];
   static final List<String> genderIndo = ["Laki-laki", "Perempuan"];
