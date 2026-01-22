@@ -10,6 +10,7 @@ import 'package:rrfx/src/components/alerts/popup.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/buttons/custom_buttons.dart';
 import 'package:rrfx/src/components/colors/default.dart';
+import 'package:rrfx/src/components/widgets/build_version_indicator.dart';
 import 'package:rrfx/src/controllers/utilities.dart';
 import 'package:rrfx/src/views/beranda/rrfx-contents/market_analysis/market_analysis_detail_page.dart';
 import 'package:rrfx/src/views/beranda/rrfx-contents/market_analysis/market_analysis_page.dart';
@@ -18,7 +19,6 @@ import 'package:rrfx/src/views/beranda/rrfx-contents/news/news_page.dart';
 import 'package:rrfx/src/views/beranda/rrfx-contents/promotions/promotion_detail_page.dart';
 import 'package:rrfx/src/views/chart/components/flag_pair.dart';
 import 'package:rrfx/src/views/no_auth_view/explore/explore_content_controller.dart';
-import 'package:rrfx/src/views/no_auth_view/explore/redeem_rewards.dart';
 import 'package:rrfx/src/views/trade/derivchart_without_loginid.dart';
 
 class ExploreNoAuth extends StatefulWidget {
@@ -32,8 +32,8 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
   UtilitiesController utilitiesController = Get.put(UtilitiesController());
   RxBool isLoading = false.obs;
 
-
   late PageController promoPageController;
+  late ScrollController _scrollController;
   Timer? promoAutoScrollTimer;
 
   ExploreContentController contentController = Get.put(ExploreContentController());
@@ -41,6 +41,7 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
     contentController.fetchPromotions();
     utilitiesController.getTradingSignals();
     contentController.fetchNews();
@@ -53,6 +54,7 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
   void dispose() {
     promoPageController.dispose();
     promoAutoScrollTimer?.cancel();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -79,18 +81,30 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
 
   @override
   Widget build(BuildContext context) {
-  final size = MediaQuery.of(context).size;
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _buildBannerIntroduction(size: size, context: context),
-          _buildMenusItem(size.height),
-          Obx(() => _buildPromotionBannerSection()),
-          Obx(() => isLoading.value ? const CircularProgressIndicator(color: CustomColor.secondaryColor) : _buildMarketAnalysisSection()),
-          Obx(() => _buildMarketAnalysisContentSection()),
-          Obx(() => _buildNewsSection()),
-        ],
-      ),
+    final size = MediaQuery.of(context).size;
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          controller: _scrollController,
+          child: Column(
+            children: [
+              _buildBannerIntroduction(size: size, context: context),
+              _buildMenusItem(size.height),
+              Obx(() => _buildPromotionBannerSection()),
+              Obx(() => isLoading.value ? const CircularProgressIndicator(color: CustomColor.secondaryColor) : _buildMarketAnalysisSection()),
+              Obx(() => _buildMarketAnalysisContentSection()),
+              Obx(() => _buildNewsSection()),
+            ],
+          ),
+        ),
+        // Floating Build Version Indicator dengan scroll detection
+        BuildVersionIndicator(
+          scrollController: _scrollController,
+          margin: const EdgeInsets.fromLTRB(16, 50, 5, 16),
+          showBuildNumber: true,
+          autoHideOnScroll: true,
+        ),
+      ],
     );
   }
 

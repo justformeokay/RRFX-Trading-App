@@ -4,6 +4,8 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -120,15 +122,12 @@
 	<string>Aplikasi membutuhkan akses speech recognition untuk fitur tertentu.</string>
 	<key>NSUserNotificationUsageDescription</key>
 	<string>Aplikasi membutuhkan izin untuk mengirim notifikasi.</string>
-	<key>NSUserTrackingUsageDescription</key>
-	<string>Aplikasi membutuhkan izin untuk memberikan pengalaman yang lebih personal.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
 		<string>remote-notification</string>
-		<string>processing</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>

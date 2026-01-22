@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/views/no_auth_view/settings/about_company_page.dart';
 import 'package:rrfx/src/views/no_auth_view/settings/faq_page.dart';
@@ -10,6 +11,15 @@ import 'package:url_launcher/url_launcher.dart';
 
 class SettingsNoAuth extends StatelessWidget {
   const SettingsNoAuth({super.key});
+
+  Future<String> _getVersionInfo() async {
+    try {
+      final PackageInfo packageInfo = await PackageInfo.fromPlatform();
+      return "v${packageInfo.version}+${packageInfo.buildNumber}";
+    } catch (e) {
+      return "v0.0.0";
+    }
+  }
 
   Future<void> _launchMoreInfo() async {
     final Uri url = Uri.parse("https://rrfx.co.id");
@@ -193,11 +203,17 @@ class SettingsNoAuth extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          _settingsTile(
-            icon: Icons.info_outline_rounded,
-            label: "Version",
-            value: "1.0.0",
-            isDark: isDark,
+          FutureBuilder<String>(
+            future: _getVersionInfo(),
+            builder: (context, snapshot) {
+              final version = snapshot.data ?? "Loading...";
+              return _settingsTile(
+                icon: Icons.info_outline_rounded,
+                label: "Version",
+                value: version,
+                isDark: isDark,
+              );
+            },
           ),
 
           const SizedBox(height: 24),

@@ -4,16 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
-// import 'package:google_sign_in/google_sign_in.dart';
-// import 'package:icons_plus/icons_plus.dart';
-// import 'package:rrfx/src/components/alerts/popup.dart';
-// import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
+
 import 'package:rrfx/src/components/buttons/elevated_button.dart';
 // import 'package:rrfx/src/components/buttons/social_login_button.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/languages/language_variable.dart';
 import 'package:rrfx/src/components/textfields/email_textfield.dart';
 import 'package:rrfx/src/components/textfields/password_textfield.dart';
+import 'package:rrfx/src/components/widgets/build_version_indicator.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
 import 'package:rrfx/src/controllers/google_auth_controller.dart';
 import 'package:rrfx/src/views/authentications/forgot.dart';
@@ -58,6 +56,12 @@ class _SignInState extends State<SignIn> {
         appBar: AppBar(
           forceMaterialTransparency: true,
           elevation: 0,
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 2.0, top: 8.0),
+              child: SimpleVersionBadge(),
+            ),
+          ],
         ),
         resizeToAvoidBottomInset: true,
         body: SingleChildScrollView(
@@ -107,7 +111,7 @@ class _SignInState extends State<SignIn> {
                             ),
                             child: Text(LanguageGlobalVar.LUPA.tr, style: GoogleFonts.inter(
                               fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                              fontSize: 11,
                               color: CustomColor.secondaryColor
                             ))
                           ),

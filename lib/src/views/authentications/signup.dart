@@ -12,6 +12,7 @@ import 'package:rrfx/src/components/textfields/label_textfield.dart';
 import 'package:rrfx/src/components/textfields/name_text_field_new.dart';
 import 'package:rrfx/src/components/textfields/password_textfield.dart';
 import 'package:rrfx/src/components/utilities/utilities.dart';
+import 'package:rrfx/src/components/widgets/build_version_indicator.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
 import 'package:rrfx/src/views/authentications/signin.dart';
 
@@ -77,6 +78,12 @@ class _SignupState extends State<Signup> {
             appBar: AppBar(
               elevation: 0,
               forceMaterialTransparency: true,
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 2.0, top: 8.0),
+                  child: SimpleVersionBadge(),
+                ),
+              ],
             ),
             body: SafeArea(
               child: SingleChildScrollView(

@@ -60,11 +60,13 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBzRHz5d1yL-MLdRZUNC1Rb7Ed-14XN3Jc',
-    appId: '1:842913049513:ios:f4cffa0e8efb270c7df2b8',
+    appId: '1:842913049513:ios:88b094b7f44f046c7df2b8',
     messagingSenderId: '842913049513',
     projectId: 'rrfx-50381',
     databaseURL: 'https://rrfx-50381-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'rrfx-50381.firebasestorage.app',
+    androidClientId: '842913049513-9cd84ju8dd9ducg4p20i7urfeqs7fng0.apps.googleusercontent.com',
+    iosClientId: '842913049513-m6fb41tr7isqu61m1lh549pb4mh8rmlu.apps.googleusercontent.com',
     iosBundleId: 'com.rrfx.app',
   );
 

@@ -7,6 +7,7 @@ import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/languages/language_variable.dart';
 import 'package:rrfx/src/components/textfields/email_textfield.dart';
 import 'package:rrfx/src/components/textfields/label_textfield.dart';
+import 'package:rrfx/src/components/widgets/build_version_indicator.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
 
 class Forgot extends StatefulWidget {
@@ -39,6 +40,12 @@ class _ForgotState extends State<Forgot> {
           backgroundColor: Colors.white,
           elevation: 0,
           forceMaterialTransparency: true,
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 2.0, top: 8.0),
+              child: SimpleVersionBadge(),
+            ),
+          ],
         ),
         body: SafeArea(
           child: SingleChildScrollView(

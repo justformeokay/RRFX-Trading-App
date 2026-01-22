@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:rrfx/src/components/account_list/account_controller.dart';
-import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
+import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
 import 'package:rrfx/src/controllers/device_utilities_controller.dart';
 import 'package:rrfx/src/models/auth/country_code_model.dart';
 import 'package:rrfx/src/service/auth_service.dart';
@@ -78,6 +78,7 @@ class AuthController extends GetxController {
           'device_id': deviceId ?? '', // ✅ Send FCM Token to API
         },
       );
+
       print(response.body);
       print(response.statusCode);
       Get.log("Device Information Sent: ${jsonEncode(deviceInfo)}");
@@ -100,11 +101,9 @@ class AuthController extends GetxController {
           return;
         }
         
-        CustomScaffoldMessanger.showAppSnackBar(
-          context,
-          message: message.isNotEmpty 
-              ? message
-              : "Sign in gagal, mohon cek ulang Email atau Password anda apakah sudah benar",
+        ModernAlertDialog.error(
+          message: message.isNotEmpty ? message : "Sign in gagal, mohon cek ulang Email atau Password anda apakah sudah benar",
+          title: "Login Gagal",
         );
         return;
       }
