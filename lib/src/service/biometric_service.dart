@@ -1,5 +1,6 @@
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
+import 'dart:io' show Platform;
 
 class BiometricService {
   static final BiometricService _instance = BiometricService._internal();
@@ -53,32 +54,45 @@ class BiometricService {
   }) async {
     try {
       print('[BiometricService] Starting authentication...');
+      print('[BiometricService] Platform: ${Platform.operatingSystem}');
       
       // Check if device supports biometric
       final isDeviceSupported = await deviceSupportsBiometric();
       print('[BiometricService] Device supported: $isDeviceSupported');
       
       if (!isDeviceSupported) {
-        throw Exception('Device tidak mendukung biometric authentication');
+        // Untuk iOS, coba tetap authenticate meskipun check gagal
+        // Karena kadang check bisa false tapi authenticate bisa jalan
+        if (!Platform.isIOS) {
+          throw Exception('Device tidak mendukung biometric authentication');
+        }
+        print('[BiometricService] iOS device - attempting anyway...');
       }
 
       // Get available biometrics
       final availableBiometrics = await getAvailableBiometrics();
       print('[BiometricService] Available biometrics: $availableBiometrics');
       
-      if (availableBiometrics.isEmpty) {
-        throw Exception('Tidak ada fingerprint terdaftar di device');
+      // Untuk iOS, kadang availableBiometrics bisa kosong tapi tetap bisa authenticate
+      if (availableBiometrics.isEmpty && !Platform.isIOS) {
+        throw Exception('Tidak ada biometric terdaftar di device');
       }
 
       print('[BiometricService] Calling authenticate with reason: $reason');
       
-      // Authenticate
+      // iOS memerlukan localizedReason yang lebih spesifik
+      final localizedReason = Platform.isIOS 
+          ? 'Autentikasi diperlukan untuk mengakses aplikasi'
+          : reason;
+      
+      // Authenticate dengan opsi berbeda untuk iOS dan Android
       final isAuthenticated = await _localAuth.authenticate(
-        localizedReason: reason,
+        localizedReason: localizedReason,
         options: AuthenticationOptions(
           stickyAuth: stickyAuth,
-          biometricOnly: true,
+          biometricOnly: Platform.isIOS ? true : false, // iOS: biometric only, Android: allow fallback
           useErrorDialogs: useErrorDialogs,
+          sensitiveTransaction: false,
         ),
       );
 
@@ -86,18 +100,39 @@ class BiometricService {
       return isAuthenticated;
     } on PlatformException catch (e) {
       print('[BiometricService] PlatformException: ${e.code} - ${e.message}');
+      print('[BiometricService] Full error details: $e');
       
       // Handle specific errors
       if (e.code == 'NotAvailable') {
         throw Exception('Biometric tidak tersedia di device ini');
       } else if (e.code == 'NotEnrolled') {
-        throw Exception('Tidak ada fingerprint terdaftar di device');
-      } else if (e.code == 'LockedOut') {
+        throw Exception('Tidak ada biometric terdaftar di device');
+      } else if (e.code == 'LockedOut' || e.code == 'LockedOutTemporarily') {
         throw Exception('Terlalu banyak percobaan gagal. Coba lagi nanti');
       } else if (e.code == 'PermanentlyLockedOut') {
         throw Exception('Biometric terkunci permanen. Gunakan passcode');
-      } else if (e.code == 'UserCanceled') {
-        throw Exception('Autentikasi dibatalkan oleh user');
+      } else if (e.code == 'UserCanceled' || e.code == 'PasscodeNotSet' || e.code == 'AuthenticationCanceled') {
+        // Don't throw error for user cancellation
+        print('[BiometricService] User canceled authentication');
+        return false;
+      } else if (e.code == 'BiometricOnlyNotSupported') {
+        // iOS specific - retry with biometricOnly: false
+        print('[BiometricService] BiometricOnly not supported, retrying...');
+        try {
+          final retryAuth = await _localAuth.authenticate(
+            localizedReason: reason,
+            options: const AuthenticationOptions(
+              stickyAuth: true,
+              biometricOnly: false,
+              useErrorDialogs: true,
+              sensitiveTransaction: false,
+            ),
+          );
+          return retryAuth;
+        } catch (retryError) {
+          print('[BiometricService] Retry failed: $retryError');
+          return false;
+        }
       }
       
       throw Exception('Autentikasi biometric gagal: ${e.message}');

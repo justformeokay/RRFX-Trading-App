@@ -93,6 +93,11 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
         
         cachedMap.forEach((symbol, data) {
           try {
+            // Skip market yang di-archive
+            if (archivedMarkets.contains(symbol)) {
+              return;
+            }
+            
             final model = MarketMt5Model.fromJson(data);
             marketData[symbol] = model;
           } catch (e) {
@@ -106,7 +111,7 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
         
         if (marketData.isNotEmpty) {
           isUsingCachedData.value = true;
-          print('✅ Loaded ${marketData.length} cached markets');
+          print('✅ Loaded ${marketData.length} cached markets (${archivedMarkets.length} archived)');
         }
       }
     } catch (e) {
@@ -322,6 +327,9 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
     }
     archivedMarkets.addAll(selectedMarkets);
     selectedMarkets.clear();
+    // Simpan ke storage
+    _saveArchivedMarkets();
+    print('✅ Archived markets saved to storage');
   }
 
   /// Unarchive market
@@ -333,6 +341,9 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
     }
     archivedMarkets.remove(symbol);
     archivedMarketData.remove(symbol);
+    // Simpan ke storage
+    _saveArchivedMarkets();
+    print('✅ Unarchived market saved to storage');
   }
 
   /// Get visible markets (excluding archived ones)
