@@ -71,4 +71,20 @@ class MarketMt5Model {
       digits: newData.digits,
     );
   }
+
+  // Method untuk convert ke JSON (untuk caching)
+  Map<String, dynamic> toJson() {
+    return {
+      'symbol': symbol,
+      'datetime_msc': datetimeMsc,
+      'bid': bid,
+      'ask': ask,
+      'spread': spread,
+      'bid_high': bidHigh,
+      'bid_low': bidLow,
+      'ask_high': askHigh,
+      'ask_low': askLow,
+      'digits': digits,
+    };
+  }
 }

@@ -1,10 +1,17 @@
 import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:rrfx/src/views/markets/models/market_mt5_model.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
+  // Storage untuk persist data market
+  final GetStorage _storage = GetStorage();
+  static const String _cacheKey = 'cached_market_data';
+  static const String _cacheTimeKey = 'cached_market_time';
+  static const String _archivedKey = 'archived_markets';
+  
   // Observable Map untuk menyimpan data market. Key: Symbol (String), Value: MarketModel
   final RxMap<String, MarketMt5Model> marketData = <String, MarketMt5Model>{}.obs;
   
@@ -13,6 +20,10 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
   final RxSet<String> selectedMarkets = <String>{}.obs;
   final RxSet<String> archivedMarkets = <String>{}.obs;
   final RxMap<String, MarketMt5Model> archivedMarketData = <String, MarketMt5Model>{}.obs;
+  
+  // Flag untuk menandai data offline/cached
+  final RxBool isUsingCachedData = false.obs;
+  final Rxn<DateTime> lastUpdateTime = Rxn<DateTime>();
   
   // URL WebSocket
   final String _wsUrl = 'ws://207.148.119.106:9003';
@@ -25,13 +36,22 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
   @override
   void onInit() {
     super.onInit();
-    WidgetsBinding.instance.addObserver(this); 
+    WidgetsBinding.instance.addObserver(this);
+    
+    // Load cached data terlebih dahulu
+    _loadCachedData();
+    _loadArchivedMarkets();
+    
+    // Kemudian coba connect ke websocket
     connectWebSocket();
   }
 
   @override
   void onClose() {
-    WidgetsBinding.instance.removeObserver(this); 
+    WidgetsBinding.instance.removeObserver(this);
+    // Save data sebelum close
+    _saveCacheData();
+    _saveArchivedMarkets();
     _channel.sink.close();
     super.onClose();
   }
@@ -52,9 +72,86 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
     // Opsional: Putuskan koneksi saat aplikasi di-background (Paused)
     // Walaupun OS sering memutusnya, ini bisa jadi housekeeping yang baik.
     else if (state == AppLifecycleState.paused) {
-        print("Aplikasi di-background (PAUSED). Menutup koneksi...");
+        print("Aplikasi di-background (PAUSED). Menyimpan data dan menutup koneksi...");
+        _saveCacheData();
+        _saveArchivedMarkets();
         _channel.sink.close();
         isConnected.value = false;
+    }
+  }
+
+  // ===== CACHE METHODS =====
+  
+  /// Load cached market data dari storage
+  void _loadCachedData() {
+    try {
+      final cachedJson = _storage.read<String>(_cacheKey);
+      final cachedTimeStr = _storage.read<String>(_cacheTimeKey);
+      
+      if (cachedJson != null && cachedJson.isNotEmpty) {
+        final Map<String, dynamic> cachedMap = jsonDecode(cachedJson);
+        
+        cachedMap.forEach((symbol, data) {
+          try {
+            final model = MarketMt5Model.fromJson(data);
+            marketData[symbol] = model;
+          } catch (e) {
+            print('Error loading cached market $symbol: $e');
+          }
+        });
+        
+        if (cachedTimeStr != null) {
+          lastUpdateTime.value = DateTime.tryParse(cachedTimeStr);
+        }
+        
+        if (marketData.isNotEmpty) {
+          isUsingCachedData.value = true;
+          print('✅ Loaded ${marketData.length} cached markets');
+        }
+      }
+    } catch (e) {
+      print('Error loading cached data: $e');
+    }
+  }
+  
+  /// Save market data ke storage
+  void _saveCacheData() {
+    try {
+      if (marketData.isEmpty) return;
+      
+      final Map<String, dynamic> cacheMap = {};
+      marketData.forEach((symbol, model) {
+        cacheMap[symbol] = model.toJson();
+      });
+      
+      _storage.write(_cacheKey, jsonEncode(cacheMap));
+      _storage.write(_cacheTimeKey, DateTime.now().toIso8601String());
+      print('💾 Saved ${marketData.length} markets to cache');
+    } catch (e) {
+      print('Error saving cache data: $e');
+    }
+  }
+  
+  /// Load archived markets dari storage
+  void _loadArchivedMarkets() {
+    try {
+      final archivedJson = _storage.read<String>(_archivedKey);
+      if (archivedJson != null && archivedJson.isNotEmpty) {
+        final List<dynamic> archivedList = jsonDecode(archivedJson);
+        archivedMarkets.addAll(archivedList.cast<String>());
+        print('✅ Loaded ${archivedMarkets.length} archived markets');
+      }
+    } catch (e) {
+      print('Error loading archived markets: $e');
+    }
+  }
+  
+  /// Save archived markets ke storage
+  void _saveArchivedMarkets() {
+    try {
+      _storage.write(_archivedKey, jsonEncode(archivedMarkets.toList()));
+    } catch (e) {
+      print('Error saving archived markets: $e');
     }
   }
 
@@ -140,12 +237,20 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
     }
   }
 
+  // Counter untuk periodic save
+  int _dataUpdateCount = 0;
+  
   void _handleNewData(String data) {
     // Asumsikan data yang diterima adalah string JSON tunggal per pesan
     try {
       final json = jsonDecode(data) as Map<String, dynamic>;
       final newModel = MarketMt5Model.fromJson(json);
       final symbol = newModel.symbol;
+
+      // Cek apakah market ini sudah di-archive
+      if (archivedMarkets.contains(symbol)) {
+        return; // Jangan tampilkan market yang di-archive
+      }
 
       // Logika pembaruan state
       marketData.update(symbol, (existingModel) {
@@ -155,6 +260,20 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
         // Jika model belum ada, tambahkan baru
         return newModel;
       });
+      
+      // Update flag - sekarang menggunakan data live
+      if (isUsingCachedData.value) {
+        isUsingCachedData.value = false;
+      }
+      lastUpdateTime.value = DateTime.now();
+      
+      // Save cache secara periodic (setiap 50 update)
+      _dataUpdateCount++;
+      if (_dataUpdateCount >= 50) {
+        _saveCacheData();
+        _dataUpdateCount = 0;
+      }
+      
     } catch (e) {
       print('Error parsing or processing JSON: $e');
       print('Received data: $data');
