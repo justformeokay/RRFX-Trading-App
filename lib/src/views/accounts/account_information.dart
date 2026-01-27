@@ -56,14 +56,14 @@ class _AccountInformationState extends State<AccountInformation> {
         autoImplyLeading: true
       ),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: EdgeInsets.symmetric(horizontal: 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Account", style: GoogleFonts.inter(fontSize: 50, fontWeight: FontWeight.w700, color: CustomColor.secondaryColor, height: 1.0,)),
-            Text("Information", style: GoogleFonts.inter(fontSize: 50, fontWeight: FontWeight.w700, color: Theme.of(context).textTheme.titleLarge?.color)),
+            Text("Account", style: GoogleFonts.inter(fontSize: 30, fontWeight: FontWeight.w700, color: CustomColor.secondaryColor, height: 1.0,)),
+            Text("Information", style: GoogleFonts.inter(fontSize: 30, fontWeight: FontWeight.w700, color: Theme.of(context).textTheme.titleLarge?.color)),
             const SizedBox(height: 5.0),
-            Text("Informasi lengkap mengenai akun trading ${widget.loginID}.", style: TextStyle(color: CustomColor.textThemeLightSoftColor, fontSize: 15)),
+            Text("Informasi lengkap mengenai akun trading ${widget.loginID}.", style: TextStyle(color: CustomColor.textThemeLightSoftColor, fontSize: 13)),
             const SizedBox(height: 10.0),
             // Header card
             _buildAccountCard(context),
@@ -219,37 +219,95 @@ class _AccountInformationState extends State<AccountInformation> {
   Widget _buildInfoTab() {
     String marginFree = NumberFormatter.formatCurrency(selectedAccount?.marginFree, currency: 'USD');
     String leverage = '1:${selectedAccount?.leverage != null ? NumberFormatter.formatWithoutTrailingZeros(selectedAccount!.leverage) : '0'}';
-    String totalDeposit = selectedAccount?.totalDeposit != null ? NumberFormatter.formatCurrency(selectedAccount!.totalDeposit, currency: selectedAccount!.currency!) : '0';
-    String minimumDeposit = selectedAccount?.minDeposit != null ? NumberFormatter.formatCurrency(selectedAccount!.minDeposit, currency: selectedAccount!.currency!) : '0';
     String fixedRate = selectedAccount?.rate != "Floating" ? 'Yes' : 'No';
     String server = 'RRFX-Real';
     String currency = selectedAccount?.currency ?? "USD";
     String accountTypeName = selectedAccount?.namaTipeAkun ?? '-';
+    String minimumDeposit = selectedAccount?.minDeposit != null ? NumberFormatter.formatCurrency(selectedAccount!.minDeposit, currency: selectedAccount!.currency!) : '0';
+    
+    // Get total deposit based on currency
+    String totalDeposit = _getTotalDepositFormatted();
+    String totalWithdrawal = _getTotalWithdrawalFormatted();
+    
+    // New fields
+    String pnl = selectedAccount?.pnl != null ? NumberFormatter.formatCurrency(selectedAccount!.pnl, currency: selectedAccount!.currency!) : '0';
+    String marginFreePercent = selectedAccount?.marginFreePercent != null ? '${NumberFormatter.formatWithoutTrailingZeros(selectedAccount!.marginFreePercent)}%' : '0%';
+    String minTopup = selectedAccount?.minTopup != null ? NumberFormatter.formatCurrency(selectedAccount!.minTopup, currency: selectedAccount!.currency!) : '0';
+    String minWithdrawal = selectedAccount?.minWithdrawal != null ? NumberFormatter.formatCurrency(selectedAccount!.minWithdrawal, currency: selectedAccount!.currency!) : '0';
+    String maxWithdrawal = selectedAccount?.maxWithdrawal != null ? NumberFormatter.formatCurrency(selectedAccount!.maxWithdrawal, currency: selectedAccount!.currency!) : '0';
 
     return Expanded(
-      child: Padding(
+      child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 12),
-            const Text(
-              'Account details',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            _infoItem(context, 'Margin Free', marginFree),
-            _infoItem(context, 'Leverage', leverage),
-            _infoItem(context, 'Fixed rate', fixedRate),
-            _infoItem(context, 'Server', server),
-            _infoItem(context, 'Currency', currency),
-            _infoItem(context, 'Account Type Name', accountTypeName),
-            _infoItem(context, 'Minimum Deposit', minimumDeposit),
-            _infoItem(context, 'Total Deposit', totalDeposit),
-          ],
-        ),
+        children: [
+          const SizedBox(height: 12),
+          const Text(
+            'Account details',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          _infoItem(context, 'Margin Free', marginFree),
+          _infoItem(context, 'Margin Free Percent', marginFreePercent),
+          _infoItem(context, 'Leverage', leverage),
+          _infoItem(context, 'Fixed rate', fixedRate),
+          _infoItem(context, 'Server', server),
+          _infoItem(context, 'Currency', currency),
+          _infoItem(context, 'Account Type Name', accountTypeName),
+          _infoItem(context, 'Profit/Loss (PnL)', pnl),
+          _infoItem(context, 'Minimum Deposit', minimumDeposit),
+          _infoItem(context, 'Minimum Top-up', minTopup),
+          _infoItem(context, 'Minimum Withdrawal', minWithdrawal),
+          _infoItem(context, 'Maximum Withdrawal', maxWithdrawal),
+          _infoItem(context, 'Total Deposit', totalDeposit),
+          _infoItem(context, 'Total Withdrawal', totalWithdrawal),
+          const SizedBox(height: 20),
+        ],
       ),
     );
+  }
+
+  // Helper method to get total deposit formatted by currency
+  String _getTotalDepositFormatted() {
+    if (selectedAccount == null) {
+      Get.log("❌ selectedAccount is NULL");
+      return '0';
+    }
+    
+    Get.log("✅ selectedAccount found");
+    Get.log("   currency: '${selectedAccount!.currency}'");
+    Get.log("   totalDepositIdr: '${selectedAccount!.totalDepositIdr}'");
+    Get.log("   totalDepositUsd: '${selectedAccount!.totalDepositUsd}'");
+    
+    // If currency is IDR, show IDR value, otherwise show USD
+    if (selectedAccount!.currency?.toUpperCase() == 'IDR') {
+      Get.log("   → Returning IDR value");
+      return selectedAccount!.totalDepositIdr ?? '0';
+    } else {
+      Get.log("   → Returning USD value");
+      return selectedAccount!.totalDepositUsd ?? '0';
+    }
+  }
+
+  // Helper method to get total withdrawal formatted by currency
+  String _getTotalWithdrawalFormatted() {
+    if (selectedAccount == null) {
+      Get.log("❌ selectedAccount is NULL");
+      return '0';
+    }
+    
+    Get.log("✅ selectedAccount found");
+    Get.log("   currency: '${selectedAccount!.currency}'");
+    Get.log("   totalWithdrawalIdr: '${selectedAccount!.totalWithdrawalIdr}'");
+    Get.log("   totalWithdrawalUsd: '${selectedAccount!.totalWithdrawalUsd}'");
+    
+    // If currency is IDR, show IDR value, otherwise show USD
+    if (selectedAccount!.currency?.toUpperCase() == 'IDR') {
+      Get.log("   → Returning IDR value");
+      return selectedAccount!.totalWithdrawalIdr ?? '0';
+    } else {
+      Get.log("   → Returning USD value");
+      return selectedAccount!.totalWithdrawalUsd ?? '0';
+    }
   }
 
   Widget _infoItem(BuildContext context, String label, String value) {
@@ -258,18 +316,26 @@ class _AccountInformationState extends State<AccountInformation> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: textTheme.bodyMedium?.copyWith(
-              color: textTheme.bodyMedium?.color?.withOpacity(0.6), // lebih soft
+          Expanded(
+            flex: 1,
+            child: Text(
+              label,
+              style: textTheme.bodyMedium?.copyWith(
+                color: textTheme.bodyMedium?.color?.withOpacity(0.6),
+              ),
             ),
           ),
-          Text(
-            value,
-            style: textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600, // biar kontras
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 1,
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

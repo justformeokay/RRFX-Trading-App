@@ -31,6 +31,7 @@ class _CreateMT5PasswordPageState extends State<CreateMT5PasswordPage> {
 
   // Confirm password match
   final RxBool confirmMatch = false.obs;
+  final RxBool confirmTouched = false.obs; // Track if user has interacted with confirm field
 
   RxBool get passwordValid => RxBool(
     hasUpper.value &&
@@ -57,6 +58,7 @@ class _CreateMT5PasswordPageState extends State<CreateMT5PasswordPage> {
     });
 
     confirmC.addListener(() {
+      confirmTouched.value = true; // Mark as touched when user starts typing
       confirmMatch.value = confirmC.text == passC.text;
     });
   }
@@ -233,15 +235,15 @@ class _CreateMT5PasswordPageState extends State<CreateMT5PasswordPage> {
               const SizedBox(height: 8),
       
               /// CONFIRM VALIDATION TEXT
-              Obx(() => confirmMatch.value
-                  ? const SizedBox()
-                  : Text(
+              Obx(() => (confirmTouched.value && !confirmMatch.value)
+                  ? Text(
                       "Password tidak cocok!",
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.redAccent,
                       ),
-                    )),
+                    )
+                  : const SizedBox()),
       
               const SizedBox(height: 40),
       

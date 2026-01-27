@@ -78,9 +78,9 @@ class _AccountsState extends State<Accounts> {
             },
             child: Scaffold(
               appBar: CustomAppBar.defaultAppBar(
-                autoImplyLeading: false,
+                autoImplyLeading: true,
                 bottom: PreferredSize(
-                  preferredSize: Size.fromHeight(200),
+                  preferredSize: Size.fromHeight(170),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.start,

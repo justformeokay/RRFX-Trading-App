@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:icons_plus/icons_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 
@@ -81,8 +82,8 @@ class _NumberTextfieldNewState extends State<NumberTextfieldNew> {
         decoration: InputDecoration(
           label: labelWidget, // 🔥 gunakan label baru di sini
           prefixIcon: Icon(
-            Icons.numbers,
-            size: 16,
+            Iconsax.dollar_square_bold,
+            size: 23,
             color: isReadOnly ? null : colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
           ),
 

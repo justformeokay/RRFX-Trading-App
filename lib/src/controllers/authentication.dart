@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -15,7 +16,6 @@ import 'package:rrfx/src/views/authentications/setup_passcode_page.dart';
 import 'package:rrfx/src/views/authentications/suspended_page.dart';
 import 'package:rrfx/src/views/authentications/verification_account_page.dart';
 import 'package:rrfx/src/views/authentications/verify_passcode_page.dart';
-import 'package:rrfx/src/views/mainpage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rrfx/src/controllers/home.dart';
 import 'package:rrfx/src/helpers/variables/global_variables.dart';
@@ -35,10 +35,13 @@ class AuthController extends GetxController {
     try {
       return Get.find<HomeController>();
     } catch (e) {
-      Get.log("⚠️ [AUTH] HomeController not found, creating permanent instance");
+      Get.log(
+        "⚠️ [AUTH] HomeController not found, creating permanent instance",
+      );
       return Get.put(HomeController(), permanent: true);
     }
   }
+
   Map<String, String> deviceInfo = {};
   AuthService authService = Get.find();
 
@@ -54,7 +57,11 @@ class AuthController extends GetxController {
     init();
   }
 
-  Future<void> login(BuildContext context, {String? email, String? password}) async {
+  Future<void> login(
+    BuildContext context, {
+    String? email,
+    String? password,
+  }) async {
     Get.log("🔵 [AUTH] login() called for email: $email");
     SharedPreferences preferences = await SharedPreferences.getInstance();
     try {
@@ -77,6 +84,18 @@ class AuthController extends GetxController {
           'device': jsonEncode(deviceInfo),
           'device_id': deviceId ?? '', // ✅ Send FCM Token to API
         },
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          isLoading(false);
+          Get.log("❌ [AUTH] Request timeout");
+          ModernAlertDialog.warning(
+            title: "Koneksi Lambat",
+            message: "Server tidak merespons. Silakan periksa koneksi internet Anda dan coba lagi.",
+            buttonText: "OK",
+          );
+          throw TimeoutException("Request timeout");
+        },
       );
 
       print(response.body);
@@ -92,7 +111,7 @@ class AuthController extends GetxController {
       // ✅ Check API response status first (regardless of HTTP status code)
       if (result['status'] == false) {
         Get.log("❌ [AUTH] Login failed - API status false");
-        
+
         // Check if account is locked
         final message = result['message'] ?? "";
         if (message.toLowerCase().contains("locked")) {
@@ -100,39 +119,56 @@ class AuthController extends GetxController {
           Get.offAll(() => const LockedPage());
           return;
         }
+
+        // Tentukan title dan type berdasarkan pesan error
+        String title = "Login Gagal";
+        AlertType alertType = AlertType.error;
         
-        ModernAlertDialog.error(
-          message: message.isNotEmpty ? message : "Sign in gagal, mohon cek ulang Email atau Password anda apakah sudah benar",
-          title: "Login Gagal",
+        if (message.contains("tidak ditemukan") || message.contains("salah")) {
+          title = "Email atau Password Salah";
+        }
+
+        ModernAlertDialog.show(
+          type: alertType,
+          message: message.isNotEmpty ? message : "Login gagal, mohon cek ulang Email atau Password Anda apakah sudah benar",
+          title: title,
+          buttonText: "OK",
         );
         return;
       }
 
       if (response.statusCode != 200) {
-        Get.log("❌ [AUTH] Login failed - HTTP status code not 200: ${response.statusCode}");
+        Get.log(
+          "❌ [AUTH] Login failed - HTTP status code not 200: ${response.statusCode}",
+        );
         responseMessage(result['message'] ?? "Login gagal");
+        ModernAlertDialog.error(
+          title: "Masalah Server",
+          message: result['message'] ?? "Terjadi kesalahan saat login. Silakan coba lagi.",
+          buttonText: "OK",
+        );
         return;
       }
-      
+
       responseMessage(result['message'] ?? "Login berhasil");
       final status = result['response']?['status'] ?? "";
       final hasPasscode = result['response']?['passcode'] ?? false;
       statusAccount(status.toLowerCase());
       final accessToken = result['response']?['access_token'];
       final refreshToken = result['response']?['refresh_token'];
-      
+
       Get.log("✅ [AUTH] Login successful");
       Get.log("🔐 [AUTH] Account status: $status");
       Get.log("📋 [AUTH] Has passcode on server: $hasPasscode");
       Get.log("🎫 [AUTH] Access token: ${accessToken?.substring(0, 20)}...");
-      
+
       preferences.setString('refreshToken', refreshToken);
       preferences.setString('accessToken', accessToken);
       await box.write('token', accessToken);
       await box.write('refreshToken', refreshToken);
       authService.accessToken = accessToken;
       authService.refreshToken = refreshToken;
-      
+
       Get.log("💾 [AUTH] Tokens saved successfully");
       Get.log("🎮 [AUTH] Initializing controllers...");
       Get.put(AccountController());
@@ -146,20 +182,28 @@ class AuthController extends GetxController {
       // Tunggu profile selesai di-fetch sebelum routing
       final profileSuccess = await homeController.profile();
       Get.log("📥 [AUTH] Profile fetch completed. Success: $profileSuccess");
-      Get.log("👤 [AUTH] Profile data: ${homeController.profileModel.value?.toJson()}");
+      Get.log(
+        "👤 [AUTH] Profile data: ${homeController.profileModel.value?.toJson()}",
+      );
 
-      Get.log("🚀 [AUTH] Routing based on status: $status and passcode: $hasPasscode");
+      Get.log(
+        "🚀 [AUTH] Routing based on status: $status and passcode: $hasPasscode",
+      );
       switch (statusAccount.value) {
         case "active":
           Get.log("✅ [AUTH] Status: active - Checking passcode...");
           await preferences.setBool('loggedIn', true);
-          
+
           // ✅ Check if passcode already exists on server
           if (hasPasscode) {
-            Get.log("✅ [AUTH] Passcode exists on server - Going to VerifyPasscodePage");
+            Get.log(
+              "✅ [AUTH] Passcode exists on server - Going to VerifyPasscodePage",
+            );
             Get.offAll(() => const VerifyPasscodePage());
           } else {
-            Get.log("🔐 [AUTH] Passcode not set up on server - Going to SetupPasscodePage");
+            Get.log(
+              "🔐 [AUTH] Passcode not set up on server - Going to SetupPasscodePage",
+            );
             Get.offAll(() => const SetupPasscodePage());
           }
           break;
@@ -168,12 +212,18 @@ class AuthController extends GetxController {
           Get.offAll(() => const SuspendedAccountPage());
           break;
         case "otp":
-          Get.log("📱 [AUTH] Status: otp - Going to OtpPage (user baru, belum verifikasi OTP)");
+          Get.log(
+            "📱 [AUTH] Status: otp - Going to OtpPage (user baru, belum verifikasi OTP)",
+          );
           Get.offAll(() => const OtpPage());
           break;
         case "verification":
-          Get.log("📧 [AUTH] Status: verification - Going to VerificationAccountPage (user baru, belum verifikasi akun)");
-          Get.log("👤 [AUTH] Profile before navigation: ${homeController.profileModel.value?.email ?? 'NULL'}");
+          Get.log(
+            "📧 [AUTH] Status: verification - Going to VerificationAccountPage (user baru, belum verifikasi akun)",
+          );
+          Get.log(
+            "👤 [AUTH] Profile before navigation: ${homeController.profileModel.value?.email ?? 'NULL'}",
+          );
           Get.offAll(() => const VerificationAccountPage());
           break;
         default:
@@ -182,12 +232,65 @@ class AuthController extends GetxController {
       }
     } catch (e) {
       isLoading(false);
-      print("❌ [AUTH] Exception in login(): $e");
-      responseMessage.value = "Terjadi kesalahan: $e";
+      Get.log("❌ [AUTH] Exception in login(): $e");
+      
+      // Gunakan helper method untuk mendapatkan pesan error yang sesuai
+      String errorMessage = _getErrorMessage(e);
+      responseMessage.value = errorMessage;
+      
+      // Tentukan title berdasarkan jenis error
+      String title = "Kesalahan";
+      if (errorMessage.contains("Koneksi internet")) {
+        title = "Koneksi Internet Terputus";
+      } else if (errorMessage.contains("lambat")) {
+        title = "Koneksi Lambat";
+      }
+      
+      // Tampilkan popup error
+      ModernAlertDialog.show(
+        type: AlertType.error,
+        title: title,
+        message: errorMessage,
+        buttonText: "OK",
+      );
     }
   }
 
   /// Register API
+  /// Helper method untuk menentukan pesan error yang sesuai
+  String _getErrorMessage(Object error) {
+    if (error is SocketException) {
+      // Koneksi internet terputus atau host tidak ditemukan
+      return "Koneksi internet terputus. Silakan periksa koneksi Anda dan coba lagi.";
+    } else if (error is TimeoutException) {
+      // Koneksi timeout
+      return "Koneksi lambat atau server tidak merespons. Silakan coba lagi.";
+    } else if (error is FormatException) {
+      // Error parsing response
+      return "Terjadi kesalahan saat memproses data. Silakan coba lagi.";
+    } else if (error is HttpException) {
+      // HTTP error
+      return "Terjadi kesalahan jaringan. Silakan periksa koneksi Anda.";
+    } else {
+      final errorString = error.toString();
+      
+      // Deteksi berbagai pesan error jaringan
+      if (errorString.contains("SocketException") || errorString.contains("Failed host lookup")) {
+        return "Koneksi internet terputus. Silakan periksa koneksi Anda dan coba lagi.";
+      } else if (errorString.contains("TimeoutException") || errorString.contains("Timeout")) {
+        return "Koneksi lambat atau server tidak merespons. Silakan coba lagi.";
+      } else if (errorString.contains("Connection refused")) {
+        return "Tidak dapat terhubung ke server. Silakan coba lagi nanti.";
+      } else if (errorString.contains("Connection reset")) {
+        return "Koneksi terputus oleh server. Silakan coba lagi.";
+      } else if (errorString.contains("No address associated with hostname")) {
+        return "Server tidak dapat diakses. Periksa koneksi internet Anda.";
+      }
+      
+      return error.toString();
+    }
+  }
+
   Future<bool> register({
     String? email,
     String? password,
@@ -197,10 +300,14 @@ class AuthController extends GetxController {
     String? phoneCode,
     bool? agree,
   }) async {
-    Get.log("🟢 [AUTH] register() called for email: $email, name: $name, phone: $phone");
+    Get.log(
+      "🟢 [AUTH] register() called for email: $email, name: $name, phone: $phone",
+    );
     try {
       isLoading(true);
       Get.log("📡 [AUTH] Sending registration request...");
+      
+      // Tambahkan timeout untuk request
       http.Response response = await http.post(
         Uri.tryParse("${GlobalVariable.mainURL}/auth/register")!,
         headers: {
@@ -217,16 +324,25 @@ class AuthController extends GetxController {
           'terms': agree == true ? '1' : '0',
           'device': jsonEncode(deviceInfo),
         },
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          isLoading(false);
+          responseMessage.value = "Koneksi lambat atau server tidak merespons. Silakan coba lagi.";
+          Get.log("❌ [AUTH] Request timeout");
+          throw TimeoutException("Request timeout");
+        },
       );
+      
       var result = jsonDecode(response.body);
       isLoading(false);
       Get.log("📥 [AUTH] Register response status: ${response.statusCode}");
       Get.log("📋 [AUTH] Register response: ${response.body}");
-      
+
       if (response.statusCode == 200) {
         if (result['status'] != true) {
           Get.log("❌ [AUTH] Registration failed - status false");
-          responseMessage.value = result['message'];
+          responseMessage.value = result['message'] ?? "Registrasi gagal";
           return false;
         }
         Get.log("✅ [AUTH] Registration successful");
@@ -234,13 +350,14 @@ class AuthController extends GetxController {
         return true;
       }
       Get.log("❌ [AUTH] Registration failed - status code not 200");
-      responseMessage.value = result['message'];
-      // responseMessage.value = result['message']['data']['id'];
+      responseMessage.value = result['message'] ?? "Terjadi kesalahan saat registrasi";
       return false;
     } catch (e) {
       Get.log("❌ [AUTH] Exception in register(): $e");
       isLoading(false);
-      responseMessage.value = e.toString();
+      
+      // Gunakan helper method untuk mendapatkan pesan error yang sesuai
+      responseMessage.value = _getErrorMessage(e);
       return false;
     }
   }
@@ -357,11 +474,13 @@ class AuthController extends GetxController {
   /// Send OTP WhatsApp API
   Future<Map<String, dynamic>> getVersionApp({String? version}) async {
     String? appVersion = '1.0'; // Default fallback (format: major.minor)
-    
+
     try {
       // Add timeout untuk getAppVersion karena package_info_plus bisa hang
-      appVersion = await DeviceUtilitiesController.getAppVersion()
-          .timeout(const Duration(seconds: 5), onTimeout: () => '1.0');
+      appVersion = await DeviceUtilitiesController.getAppVersion().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => '1.0',
+      );
     } catch (e) {
       print('⚠️ [AUTH] getAppVersion error: $e, using fallback version');
       appVersion = '1.0';
@@ -369,18 +488,23 @@ class AuthController extends GetxController {
 
     try {
       isLoading(true);
-      
+
       // Add timeout untuk HTTP request
-      http.Response response = await http.post(
-        Uri.tryParse("${GlobalVariable.mainURL}/public/check-version")!,
-        headers: {
-          'x-api-key': GlobalVariable.x_api_key,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: {'version': appVersion, 'device': jsonEncode(deviceInfo)},
-      ).timeout(const Duration(seconds: 15), onTimeout: () {
-        throw TimeoutException('Version check timeout');
-      });
+      http.Response response = await http
+          .post(
+            Uri.tryParse("${GlobalVariable.mainURL}/public/check-version")!,
+            headers: {
+              'x-api-key': GlobalVariable.x_api_key,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: {'version': appVersion, 'device': jsonEncode(deviceInfo)},
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw TimeoutException('Version check timeout');
+            },
+          );
 
       isLoading(false);
 
@@ -496,6 +620,54 @@ class AuthController extends GetxController {
       isLoading(false);
       responseMessage(e.toString());
       return false;
+    }
+  }
+
+  /// Logout - Clear all stored data from login
+  Future<void> logout() async {
+    Get.log("🔴 [AUTH] logout() called - Clearing all login data");
+    try {
+      SharedPreferences preferences = await SharedPreferences.getInstance();
+
+      // Clear tokens from SharedPreferences
+      await preferences.remove('accessToken');
+      await preferences.remove('refreshToken');
+      await preferences.remove('loggedIn');
+      await preferences.remove('deviceID');
+      Get.log("💾 [AUTH] Cleared data from SharedPreferences");
+
+      // Clear tokens from GetStorage
+      await box.remove('token');
+      await box.remove('refreshToken');
+      Get.log("💾 [AUTH] Cleared data from GetStorage");
+
+      // Clear tokens from AuthService
+      authService.accessToken = null;
+      authService.refreshToken = null;
+      Get.log("💾 [AUTH] Cleared tokens from AuthService");
+
+      // Clear passcode data
+      await PasscodeService.deletePasscode();
+      Get.log("💾 [AUTH] Cleared passcode data");
+
+      // Clear controllers
+      if (Get.isRegistered<AccountController>()) {
+        Get.delete<AccountController>();
+        Get.log("🎮 [AUTH] Deleted AccountController");
+      }
+
+      if (Get.isRegistered<HomeController>()) {
+        Get.delete<HomeController>();
+        Get.log("🎮 [AUTH] Deleted HomeController");
+      }
+
+      // Clear other cached data
+      statusAccount('');
+      personalModel.value = null;
+
+      Get.log("✅ [AUTH] Logout completed successfully");
+    } catch (e) {
+      Get.log("❌ [AUTH] Error during logout: $e");
     }
   }
 }

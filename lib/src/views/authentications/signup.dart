@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
+import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
 import 'package:rrfx/src/components/bottomsheets/material_bottom_sheets.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/buttons/elevated_button.dart';
@@ -263,7 +264,31 @@ class _SignupState extends State<Signup> {
                                     CustomScaffoldMessanger.showAppSnackBar(context, message: authController.responseMessage.value, type: SnackBarType.success);
                                     Get.off(() => const SignIn());
                                   } else {
-                                    CustomScaffoldMessanger.showAppSnackBar(context, message: authController.responseMessage.value, type: SnackBarType.error);
+                                    // Tentukan title dan type berdasarkan pesan error
+                                    String title = "Registrasi Gagal";
+                                    String message = authController.responseMessage.value;
+                                    AlertType alertType = AlertType.error;
+                                    
+                                    // Deteksi jenis error
+                                    if (message.contains("Koneksi internet")) {
+                                      title = "Koneksi Internet Terputus";
+                                      alertType = AlertType.error;
+                                    } else if (message.contains("lambat") || message.contains("timeout")) {
+                                      title = "Koneksi Lambat";
+                                      alertType = AlertType.warning;
+                                    } else if (message.contains("server")) {
+                                      title = "Masalah Server";
+                                      alertType = AlertType.error;
+                                    }
+                                    
+                                    // Tampilkan popup error yang sesuai
+                                    ModernAlertDialog.show(
+                                      type: alertType,
+                                      title: title,
+                                      message: message,
+                                      buttonText: "Coba Lagi",
+                                      onPressed: () => Get.back(),
+                                    );
                                   }
                                 });
                               },

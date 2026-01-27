@@ -102,6 +102,10 @@ class Real {
     this.minTopup,
     this.minWithdrawal,
     this.maxWithdrawal,
+    this.totalDepositIdr,
+    this.totalDepositUsd,
+    this.totalWithdrawalIdr,
+    this.totalWithdrawalUsd,
   });
   String? id;
   String? login;
@@ -120,6 +124,10 @@ class Real {
   String? minTopup;
   String? minWithdrawal;
   String? maxWithdrawal;
+  String? totalDepositIdr;
+  String? totalDepositUsd;
+  String? totalWithdrawalIdr;
+  String? totalWithdrawalUsd;
 
   Real.fromJson(Map<String, dynamic> json){
     id = json['id'];
@@ -139,5 +147,9 @@ class Real {
     minTopup = json['min_topup'];
     minWithdrawal = json['min_withdrawal'];
     maxWithdrawal = json['max_withdrawal'];
+    totalDepositIdr = json['total_deposit_idr'];
+    totalDepositUsd = json['total_deposit_usd'];
+    totalWithdrawalIdr = json['total_withdrawal_idr'];
+    totalWithdrawalUsd = json['total_withdrawal_usd'];
   }
 }

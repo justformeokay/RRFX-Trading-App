@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:icons_plus/icons_plus.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/alerts/default.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
@@ -226,10 +227,10 @@ class _DepositState extends State<Deposit> {
                     subtitle: "Pilih bank admin sesuai dengan currency akun yang anda pilih sebelumnya saat pembuatan akun trading",
                     children: [
                       Obx(
-                        () => VoidTextField(requiredField: true, controller: bankAdminHolder, readOnly: false, fieldName: "Admin Bank Holder", hintText: "Admin Bank Holder", labelText: "Admin Bank Holder", onPressed: settingController.isLoading.value ? null : () async {
+                        () => VoidTextField(requiredField: true, controller: bankAdminHolder, readOnly: false, fieldName: "Admin Bank Holder", hintText: "Admin Bank Holder", labelText: "Admin Bank Holder", iconData: Iconsax.user_bold, onPressed: settingController.isLoading.value ? null : () async {
                           CustomMaterialBottomSheets.defaultBottomSheet(context, size: size, title: "Pilih bank admin yang sesuai dengan rekening anda", children: List.generate(settingController.adminBankModel.value?.response?.length ?? 0, (i){
                             return ListTile(
-                              leading: Icon(Icons.account_balance, color: isDark ? Colors.white : Colors.black),
+                              leading: Icon(Iconsax.user_bold, color: isDark ? Colors.white : Colors.black),
                               onTap: (){
                                 Navigator.pop(context);
                                 bankAdminHolder.text = settingController.adminBankModel.value?.response?[i].bankHolder ?? "";
@@ -260,10 +261,10 @@ class _DepositState extends State<Deposit> {
                     subtitle: "Pilih bank yang anda miliki",
                     children: [
                       Obx(
-                        () => VoidTextField(readOnly: false, requiredField: true, controller: myBankName, fieldName: "Nama Bank", hintText: "Nama Bank", labelText: "Nama Bank", onPressed: settingController.isLoading.value ? null : () async {
+                        () => VoidTextField(readOnly: false, requiredField: true, controller: myBankName, fieldName: "Nama Bank", hintText: "Nama Bank", labelText: "Nama Bank", iconData: Iconsax.building_bold, onPressed: settingController.isLoading.value ? null : () async {
                           CustomMaterialBottomSheets.defaultBottomSheet(context, size: size, title: "Pilih bank yang anda miliki", children: List.generate(settingController.userBankModel.value?.response?.length ?? 0, (i){
                             return ListTile(
-                              leading: Icon(Icons.account_balance, color: isDark ? Colors.white : Colors.black),
+                              leading: Icon(Iconsax.building_bold, color: isDark ? Colors.white : Colors.black),
                               onTap: (){
                                 Navigator.pop(context);
                                 selectedBankUserID(settingController.userBankModel.value?.response?[i].id);
@@ -278,7 +279,7 @@ class _DepositState extends State<Deposit> {
                       NameTextField(requiredField: true, controller: myBankNumber, fieldName: "Nomor Rekening", hintText: "Nomor Rekening", labelText: "Nomor Rekening", readOnly: true, useValidator: false),
                       Obx(
                         () {
-                          return VoidTextField(requiredField: true, readOnly: widget.idLogin == null ? false : true, controller: myAccountTrading, fieldName: "Akun Trading", hintText: "Akun Trading", labelText: "Akun Trading", onPressed: isLoading.value ? null : () async {
+                          return VoidTextField(requiredField: true, readOnly: widget.idLogin == null ? false : true, controller: myAccountTrading, fieldName: "Akun Trading", hintText: "Akun Trading", labelText: "Akun Trading", iconData: Iconsax.wallet_2_bold, onPressed: isLoading.value ? null : () async {
                             isLoading(true);
                             accountController.fetchAccountInfo().then((result){
                               isLoading(false);
@@ -302,7 +303,7 @@ class _DepositState extends State<Deposit> {
                                       selectedTradingLogin(account.login);
                                       Get.back();
                                     },
-                                    leading: Icon(Icons.group, color: CustomColor.secondaryColor),
+                                    leading: Icon(Iconsax.wallet_2_bold, color: CustomColor.secondaryColor),
                                   );
                                 }));
                               }
