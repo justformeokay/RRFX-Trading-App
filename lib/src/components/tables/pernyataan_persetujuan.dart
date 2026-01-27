@@ -275,7 +275,7 @@ class StatementWidget {
         children: [
           const SizedBox(height: 15.0), // Space between title and main text
           // Main statement text
-          Text('Dengan mengisi kolom "YA" di bawah, saya menyatakan bahwa saya telah memiliki pengalamann yang mencukupi dalam melaksanakan transaksi Perdaganan Berjangka karena pernah bertransaksi pada Perusahaan Pialang Berjangka dan telah memahami tentang cara bertransaksi Perdaganan Berjangka.', textAlign: TextAlign.justify, style: TextStyle(
+          Text('Dengan mengisi kolom "YA" di bawah, saya menyatakan bahwa saya telah memiliki pengalaman yang mencukupi dalam melaksanakan transaksi Perdagangan Berjangka karena pernah bertransaksi pada Perusahaan Pialang Berjangka dan telah memahami tentang cara bertransaksi Perdagangan Berjangka.', textAlign: TextAlign.justify, style: TextStyle(
             fontWeight: FontWeight.normal,
             fontSize: 14.0,
             height: 1.5, // Line height for better readability

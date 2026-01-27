@@ -82,6 +82,18 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
             );
           }
           
+          // Show selection count in edit mode
+          if (controller.isEditMode.value) {
+            return Obx(() => Text(
+              "${controller.selectedMarkets.length} selected",
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Get.isDarkMode ? Colors.white : Colors.black,
+              ),
+            ));
+          }
+          
           final isDark = Get.isDarkMode;
           return Row(
             children: [
@@ -96,7 +108,42 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
           );
         }),
         actions: [
-          Obx(() => isSearching.value
+          Obx(() => controller.isEditMode.value
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Iconsax.archive_tick_outline,
+                      color: controller.selectedMarkets.isEmpty 
+                        ? Colors.grey.shade600 
+                        : CustomColor.secondaryColor,
+                    ),
+                    onPressed: controller.selectedMarkets.isEmpty 
+                      ? null 
+                      : () {
+                          controller.archiveSelected();
+                          Get.snackbar(
+                            'Archives',
+                            '${controller.selectedMarkets.length} market(s) archived',
+                            snackPosition: SnackPosition.BOTTOM,
+                          );
+                        },
+                    tooltip: 'Archive Selected',
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Iconsax.close_square_outline,
+                      color: CustomColor.secondaryColor,
+                    ),
+                    onPressed: () {
+                      controller.toggleEditMode();
+                    },
+                    tooltip: 'Close Edit Mode',
+                  ),
+                ],
+              )
+            : isSearching.value
             ? Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -124,17 +171,60 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
                     },
                     tooltip: 'Close Search',
                   ),
+                  IconButton(
+                    icon: Icon(
+                      Iconsax.archive_1_outline,
+                      color: CustomColor.secondaryColor,
+                    ),
+                    onPressed: () {
+                      controller.toggleEditMode();
+                    },
+                    tooltip: 'Edit Markets',
+                  ),
+                  IconButton(
+                    icon: Obx(() => Badge.count(
+                      count: controller.archivedMarkets.length,
+                      isLabelVisible: controller.archivedMarkets.isNotEmpty,
+                      child: Icon(
+                        Iconsax.archive_2_outline,
+                        color: CustomColor.secondaryColor,
+                      ),
+                    )),
+                    onPressed: () {
+                      _showArchivedMarketsDialog();
+                    },
+                    tooltip: 'View Archives',
+                  ),
                 ],
               )
-            : IconButton(
-                icon: Icon(
-                  Iconsax.search_normal_outline,
-                  color: CustomColor.secondaryColor,
-                ),
-                onPressed: () {
-                  isSearching.value = true;
-                },
-                tooltip: 'Search Market',
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Obx(() => Badge.count(
+                      count: controller.archivedMarkets.length,
+                      isLabelVisible: controller.archivedMarkets.isNotEmpty,
+                      child: Icon(
+                        Iconsax.archive_2_outline,
+                        color: CustomColor.secondaryColor,
+                      ),
+                    )),
+                    onPressed: () {
+                      _showArchivedMarketsDialog();
+                    },
+                    tooltip: 'View Archives',
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Iconsax.search_normal_outline,
+                      color: CustomColor.secondaryColor,
+                    ),
+                    onPressed: () {
+                      isSearching.value = true;
+                    },
+                    tooltip: 'Search Market',
+                  ),
+                ],
               ),
           ),
         ],
@@ -291,7 +381,7 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
                         secondaryTextColor!, 
                         isZeroDecimal,
                         isTwoDecimal,
-                        searchQuery.value, // Pass search query for highlighting
+                        searchQuery: searchQuery.value, // Pass search query for highlighting
                       ); 
                     },
                   ),
@@ -331,7 +421,7 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
     Color secondaryTextColor,
     bool isZeroDecimal,
     bool isTwoDecimal,
-    [String searchQuery = ''] // Optional search query for highlighting
+    {String searchQuery = ''} // Optional search query for highlighting
   ) {
     final accountController = Get.put(AccountController());
 
@@ -412,93 +502,123 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
       );
     }
 
-    return Dismissible(
-      key: Key(model.symbol),
-      direction: DismissDirection.endToStart,
+    return Obx(() {
+      final isSelected = controller.selectedMarkets.contains(model.symbol);
+      final isInEditMode = controller.isEditMode.value;
 
-      background: Container(
-        color: Colors.green,
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-        child: Icon(Iconsax.arrow_swap_horizontal_outline, color: Colors.white),
-      ),
+      return Dismissible(
+        key: Key(model.symbol),
+        direction: isInEditMode ? DismissDirection.none : DismissDirection.endToStart,
 
-      // === TAP WRAPPER ===
-      child: InkWell(
-        onTap: goToChart,
-        child: Container(
-          color: Get.isDarkMode ? Colors.black : Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Kolom kiri
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      buildHighlightedSymbol(),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${time.hour}:${time.minute}:${time.second} | Spread: $spreadInt',
-                        style: TextStyle(
-                          color: secondaryTextColor,
-                          fontSize: 12,
+        background: Container(
+          color: Colors.green,
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          child: Icon(Iconsax.arrow_swap_horizontal_outline, color: Colors.white),
+        ),
+
+        // === TAP WRAPPER ===
+        child: GestureDetector(
+          onLongPress: isInEditMode ? null : () {
+            controller.toggleEditMode();
+            controller.toggleSelection(model.symbol);
+          },
+          child: InkWell(
+            onTap: isInEditMode 
+              ? () => controller.toggleSelection(model.symbol)
+              : goToChart,
+            child: Container(
+              color: isSelected 
+                ? CustomColor.secondaryColor.withOpacity(0.1)
+                : (Get.isDarkMode ? Colors.black : Colors.white),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Checkbox (hanya muncul saat edit mode)
+                    if (isInEditMode)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12.0),
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: Checkbox(
+                            value: isSelected,
+                            onChanged: (_) => controller.toggleSelection(model.symbol),
+                            activeColor: CustomColor.secondaryColor,
+                          ),
                         ),
                       ),
-                    ],
-                  ),
-                ),
 
-                // Kolom kanan price
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 85, // Fixed width untuk alignment
-                      height: 28, // Fixed height untuk alignment
-                      alignment: Alignment.centerRight,
-                      child: _buildPriceText(model.bid, model.previousBid, decimalPlaces, isZeroDecimal, isTwoDecimal),
+                    // Kolom kiri
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          buildHighlightedSymbol(),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${time.hour}:${time.minute}:${time.second} | Spread: $spreadInt',
+                            style: TextStyle(
+                              color: secondaryTextColor,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'L: ${model.bidLow.toStringAsFixed(decimalPlaces)}',
-                      style: TextStyle(color: secondaryTextColor, fontSize: 10),
+
+                    // Kolom kanan price
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 85, // Fixed width untuk alignment
+                          height: 28, // Fixed height untuk alignment
+                          alignment: Alignment.centerRight,
+                          child: _buildPriceText(model.bid, model.previousBid, decimalPlaces, isZeroDecimal, isTwoDecimal),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'L: ${model.bidLow.toStringAsFixed(decimalPlaces)}',
+                          style: TextStyle(color: secondaryTextColor, fontSize: 10),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 85, // Fixed width untuk alignment
+                          height: 28, // Fixed height untuk alignment
+                          alignment: Alignment.centerRight,
+                          child: _buildPriceText(model.ask, model.previousAsk, decimalPlaces, isZeroDecimal, isTwoDecimal),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'H: ${model.askHigh.toStringAsFixed(decimalPlaces)}',
+                          style: TextStyle(color: secondaryTextColor, fontSize: 10),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 85, // Fixed width untuk alignment
-                      height: 28, // Fixed height untuk alignment
-                      alignment: Alignment.centerRight,
-                      child: _buildPriceText(model.ask, model.previousAsk, decimalPlaces, isZeroDecimal, isTwoDecimal),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'H: ${model.askHigh.toStringAsFixed(decimalPlaces)}',
-                      style: TextStyle(color: secondaryTextColor, fontSize: 10),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
         ),
-      ),
 
-      // === SWIPE ACTION → GO TO PAGE ===
-      confirmDismiss: (direction) async {
-        goToChart();
-        return false; // tile tetap ada
-      },
-    );
+        // === SWIPE ACTION → GO TO PAGE ===
+        confirmDismiss: (direction) async {
+          goToChart();
+          return false; // tile tetap ada
+        },
+      );
+    });
   }
 
 
@@ -820,6 +940,184 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Dialog untuk menampilkan archived markets
+  void _showArchivedMarketsDialog() {
+    final isDarkMode = Get.isDarkMode;
+    
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDarkMode ? Colors.grey.shade900 : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Iconsax.archive_2_outline,
+                      color: CustomColor.secondaryColor,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Archived Markets',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: isDarkMode ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    ),
+                    Obx(() => Badge.count(
+                      count: controller.archivedMarkets.length,
+                      backgroundColor: CustomColor.secondaryColor,
+                    )),
+                  ],
+                ),
+              ),
+              
+              // Content
+              Obx(() {
+                if (controller.archivedMarkets.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Iconsax.archive_slash_outline,
+                          size: 64,
+                          color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No Archived Markets',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Markets you archive will appear here',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return Container(
+                  constraints: BoxConstraints(
+                    maxHeight: Get.height * 0.5,
+                  ),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: controller.archivedMarkets.length,
+                    itemBuilder: (context, index) {
+                      final symbol = controller.archivedMarkets.toList()[index];
+                      
+                      return Container(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
+                              width: 1,
+                            ),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Iconsax.archive_1_outline,
+                                color: CustomColor.secondaryColor.withOpacity(0.6),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  symbol,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDarkMode ? Colors.white : Colors.black,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  Iconsax.import_outline,
+                                  color: CustomColor.secondaryColor,
+                                  size: 20,
+                                ),
+                                onPressed: () {
+                                  controller.unarchiveMarket(symbol);
+                                  Get.back();
+                                  Get.snackbar(
+                                    'Restored',
+                                    '$symbol restored to Live Markets',
+                                    snackPosition: SnackPosition.BOTTOM,
+                                  );
+                                },
+                                tooltip: 'Restore',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              }),
+
+              // Footer
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100,
+                      foregroundColor: isDarkMode ? Colors.white : Colors.black,
+                    ),
+                    onPressed: () => Get.back(),
+                    child: Text(
+                      'Close',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierColor: Colors.black.withOpacity(0.3),
     );
   }
 }

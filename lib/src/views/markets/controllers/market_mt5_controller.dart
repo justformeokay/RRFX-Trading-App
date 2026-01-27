@@ -8,6 +8,12 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
   // Observable Map untuk menyimpan data market. Key: Symbol (String), Value: MarketModel
   final RxMap<String, MarketMt5Model> marketData = <String, MarketMt5Model>{}.obs;
   
+  // Edit Mode dan Selection
+  final RxBool isEditMode = false.obs;
+  final RxSet<String> selectedMarkets = <String>{}.obs;
+  final RxSet<String> archivedMarkets = <String>{}.obs;
+  final RxMap<String, MarketMt5Model> archivedMarketData = <String, MarketMt5Model>{}.obs;
+  
   // URL WebSocket
   final String _wsUrl = 'ws://207.148.119.106:9003';
   // Status koneksi
@@ -153,5 +159,67 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
       print('Error parsing or processing JSON: $e');
       print('Received data: $data');
     }
+  }
+
+  // ===== EDIT MODE METHODS =====
+  
+  /// Toggle edit mode
+  void toggleEditMode() {
+    isEditMode.toggle();
+    if (!isEditMode.value) {
+      // Clear selection ketika keluar dari edit mode
+      selectedMarkets.clear();
+    }
+  }
+
+  /// Toggle selection untuk market
+  void toggleSelection(String symbol) {
+    if (selectedMarkets.contains(symbol)) {
+      selectedMarkets.remove(symbol);
+    } else {
+      selectedMarkets.add(symbol);
+    }
+  }
+
+  /// Select all markets
+  void selectAll(List<String> symbols) {
+    selectedMarkets.addAll(symbols);
+  }
+
+  /// Deselect all markets
+  void deselectAll() {
+    selectedMarkets.clear();
+  }
+
+  /// Archive selected markets
+  void archiveSelected() {
+    // Simpan data market sebelum di-archive
+    for (String symbol in selectedMarkets) {
+      final marketModel = marketData[symbol];
+      if (marketModel != null) {
+        archivedMarketData[symbol] = marketModel;
+      }
+      marketData.remove(symbol);
+    }
+    archivedMarkets.addAll(selectedMarkets);
+    selectedMarkets.clear();
+  }
+
+  /// Unarchive market
+  void unarchiveMarket(String symbol) {
+    // Restore data market
+    final marketModel = archivedMarketData[symbol];
+    if (marketModel != null) {
+      marketData[symbol] = marketModel;
+    }
+    archivedMarkets.remove(symbol);
+    archivedMarketData.remove(symbol);
+  }
+
+  /// Get visible markets (excluding archived ones)
+  List<String> getVisibleMarkets() {
+    return marketData.keys
+        .where((symbol) => !archivedMarkets.contains(symbol))
+        .toList();
   }
 }
