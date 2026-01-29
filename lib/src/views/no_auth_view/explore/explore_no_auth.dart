@@ -381,7 +381,7 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
             const SizedBox(height: 16),
 
             Text(
-              "Welcome to RRFX",
+              "Selamat datang di RRFX",
               style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -392,7 +392,7 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
             const SizedBox(height: 8),
 
             Text(
-              "Explore the world of trading with RRFX.",
+              "Trading Komoditi, Forex & Index teregulasi oleh BAPPEBTI, OJK dan BI",
               style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w400,
@@ -406,7 +406,7 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
             SizedBox(
               width: 150,
               child: CustomButtons.buildFilledButton(
-                text: "Get Started",
+                text: "Mulai Trading",
                 onPressed: () => AuthDirectionPopup.show(),
               ),
             ),

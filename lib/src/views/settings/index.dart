@@ -482,7 +482,7 @@ class _SettingsState extends State<Settings> {
                     Get.to(() => const RequestIBPage());
                   },
                 ),
-                SettingComponents.listTileItem(context, "Hapus Akun", "Hapus Akun Saya ", enabled: false, Iconsax.trash_outline, onTap: (){
+                SettingComponents.listTileItem(context, "Hapus Akun", "Hapus Akun Saya ", enabled: true, Iconsax.trash_outline, onTap: (){
                   Get.to(() => const DeleteAccountPage());
                 }),
               ],

@@ -350,10 +350,10 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
 // ---------------- BALANCE SECTION --------------------
 class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
-  double get minExtent => 190;
+  double get minExtent => 170;
 
   @override
-  double get maxExtent => 200;
+  double get maxExtent => 170;
 
   final accountController = Get.find<AccountController>();
   final accountWS = Get.find<AccountBalanceWSController>();

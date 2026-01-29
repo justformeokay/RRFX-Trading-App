@@ -602,12 +602,13 @@ class AuthController extends GetxController {
   }
 
   // Create Demo Trading API
-  Future<bool> verificationAccount({String? gender, String? address}) async {
+  Future<bool> verificationAccount({String? gender, String? address, String? country}) async {
     try {
       isLoading(true);
       Map<String, dynamic> result = await authService.post("verif/step-1", {
         'gender': gender,
         'address': address,
+        'country': country,
         'device': jsonEncode(deviceInfo),
       });
       isLoading(false);
