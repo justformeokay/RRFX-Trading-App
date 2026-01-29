@@ -484,6 +484,7 @@ class _SettingsState extends State<Settings> {
                 ),
                 SettingComponents.listTileItem(context, "Hapus Akun", "Hapus Akun Saya ", enabled: true, Iconsax.trash_outline, onTap: (){
                   Get.to(() => const DeleteAccountPage());
+                  // Get.to(() => const SIDRegistrationPage());
                 }),
               ],
             ),

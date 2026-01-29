@@ -9,7 +9,7 @@ import 'package:rrfx/src/views/accounts/registration_online/components/button_ne
 import 'package:rrfx/src/views/accounts/registration_online/components/time_and_statement.dart';
 import 'package:rrfx/src/views/accounts/registration_online/controllers/statement_controller.dart';
 import 'package:rrfx/src/views/accounts/registration_online/repository/regol_repository.dart';
-import 'package:rrfx/src/views/accounts/registration_online/views/step_7.dart';
+import 'package:rrfx/src/views/accounts/registration_online/views/sid_registration.dart';
 
 class Step6 extends StatefulWidget {
   const Step6({super.key});
@@ -69,7 +69,8 @@ class _Step6State extends State<Step6> {
           }
           bool result = await _regolRepository.step6();
           if(result) {
-            Get.to(() => const Step7());
+            // Get.to(() => const Step7());
+            Get.to(() => const SIDRegistrationPage());
             return;
           }
           CustomScaffoldMessanger.showAppSnackBar(context, message: _regolRepository.responseMessage.value, type: SnackBarType.error);

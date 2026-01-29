@@ -194,6 +194,30 @@ class RegolRepository extends GetxController {
     }
   }
 
+  Future<bool> step6ASID({String? sid, String? keterangan}) async {
+    try {
+      isLoading(true);
+      formattedDate = DateFormat('yyyy-MM-dd hh:mm:ss').format(now);
+      Map<String, dynamic> result = await authService.post(_step6, {
+        'aggree' : 'Ya',
+        'keterangan': keterangan, // 1 untuk sudah memiliki SID, 2 untuk belum memiliki SID,
+        'sid': sid
+      });
+      Get.log(result.toString());
+      isLoading(false);
+      responseMessage(result['message']);
+      // responseMessage(result['alert']['title']);
+      if (result['status']) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      isLoading(false);
+      responseMessage(e.toString());
+      return false;
+    }
+  }
+
   Future<bool> step7({
   String? imagecover1,
   String? imagecover2, // opsional
