@@ -17,6 +17,7 @@ class RegolRepository extends GetxController {
   static const String _step4 = 'regol/pernyataanSimulasi';
   static const String _step5 = 'regol/pernyataanPengalaman';
   static const String _step6 = 'regol/pernyataanPengungkapan_1';
+  static const String _step6A = 'regol/formulirSID';
   static const String _step7 = 'regol/aplikasiPembukaanRekening';
   static const String _step8 = 'regol/pernyataanPengungkapan_2';
   static const String _step9 = 'regol/formulirDokumenResiko';
@@ -198,27 +199,54 @@ class RegolRepository extends GetxController {
     try {
       isLoading(true);
       formattedDate = DateFormat('yyyy-MM-dd hh:mm:ss').format(now);
-      Map<String, dynamic> result = await authService.post(_step6, {
+      sid ??= "";
+      
+      // DEBUG: Log data yang akan dikirim
+      final Map<String, dynamic> requestData = {
         'aggree' : 'Ya',
         'keterangan': keterangan, // 1 untuk sudah memiliki SID, 2 untuk belum memiliki SID,
-        'sid': sid
-      });
-      Get.log(result.toString());
+        'nomor_sid': sid
+      };
+      
+      Get.log('========== DEBUG STEP 6A SID REQUEST ==========');
+      Get.log('Endpoint: $_step6A');
+      Get.log('Request Data: $requestData');
+      Get.log('SID Value: $sid');
+      Get.log('Keterangan: $keterangan');
+      Get.log('SID is null: $sid');
+      Get.log('SID is empty: ${sid.isEmpty}');
+      Get.log('==========================================');
+      
+      Map<String, dynamic> result = await authService.post(_step6A, requestData);
+      
+      // DEBUG: Log response dari server
+      Get.log('========== DEBUG STEP 6A SID RESPONSE ==========');
+      Get.log('Full Response: $result');
+      Get.log('Response Status: ${result['status']}');
+      Get.log('Response Message: ${result['message']}');
+      Get.log('Response Code: ${result['code'] ?? 'N/A'}');
+      Get.log('Response Data: ${result['data'] ?? 'N/A'}');
+      Get.log('==========================================');
+      
       isLoading(false);
       responseMessage(result['message']);
       // responseMessage(result['alert']['title']);
       if (result['status']) {
+        Get.log('✓ Step 6A SID SUCCESS');
         return true;
       }
+      Get.log('✗ Step 6A SID FAILED - Status is false');
       return false;
     } catch (e) {
       isLoading(false);
       responseMessage(e.toString());
+      Get.log('✗ Step 6A SID EXCEPTION: $e');
+      Get.log('Stack trace: ${StackTrace.current}');
       return false;
     }
   }
 
-  Future<bool> step7({
+Future<bool> step7({
   String? imagecover1,
   String? imagecover2, // opsional
   String? appImage1, // NPWP / Rekening Koran / Rekening Listrik
@@ -265,12 +293,18 @@ class RegolRepository extends GetxController {
   String? bankName2,
   String? bankNumber1,
   String? bankNumber2,
+  String? kewarganegaraan,
+  String? pendidikanTerakhir,
+  String? sumberPenghasilan
 }) async {
   try {
     final requiredFields = {
       'Nomor NPWP': nomorNPWP,
       'Jenis Kelamin': jenisKelamin,
       'Nama Ibu': namaIbu,
+      'Kewarganegaraan': kewarganegaraan,
+      'Pendidikan Terakhir': pendidikanTerakhir,
+      'Sumber Penghasilan': sumberPenghasilan,
       'Status Perkawinan': statusPerkawinan,
       'Nomor Handphone': noHandphone,
       'Status Kepemilikan Rumah': statusKepemilikanRumah,
@@ -336,6 +370,9 @@ class RegolRepository extends GetxController {
       'bank_name2': bankName2 ?? '',
       'bank_number1': bankNumber1 ?? '',
       'bank_number2': bankNumber2 ?? '',
+      'app_kewarganegaraan': kewarganegaraan ?? '',
+      'app_pendidikan_terakhir': pendidikanTerakhir ?? '',
+      'app_sumber_penghasilan': sumberPenghasilan ?? '',
     };
     final data = rawData.map((key, value) => MapEntry(key, value ?? ''));
     final Map<String, String> files = {};

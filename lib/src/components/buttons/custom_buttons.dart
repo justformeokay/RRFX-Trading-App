@@ -24,12 +24,10 @@ class CustomButtons {
     return ElevatedButton(
       onPressed: enabled ? onPressed : null, // 👈 disable otomatis
       style: ElevatedButton.styleFrom(
-        backgroundColor:
-            enabled ? CustomColor.secondaryColor : disabledColor, // 👈 warna disable
-        foregroundColor:
-            enabled ? Colors.black : disabledTextColor, // 👈 teks icon disable
+        backgroundColor: enabled ? CustomColor.secondaryColor : disabledColor, // 👈 warna disable
+        foregroundColor: enabled ? Colors.black : disabledTextColor, // 👈 teks icon disable
         elevation: 0,
-        padding: padding ?? const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: padding ?? const EdgeInsets.symmetric(horizontal: 20, vertical: 4.0),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),
@@ -37,7 +35,7 @@ class CustomButtons {
       child: Text(
         text,
         style: GoogleFonts.inter(
-          fontSize: 16,
+          fontSize: 13,
           fontWeight: FontWeight.w800,
           color: enabled ? Colors.black : disabledTextColor, // 👈 teks disable
         ),

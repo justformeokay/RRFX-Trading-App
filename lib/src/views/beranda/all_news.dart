@@ -52,7 +52,7 @@ class _CardGridPageState extends State<CardGridPage> {
           return;
         }
         if (utilitiesController.newsModel.value?.response.isNotEmpty == true) {
-          final typeFilter = widget.title == "News" ? "News" : "Market Analysis";
+          final typeFilter = widget.title == "News" ? "News" : "";
           cards.addAll(utilitiesController.newsModel.value!.response.where((item) => item.type == typeFilter).map((item) => PlantCard(
               id: item.id ?? '',
               author: item.author ?? '',

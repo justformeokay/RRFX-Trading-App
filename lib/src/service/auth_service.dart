@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:rrfx/src/controllers/device_utilities_controller.dart';
@@ -100,11 +101,32 @@ class AuthService extends GetxController {
       await init();
       headers['Authorization'] = 'Bearer $accessToken';
 
+      final fullUrl = "${GlobalVariable.mainURL}/$url";
+      
+      // DEBUG: Log request details
+      Get.log('═══════════════════════════════════════════');
+      Get.log('🚀 POST REQUEST');
+      Get.log('═══════════════════════════════════════════');
+      Get.log('URL: $fullUrl');
+      Get.log('Headers: $headers');
+      Get.log('Body: $body');
+      Get.log('Access Token (first 20 chars): ${accessToken?.substring(0, min(20, accessToken?.length ?? 0)) ?? 'NULL'}...');
+      Get.log('───────────────────────────────────────────');
+
       http.Response response = await http.post(
-        Uri.parse("${GlobalVariable.mainURL}/$url"), 
+        Uri.parse(fullUrl), 
         headers: headers,
         body: body
       );
+
+      // DEBUG: Log response details
+      Get.log('📥 POST RESPONSE');
+      Get.log('Status Code: ${response.statusCode}');
+      Get.log('Response Headers: ${response.headers}');
+      Get.log('Response Body: ${response.body}');
+      Get.log('Body Length: ${response.body.length} characters');
+      Get.log('Body is empty: ${response.body.isEmpty}');
+      Get.log('═══════════════════════════════════════════');
 
       print("POST ${GlobalVariable.mainURL}/$url");
 
@@ -130,6 +152,14 @@ class AuthService extends GetxController {
       }
 
       Map<String, dynamic> respBody = jsonDecode(response.body);
+      
+      // DEBUG: Log parsed response
+      Get.log('✅ PARSED RESPONSE DATA');
+      Get.log('Status: ${respBody['status']}');
+      Get.log('Message: ${respBody['message']}');
+      Get.log('Response Data: ${respBody['response']}');
+      Get.log('═══════════════════════════════════════════');
+      
       return {
         'status': respBody['status'],
         'statusCode': response.statusCode,
@@ -138,6 +168,8 @@ class AuthService extends GetxController {
       };
 
     } catch (e) {
+      Get.log('❌ ERROR DI AUTHSERVICE.POST: $e');
+      Get.log('Stack trace: $e');
       throw Exception("authService post error: $e");
     }
   }

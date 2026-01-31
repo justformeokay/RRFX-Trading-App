@@ -127,7 +127,7 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
           child: Text(
             "Promotions",
             style: GoogleFonts.inter(
-              fontSize: 18,
+              fontSize: 15,
               fontWeight: FontWeight.w700,
               color: theme.colorScheme.onSurface,
             ),
@@ -309,7 +309,7 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
             children: [
               Text(title,
                 style: GoogleFonts.inter(
-                  fontSize: 18,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: theme.colorScheme.onSurface,
                 ),
@@ -656,7 +656,7 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
         children: [
           Text("Trading Signals",
             style: GoogleFonts.inter(
-              fontSize: 16,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).textTheme.bodyMedium?.color,
             ),
@@ -665,7 +665,7 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
           Text(
             "Get the Trading Signals updates to maximize your trading opportunities.",
             style: GoogleFonts.inter(
-              fontSize: 14,
+              fontSize: 11,
               fontWeight: FontWeight.w400,
               color: Theme.of(context).textTheme.bodyMedium?.color,
             ),

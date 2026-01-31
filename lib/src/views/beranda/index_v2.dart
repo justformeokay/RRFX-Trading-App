@@ -84,6 +84,66 @@ class _IndexV2State extends State<IndexV2> {
   var selectedIndex = 0.obs;
   RxBool wasGetAccountTrading = false.obs;
 
+  RxBool containsPendingAccount = false.obs;
+  RxString pendingAccountStatus = "".obs;
+  Rx<Color?> backgroundStatusPending = Rx<Color?>(null);
+  Rx<IconData?> iconStatusPending = Rx<IconData?>(null);
+
+  /// Map status ke icon dan warna
+  Map<String, Map<String, dynamic>> statusStyleMap = {
+    "Registrasi": {
+      "color": Colors.blue,
+      "icon": Iconsax.clock_1_outline,
+      "label": "Sedang Diproses",
+    },
+    "Ditolak": {
+      "color": Colors.red,
+      "icon": Iconsax.close_circle_outline,
+      "label": "Ditolak",
+    },
+    "Regol belum selesai": {
+      "color": Colors.orange,
+      "icon": Iconsax.warning_2_outline,
+      "label": "Regol Belum Selesai",
+    },
+    "Proses Akun": {
+      "color": Colors.orange,
+      "icon": Iconsax.clock_1_outline,
+      "label": "Proses Akun",
+    },
+  };
+
+  /// Fungsi untuk mendapatkan style (color & icon) berdasarkan status
+  Map<String, dynamic> getStatusStyle(String status) {
+    return statusStyleMap[status] ?? {
+      "color": Colors.grey,
+      "icon": Iconsax.info_circle_outline,
+      "label": status,
+    };
+  }
+
+  void fetchPendingAccountStatus() {
+    homeController.getPendingAccount().then((result) {
+      containsPendingAccount.value = result;
+      
+      final response = homeController.pendingModel.value?.response;
+      if (response?.isNotEmpty == true) {
+        final status = response![0].status ?? "Proses Akun";
+        pendingAccountStatus.value = status;
+        
+        // Set icon dan color berdasarkan status
+        final style = getStatusStyle(status);
+        backgroundStatusPending.value = style["color"] as Color;
+        iconStatusPending.value = style["icon"] as IconData;
+      }
+    }).catchError((e) {
+      ErrorPopup.show(
+        title: "Status Tidak Dikenali",
+        message: "Status akun Anda tidak dapat dikenali oleh sistem. Silakan hubungi customer support kami.",
+      );
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -92,6 +152,7 @@ class _IndexV2State extends State<IndexV2> {
       contentController.fetchNews();
       contentController.fetchMarketAnalysis();
       startTradingSignalTimer();
+      fetchPendingAccountStatus();
     });
   }
 
@@ -564,69 +625,170 @@ class _IndexV2State extends State<IndexV2> {
                           ),
                         ),
               ),
-              Container(
-                margin: const EdgeInsets.only(bottom: 16.0),
-                padding: const EdgeInsets.symmetric(vertical: 24.0),
-                width: double.infinity,
-                color: Theme.of(context).cardColor, // ✅ mengikuti theme
-                child: Obx(
-                  () => Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(menus.length, (i) {
-                      final appName = menus[i]['app_name'] as String;
-                      final icon = menus[i]['icon'] as IconData;
-
-                      return Expanded(
-                        child: CupertinoButton(
-                          padding: EdgeInsets.zero,
-                          onPressed:
-                              () => _handleMenuTap(context, size, appName),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(7),
-                                decoration: BoxDecoration(
-                                  color:
-                                      appName == "Rewards"
-                                          ? Colors.grey.shade700
-                                          : CustomColor.secondaryBackground
-                                              .withOpacity(0.3),
-                                  borderRadius: BorderRadius.circular(8),
+              Obx(
+                () => Container(
+                  margin: containsPendingAccount.value ? null : const EdgeInsets.only(bottom: 16.0),
+                  padding: const EdgeInsets.symmetric(vertical: 24.0),
+                  width: double.infinity,
+                  color: Theme.of(context).cardColor, // ✅ mengikuti theme
+                  child: Obx(
+                    () => Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: List.generate(menus.length, (i) {
+                        final appName = menus[i]['app_name'] as String;
+                        final icon = menus[i]['icon'] as IconData;
+                
+                        return Expanded(
+                          child: CupertinoButton(
+                            padding: EdgeInsets.zero,
+                            onPressed:
+                                () => _handleMenuTap(context, size, appName),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(7),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        appName == "Rewards"
+                                            ? Colors.grey.shade700
+                                            : CustomColor.secondaryBackground
+                                                .withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    icon,
+                                    color:
+                                        appName == "Rewards"
+                                            ? Colors.white60
+                                            : CustomColor.secondaryColor,
+                                    size: 20,
+                                  ),
                                 ),
-                                child: Icon(
-                                  icon,
-                                  color:
-                                      appName == "Rewards"
-                                          ? Colors.white60
-                                          : CustomColor.secondaryColor,
-                                  size: 20,
+                                const SizedBox(height: 4),
+                                Text(
+                                  appName,
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color:
+                                        appName == "Rewards"
+                                            ? Colors.grey.shade700
+                                            : Theme.of(
+                                              context,
+                                            ).textTheme.bodyMedium?.color,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                appName,
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color:
-                                      appName == "Rewards"
-                                          ? Colors.grey.shade700
-                                          : Theme.of(
-                                            context,
-                                          ).textTheme.bodyMedium?.color,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    }),
+                        );
+                      }),
+                    ),
                   ),
                 ),
+              ),
+              Obx(
+                () {
+                  if(pendingAccountStatus.value.isEmpty == false && containsPendingAccount.value) {
+                    final isDark = Get.isDarkMode;
+                    final color = backgroundStatusPending.value ?? Colors.grey;
+                    return Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.08),
+                        border: Border.all(
+                          color: color.withOpacity(0.3),
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: color.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  iconStatusPending.value ?? Iconsax.info_circle_outline,
+                                  color: color,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Status Registrasi Akun Trading",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: isDark ? Colors.white : Colors.black87,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Obx(() => Text(
+                                      pendingAccountStatus.value.isEmpty ? "Sedang memproses..." : "Status: ${getStatusStyle(pendingAccountStatus.value)['label']}",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
+                                        color: isDark ? Colors.white70 : Colors.black54,
+                                      ),
+                                    )),
+                                  ],
+                                ),
+                              ),
+                              buildPendingStatusActionButton(),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: color.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Iconsax.info_circle_outline,
+                                  size: 16,
+                                  color: color,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    "Proses verifikasi akun Anda sedang berlangsung. Biasanya memakan waktu 1-2 hari kerja.",
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: color,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return const SizedBox(height: 10);
+                }
               ),
               PromotionSection(),
               Container(
@@ -1119,11 +1281,7 @@ class _IndexV2State extends State<IndexV2> {
           );
           regolController.createDemoAccount().then((result) async {
             if (result) {
-              CustomScaffoldMessanger.showAppSnackBar(
-                context,
-                message: "Akun demo berhasil dibuat",
-                type: SnackBarType.success,
-              );
+              SuccessDemoAccountPopup.show();
               final success = await tradingController.getTradingAccount();
               await controller.fetchAccountInfo();
               if (success) {
@@ -1147,54 +1305,24 @@ class _IndexV2State extends State<IndexV2> {
         } else {
           homeController.getPendingAccount().then((result) async {
             if (!result) {
-              CustomScaffoldMessanger.showAppSnackBar(
-                context,
-                message: "Gagal mendapatkan akun pending",
-              );
+              ErrorPopup.show(title: "Informasi Akun Pending", message: "Sistem tidak dapat mengambil data akun pending Anda. Silakan coba beberapa saat lagi.");
               return;
             }
             if (homeController.pendingModel.value?.response?.isEmpty == true) {
-              await regolController.progressAccount();
+              // await regolController.progressAccount();
               Get.to(() => CreateMT5PasswordPage());
-            } else if (homeController
-                    .pendingModel
-                    .value
-                    ?.response
-                    ?.isNotEmpty ==
-                true) {
-              if (homeController.pendingModel.value?.response?[0].status ==
-                  "Registrasi") {
-                CustomScaffoldMessanger.showAppSnackBar(
-                  context,
-                  message:
-                      "Akun masih dalam proses ${homeController.pendingModel.value?.response?[0].status}",
-                );
-              } else if (homeController
-                      .pendingModel
-                      .value
-                      ?.response?[0]
-                      .status ==
-                  "Ditolak") {
+            } else if (homeController.pendingModel.value?.response?.isNotEmpty == true) {
+              if (homeController.pendingModel.value?.response?[0].status == "Registrasi") {
+                AccountProcessingPopup.show(status: homeController.pendingModel.value?.response?[0].status ?? "Registrasi");
+              } else if (homeController.pendingModel.value?.response?[0].status == "Ditolak") {
                 Get.to(() => CreateMT5PasswordPage());
-              } else if (homeController
-                      .pendingModel
-                      .value
-                      ?.response?[0]
-                      .status ==
-                  "Regol belum selesai") {
+              } else if (homeController.pendingModel.value?.response?[0].status == "Regol belum selesai") {
                 Get.to(() => CreateMT5PasswordPage());
               } else {
-                CustomScaffoldMessanger.showAppSnackBar(
-                  context,
-                  message:
-                      "Akun masih dalam proses ${homeController.pendingModel.value?.response?[0].status}",
-                );
+                AccountProcessingPopup.show(status: homeController.pendingModel.value?.response?[0].status ?? "Proses Akun");
               }
             } else {
-              CustomScaffoldMessanger.showAppSnackBar(
-                context,
-                message: "Status akun tidak dapat dikenali",
-              );
+              ErrorPopup.show(title: "Status Tidak Dikenali", message: "Status akun Anda tidak dapat dikenali oleh sistem. Silakan hubungi customer support kami.");
             }
           });
         }
@@ -1499,5 +1627,93 @@ class _IndexV2State extends State<IndexV2> {
     } catch (e) {
       return raw;
     }
+  }
+
+  /// Widget untuk menampilkan status badge dengan icon dan warna
+  Widget buildPendingStatusBadge() {
+    return Obx(() {
+      final isDark = Get.isDarkMode;
+      final color = backgroundStatusPending.value ?? Colors.grey;
+      final icon = iconStatusPending.value ?? Iconsax.info_circle_outline;
+      final status = pendingAccountStatus.value;
+      final style = getStatusStyle(status);
+      final label = style["label"] as String? ?? status;
+
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.15),
+          border: Border.all(
+            color: color.withOpacity(0.4),
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: color,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  /// Widget untuk menampilkan button aksi berdasarkan status pending account
+  Widget buildPendingStatusActionButton() {
+    return Obx(() {
+      final status = pendingAccountStatus.value;
+      final color = backgroundStatusPending.value ?? Colors.grey;
+      
+      // Status "Registrasi" - button disabled/hilang
+      if (status == "Registrasi") {
+        return const SizedBox.shrink(); // Hilangkan button
+      }
+      
+      // Status "Ditolak" atau "Regol belum selesai" - button enabled
+      final isEnabled = status == "Ditolak" || status == "Regol belum selesai";
+      final buttonLabel = status == "Ditolak" ? "Buat Lagi" : "Lanjutkan";
+      
+      return SizedBox(
+        width: 110,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            backgroundColor: isEnabled ? color : Colors.grey.withOpacity(0.5),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          onPressed: isEnabled
+              ? () {
+                  Get.to(() => CreateMT5PasswordPage());
+                }
+              : null,
+          child: Text(
+            buttonLabel,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    });
   }
 }

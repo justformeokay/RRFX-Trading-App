@@ -62,6 +62,8 @@ class _Step7State extends State<Step7> {
   TextEditingController kodePos = TextEditingController();
   TextEditingController rt = TextEditingController();
   TextEditingController rw = TextEditingController();
+  TextEditingController pendidikanTerakhir = TextEditingController();
+  TextEditingController negara = TextEditingController();
   TextEditingController tipeIdentitas = TextEditingController();
   TextEditingController jenisKelamin = TextEditingController();
   TextEditingController noIdentitas = TextEditingController();
@@ -98,6 +100,7 @@ class _Step7State extends State<Step7> {
   TextEditingController noFaksimiliKantor = TextEditingController();
 
   // DAFTAR KEKAYAAN
+  TextEditingController sumberPenghasilan = TextEditingController();
   TextEditingController penghasilanPerTahun = TextEditingController();
   TextEditingController lokasiRumah = TextEditingController();
   TextEditingController nilaiNJOP = TextEditingController();
@@ -162,11 +165,18 @@ class _Step7State extends State<Step7> {
     super.initState();
     Future.delayed(Duration.zero, () async {
       await progressController.fetchProgressAccount();
-      nama.text = userController.profileModel.value?.name ?? '-';
+      nama.text = userController.profileModel.value?.name ?? '';
+      negara.text = userController.profileModel.value?.country ?? '';
+      if(negara.text.isEmpty || negara.text == ""){
+        negara.text = progressController.progressData.value?.response?.kewarganegaraan ?? '';
+      }
+      
       tipeIdentitas.text = progressController.progressData.value?.response?.idType ?? '-';
       noIdentitas.text = progressController.progressData.value?.response?.idNumber ?? '-';
       tempatLahir.text = progressController.progressData.value?.response?.placeOfBirth ?? '-';
       tanggalLahir.text = progressController.progressData.value?.response?.dateOfBirth ?? '-';
+      sumberPenghasilan.text = progressController.progressData.value?.response?.sumberPenghasilan ?? '';
+      pendidikanTerakhir.text = progressController.progressData.value?.response?.pendidikanTerakhir ?? '';
       regolController.isLoading(true);
       nomorNPWP.text = progressController.progressData.value?.response?.npwp ?? '';
       jenisKelamin.text = progressController.progressData.value?.response?.gender ?? '';
@@ -269,12 +279,15 @@ class _Step7State extends State<Step7> {
     jenisKelamin.dispose();
     alamatRumah.dispose();
     provinsi.dispose();
+    negara.dispose();
     kabupatenKota.dispose();
     kecamatan.dispose();
     desa.dispose();
     kodePos.dispose();
     rt.dispose();
     rw.dispose();
+    pendidikanTerakhir.dispose();
+    sumberPenghasilan.dispose();
     nomorNPWP.dispose();
     tipeIdentitas.dispose();
     noIdentitas.dispose();
@@ -403,17 +416,41 @@ class _Step7State extends State<Step7> {
                       hintText: "Input Alamat Rumah",
                     ),
                     const SizedBox(height: 10.0),
+
+                    VoidTextField(requiredField: true, controller: pendidikanTerakhir, fieldName: "Pendidikan Terakhir", hintText: "Pendidikan Terakhir", labelText: "Pendidikan Terakhir", readOnly: false, iconData: Iconsax.clipboard_outline, onPressed: (){
+                      final listPendidikanTerakhir = progressController.progressData.value?.data?.listPendidikan ?? [];
+                      CustomMaterialBottomSheets.defaultBottomSheet(context, title: "Pilih Pendidikan Terakhir", size: size, children: List.generate(listPendidikanTerakhir.length, (i){
+                        return ListTile(
+                          leading: Icon(Icons.check_circle, 
+                            color: (pendidikanTerakhir.text == listPendidikanTerakhir[i])
+                              ? CustomColor.secondaryColor
+                              : Colors.grey,
+                              size: 22),
+                          title: Text(listPendidikanTerakhir[i]),
+                          onTap: () {
+                            setState(() {
+                              pendidikanTerakhir.text = listPendidikanTerakhir[i];
+                            });
+                            Get.back();
+                          },
+                        );
+                      }));
+                    }),
+                    const SizedBox(height: 10.0),
+                    // Negara
+                    VoidTextField(requiredField: true, controller: negara, fieldName: "Negara", hintText: "Negara", labelText: "Negara", iconData: Clarity.map_line, onPressed: (){}, readOnly: true),
+
                     // Province
-                    VoidTextField(requiredField: true, controller: provinsi, fieldName: "Provinsi", hintText: "Provinsi", labelText: "Provinsi", iconData: Clarity.map_line, onPressed: (){}),
+                    VoidTextField(requiredField: true, controller: provinsi, fieldName: "Provinsi", hintText: "Provinsi", labelText: "Provinsi", iconData: Clarity.map_line, onPressed: (){}, readOnly: true),
 
                     // Kabupaten
-                    VoidTextField(requiredField: true, controller: kabupatenKota, fieldName: "Kabupaten", hintText: "Kabupaten", labelText: "Kabupaten", iconData: Clarity.map_line, onPressed: (){}),
+                    VoidTextField(requiredField: true, controller: kabupatenKota, fieldName: "Kabupaten", hintText: "Kabupaten", labelText: "Kabupaten", iconData: Clarity.map_line, onPressed: (){}, readOnly: true),
 
                     // Kecamatan
-                    VoidTextField(requiredField: true, controller: kecamatan, fieldName: "Kecamatan", hintText: "Kecamatan", labelText: "Kecamatan", iconData: Clarity.map_line, onPressed: (){}),
+                    VoidTextField(requiredField: true, controller: kecamatan, fieldName: "Kecamatan", hintText: "Kecamatan", labelText: "Kecamatan", iconData: Clarity.map_line, onPressed: (){}, readOnly: true),
 
                     // Desa
-                    VoidTextField(requiredField: true, controller: desa, fieldName: "Desa", iconData: Icons.holiday_village_rounded, hintText: "Desa", labelText: "Desa", onPressed: (){}),
+                    VoidTextField(requiredField: true, controller: desa, fieldName: "Desa", iconData: Icons.holiday_village_rounded, hintText: "Desa", labelText: "Desa", onPressed: (){}, readOnly: true),
 
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -910,6 +947,52 @@ class _Step7State extends State<Step7> {
                 ]),
                 SmoothExpansionTile(title: "DAFTAR KEKAYAAN", children: [
                   Obx(() {
+                    final pendapatan = progressController.progressData.value?.data?.listSumberPenghasilan ?? [];
+                    final isLoading = progressController.isLoading.value;
+                    return VoidTextField(
+                      requiredField: true,
+                      controller: sumberPenghasilan,
+                      readOnly: false,
+                      fieldName: "Sumber Pendapatan",
+                      hintText: pendapatan.isEmpty
+                        ? "Data belum tersedia"
+                        : "Pilih Sumber Pendapatan Anda",
+                      labelText: "Pilih Sumber Pendapatan Anda",
+                      iconData: Icons.home_mini,
+                      onPressed: isLoading ? null : () {
+                        if (pendapatan.isEmpty) {
+                          CustomScaffoldMessanger.showAppSnackBar(
+                            context,
+                            message: "Data sumber pendapatan tidak ditemukan",
+                            type: SnackBarType.info,
+                          );
+                          return;
+                        }
+                        CustomMaterialBottomSheets.defaultBottomSheet(
+                          context,
+                          title: "Pilih Sumber Pendapatan Anda",
+                          size: size,
+                          children: List.generate(pendapatan.length, (i) {
+                            final item = pendapatan[i];
+                            return ListTile(
+                              leading: Icon(Icons.check_circle,
+                                  color: (sumberPenghasilan.text == item)
+                                      ? CustomColor.secondaryColor
+                                      : Colors.grey,
+                                  size: 22),
+                              title: Text(item),
+                              onTap: () {
+                                sumberPenghasilan.text = item;
+                                Navigator.pop(context);
+                                setState(() {}); // update UI lokal
+                              },
+                            );
+                          }),
+                        );
+                      },
+                    );
+                  }),
+                  Obx(() {
                     final pendapatan = progressController.progressData.value?.data?.listPendapatan ?? [];
                     final isLoading = progressController.isLoading.value;
                     return VoidTextField(
@@ -1316,6 +1399,8 @@ class _Step7State extends State<Step7> {
                   // ===================================================================
                   final requiredFields = [
                     {"value": nomorNPWP.text, "message": "Mohon inputkan NPWP Anda"},
+                    {"value": sumberPenghasilan.text, "message": "Mohon inputkan sumber penghasilan"},
+                    {"value": pendidikanTerakhir.text, "message": "Mohon inputkan pendidikan terakhir"},
                     {"value": jenisKelamin.text, "message": "Mohon pilih jenis kelamin"},
                     {"value": namaIbuKandung.text, "message": "Mohon inputkan Nama Ibu Kandung"},
                     {"value": statusPerkawinan.text, "message": "Mohon pilih status perkawinan"},
@@ -1419,6 +1504,9 @@ class _Step7State extends State<Step7> {
                   //                     📌 SUBMIT TO API
                   // ===================================================================
                   bool result = await _regolRepository.step7(
+                    kewarganegaraan: negara.text,
+                    pendidikanTerakhir: pendidikanTerakhir.text,
+                    sumberPenghasilan: sumberPenghasilan.text,
                     alamatKantor: alamatKantor.text,
                     bankName1: namaBank1.text,
                     bankName2: namaBank2.text,

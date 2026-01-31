@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:ui';
 import 'package:get/get.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:rrfx/src/components/colors/default.dart';
+import 'package:rrfx/src/views/accounts/registration_online/controllers/progress_account_controller.dart';
 import 'package:rrfx/src/views/accounts/registration_online/repository/regol_repository.dart';
 import 'package:rrfx/src/views/accounts/registration_online/views/step_7.dart';
 
@@ -20,6 +22,7 @@ class _SIDRegistrationPageState extends State<SIDRegistrationPage> {
   // Single SID Input Controller
   late TextEditingController _sidController;
   final RegolRepository _regolRepository = Get.put(RegolRepository());
+  final progressController = Get.find<ProgressAccountController>();
 
   // Separated SID Input Controllers
   late TextEditingController _typeController;
@@ -47,6 +50,51 @@ class _SIDRegistrationPageState extends State<SIDRegistrationPage> {
     _dateController.addListener(() => setState(() {}));
     _tradingIdController.addListener(() => setState(() {}));
     _checkDigitController.addListener(() => setState(() {}));
+
+    // Auto-fill SID if available
+    _autoFillSID();
+  }
+
+  void _autoFillSID() {
+    final nomorSID = progressController.progressData.value?.response?.nomorSID;
+    if (nomorSID != null && nomorSID.isNotEmpty) {
+      print('SID Available: $nomorSID');
+      
+      // Parse SID format: "ID - D - 1199 - AB1234 - 56" or "IDD119934219456"
+      try {
+        // Remove all dashes and spaces
+        String cleanSID = nomorSID.replaceAll(RegExp(r'[\s-]'), '').toUpperCase();
+        
+        if (cleanSID.length >= 15) {
+          // Extract each part
+          final type = cleanSID.substring(0, 2); // 2 chars
+          final status = cleanSID.substring(2, 3); // 1 char
+          final dateOfBirth = cleanSID.substring(3, 7); // 4 chars
+          final tradingId = cleanSID.substring(7, 13); // 6 chars
+          final checkDigit = cleanSID.substring(13, 15); // 2 chars
+          
+          // Fill the controllers
+          _typeController.text = type;
+          _statusController.text = status;
+          _dateController.text = dateOfBirth;
+          _tradingIdController.text = tradingId;
+          _checkDigitController.text = checkDigit;
+          
+          // Set option to "has SID"
+          setState(() {
+            selectedOption = 0;
+          });
+          
+          print('Auto-filled SID: $type-$status-$dateOfBirth-$tradingId-$checkDigit');
+        } else {
+          print('SID length is less than 15 characters. Got: ${cleanSID.length} characters');
+        }
+      } catch (e) {
+        print('Error parsing SID: $e');
+      }
+    } else {
+      print('SID not available or empty');
+    }
   }
 
   @override
@@ -243,7 +291,7 @@ class _SIDRegistrationPageState extends State<SIDRegistrationPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    '📋 Arti Digit Nomor SID',
+                    'Arti Digit Nomor SID',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
@@ -253,8 +301,7 @@ class _SIDRegistrationPageState extends State<SIDRegistrationPage> {
                   _buildSIDDigitExplanation(
                     digit: '1',
                     title: 'Tipe Investor',
-                    description:
-                        'ID untuk persorangan, SC untuk perusahaan, MF untuk Mutual Fund',
+                    description: 'ID untuk persorangan, SC untuk perusahaan, MF untuk Mutual Fund',
                   ),
                   _buildSIDDigitExplanation(
                     digit: '2',
@@ -264,20 +311,17 @@ class _SIDRegistrationPageState extends State<SIDRegistrationPage> {
                   _buildSIDDigitExplanation(
                     digit: '3',
                     title: 'Bulan & Tanggal Lahir',
-                    description:
-                        'Format MMDD untuk verifikasi data kependudukan milik Dukcapil',
+                    description: 'Format MMDD untuk verifikasi data kependudukan milik Dukcapil',
                   ),
                   _buildSIDDigitExplanation(
                     digit: '4',
                     title: 'Trading ID',
-                    description:
-                        'Digit yang wajib digunakan setiap pelaksanaan transaksi di pasar modal',
+                    description: 'Digit yang wajib digunakan setiap pelaksanaan transaksi di pasar modal',
                   ),
                   _buildSIDDigitExplanation(
                     digit: '5',
                     title: 'Check Digit',
-                    description:
-                        'Angka yang dihasilkan sistem secara random untuk memastikan keaslian SID',
+                    description: 'Angka yang dihasilkan sistem secara random untuk memastikan keaslian SID',
                   ),
                 ],
               ),
@@ -874,6 +918,19 @@ class _SIDRegistrationPageState extends State<SIDRegistrationPage> {
                         final String keterangan = selectedOption == 0 ? "1" : "2";
                         final String? sidValue = selectedOption == 0 ? _getFormattedSID() : null;
 
+                        // DEBUG: Log data sebelum dikirim
+                        Get.log('========== DEBUG SEBELUM SUBMIT SID ==========');
+                        Get.log('Selected Option: $selectedOption (0=punya SID, 1=tidak punya)');
+                        Get.log('Keterangan: $keterangan');
+                        Get.log('SID Value: $sidValue');
+                        Get.log('Full SID (no formatting): ${_getFullSID()}');
+                        Get.log('Type: ${_typeController.text}');
+                        Get.log('Status: ${_statusController.text}');
+                        Get.log('Date: ${_dateController.text}');
+                        Get.log('Trading ID: ${_tradingIdController.text}');
+                        Get.log('Check Digit: ${_checkDigitController.text}');
+                        Get.log('==========================================');
+
                         // Call API
                         bool result = await _regolRepository.step6ASID(
                           sid: sidValue,
@@ -897,16 +954,7 @@ class _SIDRegistrationPageState extends State<SIDRegistrationPage> {
                             Get.to(() => const Step7());
                           });
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('Gagal menyimpan data. Silakan coba lagi.'),
-                              backgroundColor: Colors.red,
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                          Future.delayed(const Duration(seconds: 2), () {
-                            Get.to(() => const Step7());
-                          });
+                          _showSIDErrorPopup(context);
                         }
                       }
                     : null,
@@ -1058,6 +1106,184 @@ class _SIDRegistrationPageState extends State<SIDRegistrationPage> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showSIDErrorPopup(BuildContext context) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Error Icon with animation
+                TweenAnimationBuilder(
+                  tween: Tween<double>(begin: 0, end: 1),
+                  duration: const Duration(milliseconds: 600),
+                  builder: (context, value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Iconsax.close_circle_bold,
+                          color: Colors.red,
+                          size: 40,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+
+                // Title
+                Text(
+                  'Data Tidak Valid',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Message
+                Text(
+                  'Gagal menyimpan data SID. Silakan periksa kembali informasi yang Anda masukkan atau coba lagi nanti.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Error Info Box
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.08),
+                    border: Border.all(
+                      color: Colors.red.withOpacity(0.2),
+                      width: 1,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Iconsax.info_circle_outline,
+                        color: Colors.red,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Pastikan format SID benar atau Anda belum memiliki SID',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.red[700],
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Get.back(),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                              color: CustomColor.secondaryColor,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        child: Text(
+                          'Kembali',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: CustomColor.secondaryColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Get.back();
+                          // Reset form
+                          setState(() {
+                            selectedOption = null;
+                            _sidController.clear();
+                            _typeController.clear();
+                            _statusController.clear();
+                            _dateController.clear();
+                            _tradingIdController.clear();
+                            _checkDigitController.clear();
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: CustomColor.secondaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Ulangi',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: true,
     );
   }
 }

@@ -84,6 +84,10 @@ class AccountResponse {
   final String? kekayaanNilai;
   final String? kekayaanLain;
   final String? urlTradingRules;
+  final String? pendidikanTerakhir;
+  final String? sumberPenghasilan;
+  final String? nomorSID;
+  final String? kewarganegaraan;
 
   AccountResponse({
     required this.id,
@@ -114,6 +118,10 @@ class AccountResponse {
     this.village,
     this.rt,
     this.rw,
+    this.kewarganegaraan,
+    this.nomorSID,
+    this.sumberPenghasilan,
+    this.pendidikanTerakhir,
     this.address,
     this.postalCode,
     this.maritalStatus,
@@ -208,6 +216,10 @@ class AccountResponse {
       kekayaanDeposit: json['kekayaan_deposit'],
       kekayaanNilai: json['kekayaan_nilai'],
       kekayaanLain: json['kekayaan_lain'],
+      nomorSID: json['nomor_sid'],
+      pendidikanTerakhir: json['pendidikan_terakhir'],
+      sumberPenghasilan: json['sumber_penghasilan'],
+      kewarganegaraan: json['kewarganegaraan'],
     );
   }
 }
@@ -224,6 +236,8 @@ class AccountData {
   List<String>? kekayaanDepositBank;
   List<String>? kekayaanLainnya;
   List<String>? kekayaanJumlah;
+  List<String>? listPendidikan;
+  List<String>? listSumberPenghasilan;
   bool? alreadyHaveAccount;
 
   AccountData({
@@ -238,6 +252,8 @@ class AccountData {
     this.kekayaanDepositBank,
     this.kekayaanLainnya,
     this.kekayaanJumlah,
+    this.listPendidikan,
+    this.listSumberPenghasilan,
     this.alreadyHaveAccount
   });
 
@@ -254,6 +270,8 @@ class AccountData {
       kekayaanDepositBank: List<String>.from(json['kekayaan_deposit_bank'] ?? []),
       kekayaanLainnya: List<String>.from(json['kekayaan_lainnya'] ?? []),
       kekayaanJumlah: List<String>.from(json['kekayaan_jumlah'] ?? []),
+      listPendidikan: List<String>.from(json['list_pendidikan'] ?? []),
+      listSumberPenghasilan: List<String>.from(json['list_sumber_penghasilan'] ?? []),
       alreadyHaveAccount: json['already_have_account']
     );
   }
