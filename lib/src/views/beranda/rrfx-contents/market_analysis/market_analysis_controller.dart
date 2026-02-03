@@ -1,12 +1,24 @@
+import 'dart:async';
 import 'package:get/get.dart';
 import 'package:dio/dio.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'market_analysis_model.dart';
+
+enum MarketAnalysisErrorType {
+  none,
+  noConnection,
+  timeout,
+  serverError,
+  unknown,
+}
 
 class MarketAnalysisController extends GetxController {
   final Dio _dio = Dio();
 
   RxBool isLoading = false.obs;
   RxBool isLoadMore = false.obs;
+  Rx<MarketAnalysisErrorType> errorType = Rx<MarketAnalysisErrorType>(MarketAnalysisErrorType.none);
+  RxString errorMessage = ''.obs;
 
   RxList<MarketAnalysisModel> analysis = <MarketAnalysisModel>[].obs;
 
@@ -22,14 +34,32 @@ class MarketAnalysisController extends GetxController {
   Future<void> fetchMarketAnalysis() async {
     try {
       isLoading.value = true;
+      errorType.value = MarketAnalysisErrorType.none;
+      errorMessage.value = '';
 
-      final res = await _dio.get(
-        "https://gateway.rrfx.co.id/api/v1/contents/category/all",
-        queryParameters: {
-          "type": "MARKET_ANALYTIC",
-          "limit": limit,
-        },
-      );
+      // Check connection first
+      final connectivityResult = await Connectivity().checkConnectivity();
+      if (connectivityResult.contains(ConnectivityResult.none)) {
+        errorType.value = MarketAnalysisErrorType.noConnection;
+        errorMessage.value = 'Tidak ada koneksi internet';
+        isLoading.value = false;
+        return;
+      }
+
+      final res = await _dio
+          .get(
+            "https://gateway.rrfx.co.id/api/v1/contents/category/all",
+            queryParameters: {
+              "type": "MARKET_ANALYTIC",
+              "limit": limit,
+            },
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw TimeoutException('Request timeout');
+            },
+          );
 
       final List data = res.data["data"]["list"];
       final options = res.data["data"]["options"];
@@ -37,8 +67,13 @@ class MarketAnalysisController extends GetxController {
       canLoadMore = options["is_load_more"] ?? false;
 
       analysis.value = data.map((e) => MarketAnalysisModel.fromJson(e)).toList();
+      errorType.value = MarketAnalysisErrorType.none;
+    } on TimeoutException catch (_) {
+      errorType.value = MarketAnalysisErrorType.timeout;
+      errorMessage.value = 'Koneksi terlalu lambat (> 15 detik)';
     } catch (e) {
-      print("Error fetch market analytic: $e");
+      errorType.value = MarketAnalysisErrorType.serverError;
+      errorMessage.value = 'Terjadi kesalahan';
     } finally {
       isLoading.value = false;
     }
@@ -50,14 +85,27 @@ class MarketAnalysisController extends GetxController {
     try {
       isLoadMore.value = true;
 
-      final res = await _dio.get(
-        "https://gateway.rrfx.co.id/api/v1/contents/category/all",
-        queryParameters: {
-          "type": "MARKET_ANALYTIC",
-          "limit": limit,
-          "skip": analysis.length,
-        },
-      );
+      // Check connection first
+      final connectivityResult = await Connectivity().checkConnectivity();
+      if (connectivityResult.contains(ConnectivityResult.none)) {
+        return;
+      }
+
+      final res = await _dio
+          .get(
+            "https://gateway.rrfx.co.id/api/v1/contents/category/all",
+            queryParameters: {
+              "type": "MARKET_ANALYTIC",
+              "limit": limit,
+              "skip": analysis.length,
+            },
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw TimeoutException('Request timeout');
+            },
+          );
 
       final List data = res.data["data"]["list"];
       final options = res.data["data"]["options"];
@@ -68,9 +116,13 @@ class MarketAnalysisController extends GetxController {
         data.map((e) => MarketAnalysisModel.fromJson(e)).toList(),
       );
     } catch (e) {
-      print("Error fetchMore market analytic: $e");
+      // Silent fail for load more
     } finally {
       isLoadMore.value = false;
     }
+  }
+
+  void retryFetch() {
+    fetchMarketAnalysis();
   }
 }

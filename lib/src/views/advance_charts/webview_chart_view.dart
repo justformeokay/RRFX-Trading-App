@@ -3,6 +3,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/views/chart/controllers/chart_controller.dart';
@@ -10,6 +11,7 @@ import 'controllers/symbols_controller.dart';
 import 'widgets/market_selector_sheet.dart';
 import 'widgets/chart_trading_panel.dart';
 import 'dart:io' show Platform;
+import 'dart:async';
 
 class WebViewChartView extends StatefulWidget {
   final String? symbol;
@@ -34,6 +36,10 @@ class _WebViewChartViewState extends State<WebViewChartView> {
   String? errorMessage;
   bool _previousTheme = Get.isDarkMode;
   String? _currentSymbol;
+  bool _hasConnection = true;
+  bool _isTimeout = false;
+  late StreamSubscription _connectionSubscription;
+  Timer? _timeoutTimer;
 
   @override
   void initState() {
@@ -47,6 +53,41 @@ class _WebViewChartViewState extends State<WebViewChartView> {
     } else {
       _currentSymbol = chartController.selectedMarket.value;
     }
+
+    // Monitor connection
+    _checkConnection();
+    _connectionSubscription = Connectivity().onConnectivityChanged.listen((result) {
+      setState(() {
+        _hasConnection = !result.contains(ConnectivityResult.none);
+      });
+    });
+  }
+
+  Future<void> _checkConnection() async {
+    final result = await Connectivity().checkConnectivity();
+    if (mounted) {
+      setState(() {
+        _hasConnection = !result.contains(ConnectivityResult.none);
+      });
+    }
+  }
+
+  void _startTimeoutTimer() {
+    _timeoutTimer?.cancel();
+    _timeoutTimer = Timer(const Duration(seconds: 15), () {
+      if (mounted && isLoading && !hasError) {
+        setState(() {
+          isLoading = false;
+          hasError = true;
+          _isTimeout = true;
+        });
+      }
+    });
+  }
+
+  void _cancelTimeoutTimer() {
+    _timeoutTimer?.cancel();
+    _timeoutTimer = null;
   }
 
   @override
@@ -86,8 +127,10 @@ class _WebViewChartViewState extends State<WebViewChartView> {
     setState(() {
       isLoading = true;
       hasError = false;
+      _isTimeout = false;
       errorMessage = null;
     });
+    _startTimeoutTimer();
     webViewController?.loadUrl(
       urlRequest: URLRequest(url: WebUri(_buildChartUrl())),
     );
@@ -114,6 +157,23 @@ class _WebViewChartViewState extends State<WebViewChartView> {
   Widget build(BuildContext context) {
     final isDark = Get.isDarkMode;
     final size = MediaQuery.of(context).size;
+    final theme = Theme.of(context);
+
+    // Show error if no connection
+    if (!_hasConnection) {
+      return Scaffold(
+        backgroundColor: isDark ? Colors.black : Colors.white,
+        appBar: AppBar(
+          leadingWidth: size.width * 0.25,
+          title: Text(
+            _currentSymbol ?? 'XAUUSD.db',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+          ),
+        ),
+        body: _buildConnectionErrorState(theme, isDark),
+      );
+    }
+
     return Scaffold(
       backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
@@ -206,16 +266,19 @@ class _WebViewChartViewState extends State<WebViewChartView> {
             },
             onLoadStart: (controller, url) {
               print('📥 Loading started...');
+              _startTimeoutTimer();
               if (mounted) {
                 setState(() {
                   isLoading = true;
                   hasError = false;
+                  _isTimeout = false;
                   errorMessage = null;
                 });
               }
             },
             onLoadStop: (controller, url) async {
               print('✅ Loading finished: $url');
+              _cancelTimeoutTimer();
 
               // Untuk iOS, inject JavaScript yang lebih simple
               if (Platform.isIOS) {
@@ -322,73 +385,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
             Container(
               color: isDark ? Colors.black : Colors.white,
               child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Iconsax.chart_fail_outline,
-                          size: 64,
-                          color: Colors.red.shade400,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Chart Tidak Dapat Dimuat',
-                        style: GoogleFonts.inter(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white : Colors.black,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Terjadi kesalahan saat memuat chart. Silakan coba lagi nanti.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          height: 1.5,
-                          color: isDark ? Colors.white70 : Colors.black54,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      ElevatedButton.icon(
-                        onPressed: _reloadChart,
-                        icon: const Icon(
-                          Iconsax.refresh_outline,
-                          color: Colors.black,
-                        ),
-                        label: Text(
-                          'Muat Ulang Chart',
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: CustomColor.secondaryColor,
-                          foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 14,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                child: _buildErrorStateContent(theme, isDark),
               ),
             ),
         ],
@@ -428,7 +425,368 @@ class _WebViewChartViewState extends State<WebViewChartView> {
 
   @override
   void dispose() {
+    _connectionSubscription.cancel();
+    _cancelTimeoutTimer();
     webViewController = null;
     super.dispose();
+  }
+
+  Widget _buildConnectionErrorState(ThemeData theme, bool isDarkMode) {
+    return Center(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Animated Icon
+              TweenAnimationBuilder(
+                tween: Tween<double>(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.elasticOut,
+                builder: (context, double value, child) {
+                  return Transform.scale(
+                    scale: value,
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: CustomColor.secondaryColor.withOpacity(0.1),
+                      ),
+                      child: Icon(
+                        Iconsax.wifi_square_outline,
+                        size: 60,
+                        color: CustomColor.secondaryColor,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 32),
+
+              // Title
+              Text(
+                'Tidak Ada Koneksi',
+                style: GoogleFonts.inter(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurface,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+
+              // Description
+              Text(
+                'Sepertinya Anda tidak terhubung ke internet. Periksa koneksi WiFi atau data seluler Anda.',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  height: 1.6,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+
+              // Tips Card
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: CustomColor.secondaryColor.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: CustomColor.secondaryColor.withOpacity(0.2),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Iconsax.lamp_charge_outline,
+                          size: 18,
+                          color: CustomColor.secondaryColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Tips',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '• Pastikan WiFi atau data mobile Anda aktif\n• Coba matikan dan nyalakan ulang perangkat\n• Periksa pengaturan jaringan Anda',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        height: 1.6,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // Action buttons
+              Column(
+                children: [
+                  // Retry button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        _checkConnection();
+                        if (_hasConnection) {
+                          setState(() {
+                            hasError = false;
+                            _isTimeout = false;
+                          });
+                          _reloadChart();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: CustomColor.secondaryColor,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Iconsax.refresh_outline, size: 20),
+                      label: Text(
+                        'Coba Lagi',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Back button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: theme.colorScheme.onSurface,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        side: BorderSide(
+                          color: theme.dividerColor.withOpacity(0.5),
+                        ),
+                      ),
+                      icon: const Icon(Iconsax.arrow_left_outline, size: 20),
+                      label: Text(
+                        'Kembali',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorStateContent(ThemeData theme, bool isDarkMode) {
+    final isTimeout = _isTimeout;
+    
+    return Center(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Animated Icon
+              TweenAnimationBuilder(
+                tween: Tween<double>(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.elasticOut,
+                builder: (context, double value, child) {
+                  return Transform.scale(
+                    scale: value,
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: CustomColor.secondaryColor.withOpacity(0.1),
+                      ),
+                      child: Icon(
+                        isTimeout 
+                          ? Iconsax.timer_1_outline 
+                          : Iconsax.chart_fail_outline,
+                        size: 60,
+                        color: CustomColor.secondaryColor,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 32),
+
+              // Title
+              Text(
+                isTimeout ? 'Koneksi Terlalu Lambat' : 'Chart Tidak Dapat Dimuat',
+                style: GoogleFonts.inter(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurface,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+
+              // Description
+              Text(
+                isTimeout
+                    ? 'Server membutuhkan waktu terlalu lama untuk merespons. Coba lagi atau periksa kecepatan internet Anda.'
+                    : 'Gagal memuat chart. Periksa koneksi internet Anda dan coba lagi.',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  height: 1.6,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+
+              // Tips Card
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: CustomColor.secondaryColor.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: CustomColor.secondaryColor.withOpacity(0.2),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Iconsax.lamp_charge_outline,
+                          size: 18,
+                          color: CustomColor.secondaryColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Tips',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      isTimeout
+                          ? '• Periksa kecepatan koneksi internet Anda\n• Tunggu beberapa saat dan coba lagi\n• Jika masalah berlanjut, coba ubah server'
+                          : '• Pastikan koneksi internet stabil\n• Coba menyegarkan halaman\n• Periksa pengaturan jaringan Anda',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        height: 1.6,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // Action buttons
+              Column(
+                children: [
+                  // Retry button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          hasError = false;
+                          _isTimeout = false;
+                        });
+                        _reloadChart();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: CustomColor.secondaryColor,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Iconsax.refresh_outline, size: 20),
+                      label: Text(
+                        'Coba Lagi',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Back button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: theme.colorScheme.onSurface,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        side: BorderSide(
+                          color: theme.dividerColor.withOpacity(0.5),
+                        ),
+                      ),
+                      icon: const Icon(Iconsax.arrow_left_outline, size: 20),
+                      label: Text(
+                        'Kembali',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
