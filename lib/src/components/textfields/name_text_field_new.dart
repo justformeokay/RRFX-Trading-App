@@ -131,7 +131,7 @@ class _NameTextFieldNewVersionState extends State<NameTextFieldNewVersion> {
                       children: [
                         if (widget.requiredField)
                           const TextSpan(
-                            text: " *",
+                            text: "",
                             style: TextStyle(
                               color: Colors.red,
                               fontWeight: FontWeight.bold,

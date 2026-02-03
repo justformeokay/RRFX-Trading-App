@@ -1,6 +1,9 @@
+import 'dart:async';
+import 'dart:io' show Platform, SocketException;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/dialogs/passcode_error_dialog.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
@@ -8,7 +11,6 @@ import 'package:rrfx/src/controllers/passcode_controller.dart';
 import 'package:rrfx/src/service/passcode_service.dart';
 import 'package:rrfx/src/views/mainpage.dart';
 import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
-import 'dart:io' show Platform;
 
 class VerifyPasscodePage extends StatefulWidget {
   const VerifyPasscodePage({super.key});
@@ -55,6 +57,105 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
   void _animateDot(int index) {
     if (index < _dotAnimationControllers.length) {
       _dotAnimationControllers[index].forward(from: 0.0);
+    }
+  }
+
+  Future<void> _handleVerifyPasscode() async {
+    // Check internet connection first
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      _shakeAnimation();
+      controller.resetForVerify();
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (mounted) {
+        await PasscodeErrorDialog.show(
+          context,
+          message:
+              'Tidak ada koneksi internet. Periksa koneksi WiFi atau data seluler Anda.',
+          remainingAttempts: controller.remainingAttempts.value,
+          attemptCount: controller.lastAttemptCount.value,
+          isLocked: false,
+          lockTimeRemaining: 0,
+        );
+      }
+      return;
+    }
+
+    try {
+      // Verify passcode with timeout
+      final success = await controller.verifyPasscode().timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw TimeoutException('Request timeout');
+        },
+      );
+
+      if (success) {
+        Get.offAll(() => Mainpage());
+      } else {
+        _shakeAnimation();
+        controller.resetForVerify();
+
+        // Show custom error dialog
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (mounted) {
+          await PasscodeErrorDialog.show(
+            context,
+            message:
+                controller.isLocked.value
+                    ? 'Akun Anda terkunci sementara karena terlalu banyak percobaan yang gagal.'
+                    : 'Passcode yang Anda masukkan tidak sesuai. Silahkan coba lagi.',
+            remainingAttempts: controller.remainingAttempts.value,
+            attemptCount: controller.lastAttemptCount.value,
+            isLocked: controller.isLocked.value,
+            lockTimeRemaining: controller.lockTimeRemaining.value,
+          );
+        }
+      }
+    } on TimeoutException catch (_) {
+      _shakeAnimation();
+      controller.resetForVerify();
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (mounted) {
+        await PasscodeErrorDialog.show(
+          context,
+          message:
+              'Koneksi terlalu lambat. Proses verifikasi memakan waktu lebih dari 15 detik. Silakan coba lagi.',
+          remainingAttempts: controller.remainingAttempts.value,
+          attemptCount: controller.lastAttemptCount.value,
+          isLocked: false,
+          lockTimeRemaining: 0,
+        );
+      }
+    } on SocketException catch (_) {
+      _shakeAnimation();
+      controller.resetForVerify();
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (mounted) {
+        await PasscodeErrorDialog.show(
+          context,
+          message:
+              'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
+          remainingAttempts: controller.remainingAttempts.value,
+          attemptCount: controller.lastAttemptCount.value,
+          isLocked: false,
+          lockTimeRemaining: 0,
+        );
+      }
+    } catch (e) {
+      _shakeAnimation();
+      controller.resetForVerify();
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (mounted) {
+        await PasscodeErrorDialog.show(
+          context,
+          message: 'Terjadi kesalahan. Silakan coba lagi.',
+          remainingAttempts: controller.remainingAttempts.value,
+          attemptCount: controller.lastAttemptCount.value,
+          isLocked: false,
+          lockTimeRemaining: 0,
+        );
+      }
     }
   }
 
@@ -361,43 +462,7 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
                             passcode.length == 6 && !controller.isLocked.value
                                 ? controller.isLoading.value
                                     ? null
-                                    : () async {
-                                      final success =
-                                          await controller.verifyPasscode();
-                                      if (success) {
-                                        Get.offAll(() => Mainpage());
-                                      } else {
-                                        _shakeAnimation();
-                                        controller.resetForVerify();
-
-                                        // Show custom error dialog
-                                        await Future.delayed(
-                                          const Duration(milliseconds: 300),
-                                        );
-                                        if (mounted) {
-                                          await PasscodeErrorDialog.show(
-                                            context,
-                                            message:
-                                                controller.isLocked.value
-                                                    ? 'Akun Anda terkunci sementara karena terlalu banyak percobaan yang gagal.'
-                                                    : 'Passcode yang Anda masukkan tidak sesuai. Silahkan coba lagi.',
-                                            remainingAttempts:
-                                                controller
-                                                    .remainingAttempts
-                                                    .value,
-                                            attemptCount:
-                                                controller
-                                                    .lastAttemptCount
-                                                    .value,
-                                            isLocked: controller.isLocked.value,
-                                            lockTimeRemaining:
-                                                controller
-                                                    .lockTimeRemaining
-                                                    .value,
-                                          );
-                                        }
-                                      }
-                                    }
+                                    : _handleVerifyPasscode
                                 : null,
                         child:
                             controller.isLoading.value

@@ -4,12 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 
 /// Enum untuk tipe alert popup
-enum AlertType {
-  success,
-  error,
-  warning,
-  info,
-}
+enum AlertType { success, error, warning, info }
 
 /// Modern Alert Dialog - Popup yang bagus dan kekinian
 class ModernAlertDialog {
@@ -250,11 +245,7 @@ class _ModernAlertContentState extends State<_ModernAlertContent>
                     ),
                   ],
                 ),
-                child: Icon(
-                  _getIcon(),
-                  size: 40,
-                  color: bgColor,
-                ),
+                child: Icon(_getIcon(), size: 40, color: bgColor),
               ),
 
               const SizedBox(height: 20),
@@ -296,10 +287,7 @@ class _ModernAlertContentState extends State<_ModernAlertContent>
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
                     gradient: LinearGradient(
-                      colors: [
-                        bgColor,
-                        bgColor.withOpacity(0.8),
-                      ],
+                      colors: [bgColor, bgColor.withOpacity(0.8)],
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -314,7 +302,11 @@ class _ModernAlertContentState extends State<_ModernAlertContent>
                     child: InkWell(
                       onTap: () {
                         widget.onPressed?.call();
-                        Get.back();
+                        // Hanya pop dialog jika tidak ada custom callback
+                        // Jika ada custom callback, biarkan callback yang handle close
+                        if (widget.onPressed == null) {
+                          Get.back();
+                        }
                       },
                       borderRadius: BorderRadius.circular(14),
                       child: Center(

@@ -113,7 +113,7 @@ class _PasswordTextFieldState extends State<PasswordTextField> {
                 children: [
                   if (widget.requiredField == true)
                     const TextSpan(
-                      text: " *",
+                      text: "",
                       style: TextStyle(
                         color: Colors.red,
                         fontWeight: FontWeight.bold,

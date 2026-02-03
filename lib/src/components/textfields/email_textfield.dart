@@ -110,7 +110,7 @@ class _EmailTextFieldState extends State<EmailTextField> {
                 children: [
                   if (widget.requiredField == true)
                     const TextSpan(
-                      text: ' *',
+                      text: '',
                       style: TextStyle(
                         color: Colors.red,
                         fontWeight: FontWeight.bold,
