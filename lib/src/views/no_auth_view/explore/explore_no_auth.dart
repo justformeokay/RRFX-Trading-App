@@ -365,25 +365,25 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
             // 🔹 Logo + Title
             Row(
               children: [
-                Image.asset('assets/images/logo-rrfx-3.png', width: 40),
+                Image.asset('assets/images/logo-rrfx-3.png', width: 35),
                 const SizedBox(width: 10.0),
                 Text(
                   "RRFX",
                   style: GoogleFonts.inter(
                     color: CustomColor.secondaryColor,
-                    fontSize: 34,
+                    fontSize: 30,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
 
             Text(
               "Selamat datang di RRFX",
               style: GoogleFonts.inter(
-                fontSize: 20,
+                fontSize: 17,
                 fontWeight: FontWeight.w700,
                 color: Theme.of(context).colorScheme.onBackground,
               ),
@@ -394,14 +394,14 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
             Text(
               "Trading Komoditi, Forex & Index teregulasi oleh BAPPEBTI, OJK dan BI",
               style: GoogleFonts.inter(
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.w400,
                 color: Theme.of(context).colorScheme.onBackground.withOpacity(0.9),
               ),
             ),
 
 
-            const Spacer(),
+            const SizedBox(height: 10),
 
             SizedBox(
               width: 150,

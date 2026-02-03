@@ -264,7 +264,7 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
             // Tentukan warna latar belakang dan teks berdasarkan tema sistem
             final isDarkMode = Get.isDarkMode;
             final fgColor = isDarkMode ? Colors.white : Colors.black;
-            final secondaryTextColor = isDarkMode ? Colors.grey[600] : Colors.grey[400];
+            final secondaryTextColor = isDarkMode ? Colors.white70 : Colors.grey[700];
             
             // Cek apakah market sedang tutup (weekend/holiday)
             final now = DateTime.now();
@@ -634,7 +634,8 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
                             '${time.hour}:${time.minute}:${time.second} | Spread: $spreadInt',
                             style: TextStyle(
                               color: secondaryTextColor,
-                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
                             ),
                           ),
                         ],
@@ -655,7 +656,7 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
                         const SizedBox(height: 2),
                         Text(
                           'L: ${model.bidLow.toStringAsFixed(decimalPlaces)}',
-                          style: TextStyle(color: secondaryTextColor, fontSize: 10),
+                          style: TextStyle(color: secondaryTextColor, fontSize: 10, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -673,7 +674,7 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
                         const SizedBox(height: 2),
                         Text(
                           'H: ${model.askHigh.toStringAsFixed(decimalPlaces)}',
-                          style: TextStyle(color: secondaryTextColor, fontSize: 10),
+                          style: TextStyle(color: secondaryTextColor, fontSize: 10, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
