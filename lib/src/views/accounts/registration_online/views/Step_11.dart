@@ -25,7 +25,7 @@ class Step11 extends StatefulWidget {
   State<Step11> createState() => _Step11State();
 }
 
-class _Step11State extends State<Step11> {
+class _Step11State extends State<Step11> with SingleTickerProviderStateMixin {
   StatementController controller = Get.find();
   final AgreementSectionController agreementController = Get.put(
     AgreementSectionController(),
@@ -36,12 +36,49 @@ class _Step11State extends State<Step11> {
   String selectedPerselisihan =
       "Badan Arbitrase Perdagangan Berjangka Komoditi (BAKTI) berdasarkan Peraturan dan Prosedur Badan Arbitrase Perdagangan Berjangka Komoditi (BAKTI)";
   String selecterdKantorPerselisihan = "JAKARTA UTARA";
+  
+  late ScrollController _scrollController;
+  late AnimationController _scrollAnimController;
+  bool _showScrollButton = false;
 
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
+    _scrollAnimController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    
+    _scrollController.addListener(_updateScrollButtonVisibility);
+    
     Future.delayed(Duration.zero, () async {
       await progressController.fetchProgressAccount();
+    });
+  }
+
+  void _updateScrollButtonVisibility() {
+    bool shouldShow = _scrollController.offset < _scrollController.position.maxScrollExtent - 500;
+    if (shouldShow != _showScrollButton) {
+      setState(() {
+        _showScrollButton = shouldShow;
+      });
+    }
+  }
+
+  void _scrollToBottom() {
+    _scrollAnimController.forward().then((_) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeInOut,
+      ).then((_) {
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) {
+            _scrollAnimController.reverse();
+          }
+        });
+      });
     });
   }
 
@@ -53,6 +90,7 @@ class _Step11State extends State<Step11> {
         title: "Step 11",
       ),
       body: SingleChildScrollView(
+        controller: _scrollController,
         padding: EdgeInsets.symmetric(horizontal: 16.0),
         child: Column(
           children: [
@@ -272,6 +310,19 @@ class _Step11State extends State<Step11> {
           ],
         ),
       ),
+      floatingActionButton: _showScrollButton
+          ? ScaleTransition(
+              scale: Tween<double>(begin: 1.0, end: 1.1).animate(_scrollAnimController),
+              child: FloatingActionButton(
+                onPressed: _scrollToBottom,
+                backgroundColor: CustomColor.secondaryColor,
+                foregroundColor: Colors.black,
+                elevation: 4,
+                tooltip: 'Scroll ke Bawah',
+                child: const Icon(Icons.arrow_downward),
+              ),
+            )
+          : null,
       bottomNavigationBar: ButtonNextPrevious(
         onPressed: () async {
           // Validasi semua checkbox agreement sections
@@ -315,5 +366,12 @@ class _Step11State extends State<Step11> {
         },
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _scrollAnimController.dispose();
+    super.dispose();
   }
 }

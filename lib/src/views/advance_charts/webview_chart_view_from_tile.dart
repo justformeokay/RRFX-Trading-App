@@ -9,6 +9,7 @@ import 'package:rrfx/src/views/advance_charts/controllers/symbols_controller.dar
 import 'package:rrfx/src/views/advance_charts/widgets/market_selector_sheet.dart';
 import 'package:rrfx/src/views/advance_charts/widgets/chart_trading_panel.dart';
 import 'package:rrfx/src/views/chart/controllers/chart_controller.dart';
+import 'dart:io' show Platform;
 
 /// WebView Chart View untuk dibuka dari Market Tile
 /// Langsung load chart dengan market yang dipilih
@@ -69,7 +70,14 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
     final login = widget.login.toString();
     final theme = Get.isDarkMode ? 'dark' : 'light';
 
-    return 'http://207.148.119.106/rrfx/chart.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
+    final baseUrl = 'http://207.148.119.106/rrfx/chart.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
+    
+    // Untuk iOS, tambahkan parameter khusus
+    if (Platform.isIOS) {
+      return '$baseUrl&platform=ios&mobile=1';
+    }
+    
+    return baseUrl;
   }
 
   void _reloadChart() {
@@ -134,15 +142,15 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
               url: WebUri(_buildChartUrl()),
             ),
             initialSettings: InAppWebViewSettings(
-              useShouldOverrideUrlLoading: true,
+              // Pengaturan umum
+              useShouldOverrideUrlLoading: false, // Ubah ke false untuk iOS
               mediaPlaybackRequiresUserGesture: false,
               javaScriptEnabled: true,
-              javaScriptCanOpenWindowsAutomatically: true,
-              useHybridComposition: true,
+              javaScriptCanOpenWindowsAutomatically: false,
               supportZoom: false,
               builtInZoomControls: false,
               displayZoomControls: false,
-              transparentBackground: true,
+              transparentBackground: false,
               clearCache: false,
               cacheEnabled: true,
               minimumFontSize: 1,
@@ -151,22 +159,43 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
               disableHorizontalScroll: false,
               verticalScrollBarEnabled: true,
               horizontalScrollBarEnabled: true,
+              
+              // Untuk iOS, gunakan setting yang lebih simple
+              useHybridComposition: !Platform.isIOS, // Disable hybrid composition di iOS
+              
+              // Pengaturan khusus iOS
+              allowsInlineMediaPlayback: true,
+              allowsPictureInPictureMediaPlayback: false, // Disable PiP
+              iframeAllow: "camera; microphone; geolocation",
+              iframeAllowFullscreen: true,
+              
+              // Pengaturan untuk kompatibilitas HTTP di iOS
+              allowUniversalAccessFromFileURLs: true,
+              allowFileAccessFromFileURLs: true,
+              
+              // Network dan security settings untuk iOS
+              mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+              resourceCustomSchemes: [],
             ),
             onWebViewCreated: (controller) {
               webViewController = controller;
               print('🌐 WebView created for ${widget.marketName}');
+              print('📍 Chart URL: ${_buildChartUrl()}');
+              print('🍎 Platform: ${Platform.isIOS ? 'iOS' : 'Android'}');
               
-              // Inject JavaScript to disable zoom
-              controller.evaluateJavascript(source: """
-                var meta = document.createElement('meta');
-                meta.name = 'viewport';
-                meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-                var head = document.getElementsByTagName('head')[0];
-                head.appendChild(meta);
-              """);
+              // Set timeout untuk iOS
+              if (Platform.isIOS) {
+                Future.delayed(Duration(seconds: 10), () {
+                  if (mounted && isLoading) {
+                    print('⏰ WebView timeout pada iOS, mencoba reload...');
+                    _reloadChart();
+                  }
+                });
+              }
             },
             onLoadStart: (controller, url) {
               print('📥 Loading started: $url');
+              print('🍎 Platform: ${Platform.isIOS ? 'iOS' : 'Android'}');
               if (mounted) {
                 setState(() {
                   isLoading = true;
@@ -178,28 +207,48 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
             onLoadStop: (controller, url) async {
               print('✅ Loading finished: $url');
               
-              // Inject viewport meta tag to prevent zooming
-              await controller.evaluateJavascript(source: """
-                var meta = document.querySelector('meta[name=viewport]');
-                if (meta) {
-                  meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
-                } else {
-                  var newMeta = document.createElement('meta');
-                  newMeta.name = 'viewport';
-                  newMeta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-                  document.head.appendChild(newMeta);
+              // Untuk iOS, inject JavaScript yang lebih simple
+              if (Platform.isIOS) {
+                try {
+                  await controller.evaluateJavascript(source: """
+                    console.log('iOS Chart loaded successfully');
+                    
+                    // Set basic viewport
+                    var viewport = document.querySelector('meta[name=viewport]');
+                    if (!viewport) {
+                      var meta = document.createElement('meta');
+                      meta.name = 'viewport';
+                      meta.content = 'width=device-width, initial-scale=1.0, user-scalable=no';
+                      document.head.appendChild(meta);
+                    }
+                  """);
+                } catch (e) {
+                  print('⚠️ JavaScript injection error: $e');
                 }
-                
-                // Prevent zoom gestures
-                document.addEventListener('gesturestart', function(e) {
-                  e.preventDefault();
-                });
-                document.addEventListener('touchmove', function(e) {
-                  if (e.scale !== 1) {
-                    e.preventDefault();
+              } else {
+                // Android - inject viewport meta tag to prevent zooming
+                await controller.evaluateJavascript(source: """
+                  var meta = document.querySelector('meta[name=viewport]');
+                  if (meta) {
+                    meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+                  } else {
+                    var newMeta = document.createElement('meta');
+                    newMeta.name = 'viewport';
+                    newMeta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+                    document.head.appendChild(newMeta);
                   }
-                }, { passive: false });
-              """);
+                  
+                  // Prevent zoom gestures
+                  document.addEventListener('gesturestart', function(e) {
+                    e.preventDefault();
+                  });
+                  document.addEventListener('touchmove', function(e) {
+                    if (e.scale !== 1) {
+                      e.preventDefault();
+                    }
+                  }, { passive: false });
+                """);
+              }
               
               if (mounted) {
                 setState(() {
@@ -216,16 +265,20 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
             },
             onLoadError: (controller, url, code, message) {
               print('❌ Load error: $code - $message');
+              print('🌐 Failed URL: $url');
+              print('🍎 Platform: ${Platform.isIOS ? 'iOS' : 'Android'}');
               if (mounted) {
                 setState(() {
                   isLoading = false;
                   hasError = true;
-                  errorMessage = message;
+                  errorMessage = 'Error $code: $message';
                 });
               }
             },
             onLoadHttpError: (controller, url, statusCode, description) {
               print('❌ HTTP error: $statusCode - $description');
+              print('🌐 Failed URL: $url');
+              print('🍎 Platform: ${Platform.isIOS ? 'iOS' : 'Android'}');
               if (mounted) {
                 setState(() {
                   isLoading = false;

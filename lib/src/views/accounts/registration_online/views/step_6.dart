@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:icons_plus/icons_plus.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/appbars/default.dart';
+import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/tables/number_text_list.dart';
 import 'package:rrfx/src/components/tables/pernyataan_persetujuan.dart';
 import 'package:rrfx/src/components/textstyles/default.dart';
@@ -18,14 +20,50 @@ class Step6 extends StatefulWidget {
   State<Step6> createState() => _Step6State();
 }
 
-class _Step6State extends State<Step6> {
+class _Step6State extends State<Step6> with SingleTickerProviderStateMixin {
 
   StatementController controller = Get.find();
   final RegolRepository _regolRepository = Get.find<RegolRepository>();
 
+  late ScrollController _scrollController;
+  late AnimationController _scrollAnimController;
+  bool _showScrollButton = false;
+
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
+    _scrollAnimController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    
+    _scrollController.addListener(_updateScrollButtonVisibility);
+  }
+
+  void _updateScrollButtonVisibility() {
+    bool shouldShow = _scrollController.offset < _scrollController.position.maxScrollExtent - 500;
+    if (shouldShow != _showScrollButton) {
+      setState(() {
+        _showScrollButton = shouldShow;
+      });
+    }
+  }
+
+  void _scrollToBottom() {
+    _scrollAnimController.forward().then((_) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeInOut,
+      ).then((_) {
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) {
+            _scrollAnimController.reverse();
+          }
+        });
+      });
+    });
   }
 
   @override
@@ -36,6 +74,7 @@ class _Step6State extends State<Step6> {
         title: "Step 6"
       ),
       body: SingleChildScrollView(
+        controller: _scrollController,
         padding: EdgeInsets.symmetric(horizontal: 16.0),
         child: Column(
           children: [
@@ -61,6 +100,22 @@ class _Step6State extends State<Step6> {
           ],
         ),
       ),
+      floatingActionButton: _showScrollButton
+        ? ScaleTransition(
+            scale: Tween<double>(begin: 1.0, end: 1.1).animate(_scrollAnimController),
+            child: FloatingActionButton(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30.0),
+              ),
+              onPressed: _scrollToBottom,
+              backgroundColor: CustomColor.secondaryColor,
+              foregroundColor: Colors.black,
+              elevation: 2,
+              tooltip: 'Scroll ke Bawah',
+              child: Icon(Iconsax.arrow_down_1_outline),
+            ),
+          )
+        : null,
       bottomNavigationBar: ButtonNextPrevious(
         onPressed: () async {
           if(!controller.selectedStatement.value){
@@ -77,5 +132,12 @@ class _Step6State extends State<Step6> {
         },
       )
     );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _scrollAnimController.dispose();
+    super.dispose();
   }
 }

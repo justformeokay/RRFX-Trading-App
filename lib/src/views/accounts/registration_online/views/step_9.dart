@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:icons_plus/icons_plus.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/appbars/default.dart';
+import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/textstyles/default.dart';
 import 'package:rrfx/src/views/accounts/registration_online/components/button_next_previous.dart';
 import 'package:rrfx/src/views/accounts/registration_online/components/numbered_aggrement_list.dart';
@@ -11,8 +13,54 @@ import 'package:rrfx/src/views/accounts/registration_online/controllers/statemen
 import 'package:rrfx/src/views/accounts/registration_online/repository/regol_repository.dart';
 import 'package:rrfx/src/views/accounts/registration_online/views/step_10.dart';
 
-class Step9 extends StatelessWidget {
+class Step9 extends StatefulWidget {
   const Step9({super.key});
+
+  @override
+  State<Step9> createState() => _Step9State();
+}
+
+class _Step9State extends State<Step9> with SingleTickerProviderStateMixin {
+  late ScrollController _scrollController;
+  late AnimationController _scrollAnimController;
+  bool _showScrollButton = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    _scrollAnimController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    
+    _scrollController.addListener(_updateScrollButtonVisibility);
+  }
+
+  void _updateScrollButtonVisibility() {
+    bool shouldShow = _scrollController.offset < _scrollController.position.maxScrollExtent - 500;
+    if (shouldShow != _showScrollButton) {
+      setState(() {
+        _showScrollButton = shouldShow;
+      });
+    }
+  }
+
+  void _scrollToBottom() {
+    _scrollAnimController.forward().then((_) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeInOut,
+      ).then((_) {
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) {
+            _scrollAnimController.reverse();
+          }
+        });
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +92,7 @@ class Step9 extends StatelessWidget {
         title: "Step 9",
       ),
       body: SingleChildScrollView(
+        controller: _scrollController,
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
         child: Column(
           children: [
@@ -72,6 +121,22 @@ class Step9 extends StatelessWidget {
           ],
         ),
       ),
+      floatingActionButton: _showScrollButton
+          ? ScaleTransition(
+              scale: Tween<double>(begin: 1.0, end: 1.1).animate(_scrollAnimController),
+              child: FloatingActionButton(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30.0),
+                ),
+                onPressed: _scrollToBottom,
+                backgroundColor: CustomColor.secondaryColor,
+                foregroundColor: Colors.black,
+                elevation: 2,
+                tooltip: 'Scroll ke Bawah',
+                child: Icon(Iconsax.arrow_down_1_outline),
+              ),
+            )
+          : null,
       bottomNavigationBar: ButtonNextPrevious(
         onPressed: () async {
           if (!statementController.selectedStatement.value) {
@@ -91,5 +156,12 @@ class Step9 extends StatelessWidget {
         },
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _scrollAnimController.dispose();
+    super.dispose();
   }
 }

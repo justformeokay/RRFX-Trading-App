@@ -111,6 +111,11 @@ class _IndexV2State extends State<IndexV2> {
       "icon": Iconsax.clock_1_outline,
       "label": "Proses Akun",
     },
+    "Waiting": {
+      "color": Colors.blue,
+      "icon": Iconsax.clock_1_outline,
+      "label": "Sedang di Verifikasi Admin",
+    },
   };
 
   /// Fungsi untuk mendapatkan style (color & icon) berdasarkan status
@@ -1678,8 +1683,8 @@ class _IndexV2State extends State<IndexV2> {
       final status = pendingAccountStatus.value;
       final color = backgroundStatusPending.value ?? Colors.grey;
       
-      // Status "Registrasi" - button disabled/hilang
-      if (status == "Registrasi") {
+      // Status "Registrasi" atau "Waiting" - button disabled/hilang
+      if (status == "Registrasi" || status == "Waiting") {
         return const SizedBox.shrink(); // Hilangkan button
       }
       
