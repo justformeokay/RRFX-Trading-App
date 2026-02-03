@@ -40,6 +40,9 @@ class _WebViewChartViewState extends State<WebViewChartView> {
   bool _isTimeout = false;
   late StreamSubscription _connectionSubscription;
   Timer? _timeoutTimer;
+  
+  // Current price from chart
+  final RxnDouble currentPrice = RxnDouble(null);
 
   @override
   void initState() {
@@ -253,6 +256,24 @@ class _WebViewChartViewState extends State<WebViewChartView> {
             onWebViewCreated: (controller) {
               webViewController = controller;
               print('🌐 WebView created');
+              
+              // JavaScript handler untuk menerima price updates dari chart
+              controller.addJavaScriptHandler(
+                handlerName: 'priceUpdate',
+                callback: (args) {
+                  if (args.isNotEmpty && mounted) {
+                    try {
+                      final price = double.tryParse(args[0].toString());
+                      if (price != null) {
+                        currentPrice.value = price;
+                        print('📊 Current price updated: $price');
+                      }
+                    } catch (e) {
+                      print('⚠️ Error parsing price: $e');
+                    }
+                  }
+                },
+              );
 
               // Set timeout untuk iOS
               if (Platform.isIOS) {
@@ -280,12 +301,62 @@ class _WebViewChartViewState extends State<WebViewChartView> {
               print('✅ Loading finished: $url');
               _cancelTimeoutTimer();
 
-              // Untuk iOS, inject JavaScript yang lebih simple
-              if (Platform.isIOS) {
-                try {
-                  await controller.evaluateJavascript(
-                    source: """
-                    console.log('iOS Chart loaded successfully');
+              // Inject JavaScript untuk ambil price dari chart
+              try {
+                await controller.evaluateJavascript(
+                  source: """
+                  (function() {
+                    console.log('🚀 Initializing price tracker...');
+                    
+                    // Function untuk kirim price ke Flutter
+                    function sendPriceToFlutter(price) {
+                      try {
+                        if (window.flutter_inappwebview) {
+                          window.flutter_inappwebview.callHandler('priceUpdate', price.toString());
+                          console.log('📊 Price sent to Flutter:', price);
+                        }
+                      } catch (e) {
+                        console.error('❌ Error sending price:', e);
+                      }
+                    }
+                    
+                    // Coba ambil price dari berbagai sumber
+                    function findAndSendPrice() {
+                      // Method 1: Cari di price element yang umum
+                      const priceSelectors = [
+                        '.current-price',
+                        '.price-value',
+                        '#current-price',
+                        '[data-price]',
+                        '.last-price'
+                      ];
+                      
+                      for (let selector of priceSelectors) {
+                        const element = document.querySelector(selector);
+                        if (element) {
+                          const priceText = element.innerText || element.textContent;
+                          const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
+                          if (!isNaN(price) && price > 0) {
+                            sendPriceToFlutter(price);
+                            return true;
+                          }
+                        }
+                      }
+                      
+                      // Method 2: Cari text yang match pattern harga (e.g., 4919.17)
+                      const bodyText = document.body.innerText;
+                      const pricePattern = /\b\d{4}\.\d{2}\b/g;
+                      const matches = bodyText.match(pricePattern);
+                      if (matches && matches.length > 0) {
+                        const price = parseFloat(matches[0]);
+                        if (!isNaN(price)) {
+                          sendPriceToFlutter(price);
+                          return true;
+                        }
+                      }
+                      
+                      return false;
+                    }
                     
                     // Set basic viewport
                     var viewport = document.querySelector('meta[name=viewport]');
@@ -295,11 +366,26 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                       meta.content = 'width=device-width, initial-scale=1.0, user-scalable=no';
                       document.head.appendChild(meta);
                     }
+                    
+                    // Coba ambil price immediately
+                    setTimeout(function() {
+                      findAndSendPrice();
+                    }, 500);
+                    
+                    // Poll price setiap 2 detik
+                    setInterval(function() {
+                      findAndSendPrice();
+                    }, 2000);
+                    
+                    // Expose function globally untuk manual trigger
+                    window.sendPriceToFlutter = sendPriceToFlutter;
+                    
+                    console.log('✅ Price tracker initialized');
+                  })();
                   """,
-                  );
-                } catch (e) {
-                  print('⚠️ JavaScript injection error: $e');
-                }
+                );
+              } catch (e) {
+                print('⚠️ JavaScript injection error: $e');
               }
 
               if (mounted) {
@@ -407,6 +493,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                         _currentSymbol ??
                         widget.symbol ??
                         chartController.selectedMarket.value,
+                    currentPrice: currentPrice,
                     onOrderExecuted: (operation) {
                       print('✅ Order executed callback: $operation');
                       print('🔄 Symbol: ${_currentSymbol ?? widget.symbol}');

@@ -11,12 +11,14 @@ class ChartTradingPanel extends StatefulWidget {
   final String login;
   final String symbol;
   final Function(String operation)? onOrderExecuted;
+  final RxnDouble? currentPrice;
 
   const ChartTradingPanel({
     super.key,
     required this.login,
     required this.symbol,
     this.onOrderExecuted,
+    this.currentPrice,
   });
 
   @override
@@ -38,12 +40,23 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   
   // Global variable untuk lot step increment/decrement
   static const double LOT_STEP = 0.10;
+  
+  // Execution type tracking
+  late RxString _executionType = 'Execution Market'.obs;
+  
+  // Pending order fields
+  final TextEditingController _entryPriceController = TextEditingController();
+  final TextEditingController _stopLossController = TextEditingController();
+  final TextEditingController _takeProfitController = TextEditingController();
 
    @override
   void dispose() {
     _incrementTimer?.cancel();
     _decrementTimer?.cancel();
     _audioPlayer.dispose();
+    _entryPriceController.dispose();
+    _stopLossController.dispose();
+    _takeProfitController.dispose();
     if (_overlayEntry != null) {
       try {
         _overlayEntry?.remove();
@@ -517,6 +530,426 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     _addToQueue('sell');
   }
 
+  void _showExecutionTypeBottomSheet() {
+    final isDark = Get.isDarkMode;
+    final executionTypes = [
+      'Execution Market',
+      'Buy Limit',
+      'Sell Limit',
+      'Buy Stop',
+      'Sell Stop',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? Colors.grey.shade900 : Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Handle indicator
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Title
+                    Text(
+                      'Pilih Tipe Eksekusi',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Menu items
+                    ...executionTypes.map((type) {
+                      final isSelected = _executionType.value == type;
+                      final icon = _getExecutionTypeIcon(type);
+                      
+                      return GestureDetector(
+                        onTap: () {
+                          _executionType.value = type;
+                          Get.back();
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                              ? Colors.blue.withOpacity(0.1)
+                              : isDark
+                                ? Colors.grey.shade800
+                                : Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected
+                                ? Colors.blue
+                                : isDark
+                                  ? Colors.grey.shade700
+                                  : Colors.grey.shade300,
+                              width: isSelected ? 2 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                icon,
+                                size: 24,
+                                color: isSelected
+                                  ? Colors.blue
+                                  : isDark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  type,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontWeight: isSelected
+                                      ? FontWeight.w700
+                                      : FontWeight.w600,
+                                    color: isSelected
+                                      ? Colors.blue
+                                      : isDark
+                                        ? Colors.white
+                                        : Colors.black,
+                                  ),
+                                ),
+                              ),
+                              if (isSelected)
+                                Icon(
+                                  Iconsax.tick_circle_bold,
+                                  size: 20,
+                                  color: Colors.blue,
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+
+                    const SizedBox(height: 12),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  IconData _getExecutionTypeIcon(String type) {
+    switch (type) {
+      case 'Execution Market':
+        return Iconsax.chart_success_bold;
+      case 'Buy Limit':
+        return Iconsax.arrow_down_bold;
+      case 'Sell Limit':
+        return Iconsax.arrow_up_bold;
+      case 'Buy Stop':
+        return Iconsax.arrow_up_2_bold;
+      case 'Sell Stop':
+        return Iconsax.arrow_down_2_bold;
+      default:
+        return Iconsax.chart_success_bold;
+    }
+  }
+
+  Widget _buildPendingOrderFields(bool isDark) {
+    if (_executionType.value == 'Execution Market') {
+      return const SizedBox.shrink(); // No additional fields for market execution
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title
+          Row(
+            children: [
+              Icon(
+                Iconsax.setting_2_bold,
+                size: 16,
+                color: isDark ? Colors.white70 : Colors.black87,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Pending Order Settings',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Entry Price (Required)
+          _buildInputField(
+            controller: _entryPriceController,
+            label: 'Entry Price',
+            hint: _getEntryPriceHint(),
+            icon: Iconsax.tag_bold,
+            isDark: isDark,
+            isRequired: true,
+          ),
+          const SizedBox(height: 10),
+
+          // Stop Loss (Optional)
+          _buildInputField(
+            controller: _stopLossController,
+            label: 'Stop Loss (SL)',
+            hint: 'Optional',
+            icon: Iconsax.shield_cross_bold,
+            isDark: isDark,
+            isRequired: false,
+          ),
+          const SizedBox(height: 10),
+
+          // Take Profit (Optional)
+          _buildInputField(
+            controller: _takeProfitController,
+            label: 'Take Profit (TP)',
+            hint: 'Optional',
+            icon: Iconsax.medal_star_bold,
+            isDark: isDark,
+            isRequired: false,
+          ),
+
+          const SizedBox(height: 8),
+
+          // Info text
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Colors.blue.withOpacity(0.2),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Iconsax.info_circle_bold,
+                  size: 14,
+                  color: Colors.blue,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _getInfoText(),
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: isDark ? Colors.blue.shade200 : Colors.blue.shade700,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    required bool isDark,
+    required bool isRequired,
+  }) {
+    // Check if this is the Entry Price field
+    final isEntryPrice = controller == _entryPriceController;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white70 : Colors.black87,
+              ),
+            ),
+            if (isRequired) ...[
+              const SizedBox(width: 4),
+              Text(
+                '*',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.red,
+                ),
+              ),
+            ],
+            if (isEntryPrice && widget.currentPrice != null) ...[
+              const SizedBox(width: 8),
+              Obx(() {
+                final price = widget.currentPrice?.value;
+                if (price == null) return const SizedBox.shrink();
+                
+                return GestureDetector(
+                  onTap: () {
+                    controller.text = price.toStringAsFixed(2);
+                    HapticFeedback.lightImpact();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: Colors.blue.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Iconsax.refresh_bold,
+                          size: 10,
+                          color: Colors.blue,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          price.toStringAsFixed(2),
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ],
+        ),
+        const SizedBox(height: 6),
+        Container(
+          height: 42,
+          decoration: BoxDecoration(
+            color: isDark ? Colors.grey.shade900 : Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+            ),
+          ),
+          child: TextField(
+            controller: controller,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : Colors.black,
+            ),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: GoogleFonts.inter(
+                fontSize: 13,
+                color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
+              ),
+              prefixIcon: Icon(
+                icon,
+                size: 18,
+                color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _getEntryPriceHint() {
+    switch (_executionType.value) {
+      case 'Buy Limit':
+        return 'Below current price';
+      case 'Sell Limit':
+        return 'Above current price';
+      case 'Buy Stop':
+        return 'Above current price';
+      case 'Sell Stop':
+        return 'Below current price';
+      default:
+        return 'Enter price';
+    }
+  }
+
+  String _getInfoText() {
+    switch (_executionType.value) {
+      case 'Buy Limit':
+        return 'Order akan dieksekusi ketika harga turun mencapai Entry Price yang ditentukan.';
+      case 'Sell Limit':
+        return 'Order akan dieksekusi ketika harga naik mencapai Entry Price yang ditentukan.';
+      case 'Buy Stop':
+        return 'Order akan dieksekusi ketika harga naik menembus Entry Price yang ditentukan.';
+      case 'Sell Stop':
+        return 'Order akan dieksekusi ketika harga turun menembus Entry Price yang ditentukan.';
+      default:
+        return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Get.isDarkMode;
@@ -541,21 +974,76 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       ),
       child: SafeArea(
         top: false,
-        child: Obx(() => Row(
+        child: Obx(() => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Execution Type Selector Button
+            GestureDetector(
+              onTap: _showExecutionTypeBottomSheet,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.blue.withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _getExecutionTypeIcon(_executionType.value),
+                      size: 18,
+                      color: Colors.blue,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _executionType.value,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Iconsax.arrow_swap_horizontal_outline,
+                      size: 14,
+                      color: Colors.blue,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Pending Order Fields (shown for non-market execution types)
+            _buildPendingOrderFields(isDark),
+
+            // Trading Panel Row
+            Row(
           children: [
             // SELL button
             Expanded(
               flex: 3,
               child: GestureDetector(
-                onTap: _executeSell,
+                onTap: _executionType.value == 'Execution Market' 
+                    ? _executeSell 
+                    : _showPendingOrderComingSoon,
                 child: Container(
                   height: 38,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [
-                        Colors.red.shade400,
-                        Colors.red.shade500,
-                      ],
+                      colors: _executionType.value == 'Execution Market'
+                          ? [
+                              Colors.red.shade400,
+                              Colors.red.shade500,
+                            ]
+                          : [
+                              Colors.grey.shade400,
+                              Colors.grey.shade500,
+                            ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -666,15 +1154,22 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
             Expanded(
               flex: 3,
               child: GestureDetector(
-                onTap: _executeBuy,
+                onTap: _executionType.value == 'Execution Market' 
+                    ? _executeBuy 
+                    : _showPendingOrderComingSoon,
                 child: Container(
                   height: 38,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [
-                        Colors.green.shade400,
-                        Colors.green.shade500,
-                      ],
+                      colors: _executionType.value == 'Execution Market'
+                          ? [
+                              Colors.green.shade400,
+                              Colors.green.shade500,
+                            ]
+                          : [
+                              Colors.grey.shade400,
+                              Colors.grey.shade500,
+                            ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -698,8 +1193,97 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
               ),
             ),
           ],
+            ),
+          ],
         )),
       ),
+    );
+  }
+
+  void _showPendingOrderComingSoon() {
+    HapticFeedback.lightImpact();
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Get.isDarkMode ? Colors.grey.shade900 : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Iconsax.code_1_bold,
+                  size: 36,
+                  color: Colors.orange,
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Title
+              Text(
+                'Dalam Pengembangan',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Get.isDarkMode ? Colors.white : Colors.black,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              
+              // Description
+              Text(
+                'Fitur ${_executionType.value} masih dalam tahap pengembangan. Silakan gunakan Execution Market untuk saat ini.',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: Get.isDarkMode ? Colors.white70 : Colors.black54,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              
+              // Button
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: ElevatedButton(
+                  onPressed: () => Get.back(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Mengerti',
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: true,
     );
   }
 }
