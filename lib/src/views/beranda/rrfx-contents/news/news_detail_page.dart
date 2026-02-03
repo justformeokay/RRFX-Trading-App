@@ -228,7 +228,6 @@ class NewsDetailPage extends StatelessWidget {
     IconData icon;
     String title;
     String description;
-    Color iconColor;
 
     switch (controller.errorType.value) {
       case NewsErrorType.noConnection:
@@ -236,14 +235,12 @@ class NewsDetailPage extends StatelessWidget {
         title = 'Tidak Ada Koneksi';
         description =
             'Sepertinya Anda tidak terhubung ke internet. Periksa koneksi WiFi atau data seluler Anda.';
-        iconColor = Colors.red;
         break;
       case NewsErrorType.timeout:
         icon = Iconsax.timer_1_outline;
         title = 'Koneksi Terlalu Lambat';
         description =
             'Proses memuat data memakan waktu lebih dari 10 detik. Coba periksa kecepatan internet Anda.';
-        iconColor = Colors.orange;
         break;
       case NewsErrorType.serverError:
         icon = Iconsax.danger_outline;
@@ -252,195 +249,208 @@ class NewsDetailPage extends StatelessWidget {
             controller.errorMessage.value.isNotEmpty
                 ? controller.errorMessage.value
                 : 'Server sedang mengalami gangguan. Silakan coba lagi nanti.';
-        iconColor = Colors.red;
         break;
       case NewsErrorType.notFound:
         icon = Iconsax.search_status_outline;
         title = 'Berita Tidak Ditemukan';
         description =
             'Berita yang Anda cari tidak dapat ditemukan atau sudah dihapus.';
-        iconColor = Colors.grey;
         break;
       default:
         icon = Iconsax.information_outline;
         title = 'Terjadi Kesalahan';
         description =
             'Maaf, terjadi kesalahan yang tidak terduga. Silakan coba lagi.';
-        iconColor = Colors.grey;
     }
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Animated Icon
-            TweenAnimationBuilder(
-              tween: Tween<double>(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 600),
-              curve: Curves.elasticOut,
-              builder: (context, double value, child) {
-                return Transform.scale(
-                  scale: value,
-                  child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: iconColor.withOpacity(0.1),
-                      border: Border.all(
-                        color: iconColor.withOpacity(0.3),
-                        width: 2,
-                      ),
-                    ),
-                    child: Icon(
-                      icon,
-                      size: 60,
-                      color: iconColor.withOpacity(0.8),
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 32),
-
-            // Title
-            Text(
-              title,
-              style: GoogleFonts.inter(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurface,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-
-            // Description
-            Text(
-              description,
-              style: GoogleFonts.inter(
-                fontSize: 15,
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
-                height: 1.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 40),
-
-            // Action buttons
-            Column(
-              children: [
-                // Retry button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      controller.retryFetch(slug);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: CustomColor.secondaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    icon: const Icon(Iconsax.refresh_outline, size: 20),
-                    label: Text(
-                      'Coba Lagi',
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        color: Colors.black,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Back button
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Get.back();
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: theme.colorScheme.onSurface,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      side: BorderSide(
-                        color: theme.dividerColor.withOpacity(0.5),
-                      ),
-                    ),
-                    icon: const Icon(Iconsax.arrow_left_outline, size: 20),
-                    label: Text(
-                      'Kembali',
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            // Tips for connection issues
-            if (controller.errorType.value == NewsErrorType.noConnection ||
-                controller.errorType.value == NewsErrorType.timeout) ...[
-              const SizedBox(height: 32),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: theme.cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: theme.dividerColor.withOpacity(0.1),
-                  ),
-                ),
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        forceMaterialTransparency: true,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Iconsax.arrow_left_outline),
+          onPressed: () => Get.back(),
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.85,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Iconsax.lamp_charge_outline,
-                          size: 18,
-                          color: CustomColor.secondaryColor,
+                    // Animated Icon
+                    TweenAnimationBuilder(
+                      tween: Tween<double>(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 600),
+                      curve: Curves.elasticOut,
+                      builder: (context, double value, child) {
+                        return Transform.scale(
+                          scale: value,
+                          child: Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: CustomColor.secondaryColor.withOpacity(0.1),
+                            ),
+                            child: Icon(
+                              icon,
+                              size: 60,
+                              color: CustomColor.secondaryColor,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Title
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Description
+                    Text(
+                      description,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        height: 1.6,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Tips for connection issues
+                    if (controller.errorType.value == NewsErrorType.noConnection ||
+                        controller.errorType.value == NewsErrorType.timeout) ...[
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: CustomColor.secondaryColor.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: CustomColor.secondaryColor.withOpacity(0.2),
+                          ),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Tips',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: theme.colorScheme.onSurface,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Iconsax.lamp_charge_outline,
+                                  size: 18,
+                                  color: CustomColor.secondaryColor,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Tips',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              controller.errorType.value == NewsErrorType.timeout
+                                  ? '• Pastikan koneksi internet Anda stabil\n• Coba matikan dan nyalakan ulang perangkat\n• Periksa pengaturan jaringan Anda'
+                                  : '• Pastikan WiFi atau data mobile Anda aktif\n• Coba matikan dan nyalakan ulang perangkat\n• Periksa pengaturan jaringan Anda',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                height: 1.6,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                    ],
+
+                    // Action buttons
+                    Column(
+                      children: [
+                        // Retry button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              controller.retryFetch(slug);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: CustomColor.secondaryColor,
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            icon: const Icon(Iconsax.refresh_outline, size: 20),
+                            label: Text(
+                              'Coba Lagi',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Back button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Get.back();
+                            },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: theme.colorScheme.onSurface,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              side: BorderSide(
+                                color: theme.dividerColor.withOpacity(0.5),
+                              ),
+                            ),
+                            icon: const Icon(Iconsax.arrow_left_outline, size: 20),
+                            label: Text(
+                              'Kembali',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      controller.errorType.value == NewsErrorType.timeout
-                          ? 'Pastikan koneksi internet Anda stabil dan coba lagi.'
-                          : 'Periksa WiFi atau data seluler Anda, lalu coba lagi.',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: theme.colorScheme.onSurface.withOpacity(0.7),
-                        height: 1.4,
-                      ),
                     ),
                   ],
                 ),
               ),
             ],
-          ],
+          ),
         ),
       ),
     );

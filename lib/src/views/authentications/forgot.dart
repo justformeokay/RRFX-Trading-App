@@ -152,6 +152,7 @@ class _ForgotState extends State<Forgot> {
                     ),
                     const SizedBox(height: 30.0),
                     LabelTextField.labelName(
+                      required: true,
                       label: LanguageGlobalVar.EMAIL_ADDRESS.tr,
                       child: EmailTextField(
                         fieldName: LanguageGlobalVar.EMAIL_ADDRESS.tr,

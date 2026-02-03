@@ -1,11 +1,11 @@
 import 'dart:async';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:intl/intl.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:rrfx/src/components/alerts/popup.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/buttons/custom_buttons.dart';
@@ -31,10 +31,12 @@ class ExploreNoAuth extends StatefulWidget {
 class _ExploreNoAuthState extends State<ExploreNoAuth> {
   UtilitiesController utilitiesController = Get.put(UtilitiesController());
   RxBool isLoading = false.obs;
+  RxBool hasConnection = true.obs;
 
   late PageController promoPageController;
   late ScrollController _scrollController;
   Timer? promoAutoScrollTimer;
+  StreamSubscription? _connectionSubscription;
 
   ExploreContentController contentController = Get.put(ExploreContentController());
 
@@ -48,12 +50,24 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
     contentController.fetchMarketAnalysis();
     promoPageController = PageController(viewportFraction: 0.88);
     _startPromoAutoScroll();
+    
+    // Monitor connection
+    _checkConnection();
+    _connectionSubscription = Connectivity().onConnectivityChanged.listen((result) {
+      hasConnection.value = !result.contains(ConnectivityResult.none);
+    });
+  }
+
+  Future<void> _checkConnection() async {
+    final result = await Connectivity().checkConnectivity();
+    hasConnection.value = !result.contains(ConnectivityResult.none);
   }
 
   @override
   void dispose() {
     promoPageController.dispose();
     promoAutoScrollTimer?.cancel();
+    _connectionSubscription?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -82,30 +96,37 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    return Stack(
-      children: [
-        SingleChildScrollView(
-          controller: _scrollController,
-          child: Column(
-            children: [
-              _buildBannerIntroduction(size: size, context: context),
-              _buildMenusItem(size.height),
-              Obx(() => _buildPromotionBannerSection()),
-              Obx(() => isLoading.value ? const CircularProgressIndicator(color: CustomColor.secondaryColor) : _buildMarketAnalysisSection()),
-              Obx(() => _buildMarketAnalysisContentSection()),
-              Obx(() => _buildNewsSection()),
-            ],
+    return Obx(() {
+      // Show no connection screen if offline
+      if (!hasConnection.value) {
+        return _buildNoConnectionScreen(context, size);
+      }
+
+      return Stack(
+        children: [
+          SingleChildScrollView(
+            controller: _scrollController,
+            child: Column(
+              children: [
+                _buildBannerIntroduction(size: size, context: context),
+                _buildMenusItem(size.height),
+                Obx(() => _buildPromotionBannerSection()),
+                Obx(() => isLoading.value ? const CircularProgressIndicator(color: CustomColor.secondaryColor) : _buildMarketAnalysisSection()),
+                Obx(() => _buildMarketAnalysisContentSection()),
+                Obx(() => _buildNewsSection()),
+              ],
+            ),
           ),
-        ),
-        // Floating Build Version Indicator dengan scroll detection
-        BuildVersionIndicator(
-          scrollController: _scrollController,
-          margin: const EdgeInsets.fromLTRB(16, 50, 5, 16),
-          showBuildNumber: true,
-          autoHideOnScroll: true,
-        ),
-      ],
-    );
+          // Floating Build Version Indicator dengan scroll detection
+          BuildVersionIndicator(
+            scrollController: _scrollController,
+            margin: const EdgeInsets.fromLTRB(16, 50, 5, 16),
+            showBuildNumber: true,
+            autoHideOnScroll: true,
+          ),
+        ],
+      );
+    });
   }
 
   Widget _buildPromotionBannerSection() {
@@ -853,6 +874,143 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
           style: GoogleFonts.inter(
             fontSize: 14,
             color: Theme.of(context).textTheme.bodyMedium?.color,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Modern No Connection Screen
+  Widget _buildNoConnectionScreen(BuildContext context, Size size) {
+    final theme = Theme.of(context);
+    
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: SizedBox(
+            height: size.height - MediaQuery.of(context).padding.top,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Animated Icon
+                AnimatedBuilder(
+                  animation: AlwaysStoppedAnimation(1),
+                  builder: (context, child) {
+                    return Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: CustomColor.secondaryColor.withOpacity(0.1),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Iconsax.wifi_square_outline,
+                          size: 60,
+                          color: CustomColor.secondaryColor,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                
+                const SizedBox(height: 32),
+                
+                // Title
+                Text(
+                  "Koneksi Internet Terputus",
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Description
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    "Periksa kembali koneksi internet Anda dan coba lagi.",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 32),
+                
+                // Tips Card
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: CustomColor.secondaryColor.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: CustomColor.secondaryColor.withOpacity(0.2),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Iconsax.info_circle_outline,
+                            size: 20,
+                            color: CustomColor.secondaryColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Tips:",
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        "• Pastikan WiFi atau data mobile Anda aktif\n"
+                        "• Coba matikan dan nyalakan ulang perangkat\n"
+                        "• Periksa pengaturan jaringan Anda",
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                          height: 1.6,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 32),
+                
+                // Retry Button
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: CustomButtons.buildFilledButton(
+                      text: "Coba Lagi",
+                      onPressed: () {
+                        _checkConnection();
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
