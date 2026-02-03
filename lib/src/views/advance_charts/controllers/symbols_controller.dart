@@ -29,7 +29,7 @@ class SymbolsController extends GetxController {
     super.onInit();
     // Load favorites from storage
     _loadFavorites();
-    
+
     // Auto fetch symbols when account changes (with debounce)
     ever(accountController.selectedAccount, (_) {
       if (accountController.selectedAccount.value != null) {
@@ -99,7 +99,7 @@ class SymbolsController extends GetxController {
   /// Fetch symbols from API
   Future<void> fetchSymbols() async {
     final account = accountController.selectedAccount.value?.login;
-    
+
     if (account == null || account.isEmpty) {
       print('⚠️ No account selected');
       return;
@@ -116,32 +116,34 @@ class SymbolsController extends GetxController {
       errorMessage.value = '';
 
       print('📥 Fetching symbols for account: $account');
-      
+
       final response = await _symbolService.getSymbolsGroup(account);
-      
+
       symbolGroups.value = response.response;
-      
+
       // Flatten all symbols
       allSymbols.clear();
       for (var group in response.response) {
         allSymbols.addAll(group.symbols);
       }
-      
+
       // Initialize filtered symbols
       filteredSymbols.value = allSymbols;
-      
+
       // Auto-select first symbol if none selected
       if (selectedSymbol.value == null && allSymbols.isNotEmpty) {
         selectedSymbol.value = allSymbols.first;
       }
 
       _lastFetchedAccount = account;
-      print('✅ Loaded ${allSymbols.length} symbols in ${symbolGroups.length} groups');
-      
+      print(
+        '✅ Loaded ${allSymbols.length} symbols in ${symbolGroups.length} groups',
+      );
     } catch (e) {
       print('❌ Error fetching symbols: $e');
       hasError.value = true;
-      errorMessage.value = e.toString();
+      errorMessage.value =
+          'Terjadi kesalahan saat memuat data. Silakan coba lagi.';
     } finally {
       isLoading.value = false;
     }
@@ -150,17 +152,18 @@ class SymbolsController extends GetxController {
   /// Search symbols by query
   void searchSymbols(String query) {
     searchQuery.value = query;
-    
+
     if (query.isEmpty) {
       filteredSymbols.value = allSymbols;
       return;
     }
 
     final searchLower = query.toLowerCase();
-    filteredSymbols.value = allSymbols.where((symbol) {
-      return symbol.symbol.toLowerCase().contains(searchLower) ||
-             symbol.symbolAlias.toLowerCase().contains(searchLower);
-    }).toList();
+    filteredSymbols.value =
+        allSymbols.where((symbol) {
+          return symbol.symbol.toLowerCase().contains(searchLower) ||
+              symbol.symbolAlias.toLowerCase().contains(searchLower);
+        }).toList();
   }
 
   /// Select a symbol

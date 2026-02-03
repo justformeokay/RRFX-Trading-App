@@ -264,7 +264,7 @@ class _MarketSelectorSheetState extends State<MarketSelectorSheet>
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          symbolsController.errorMessage.value,
+                          'Gagal memuat daftar market. Periksa koneksi internet Anda.',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
                             color:

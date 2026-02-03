@@ -16,12 +16,7 @@ class WebViewChartView extends StatefulWidget {
   final String? serverType;
   final String? login;
 
-  const WebViewChartView({
-    super.key,
-    this.symbol,
-    this.serverType,
-    this.login,
-  });
+  const WebViewChartView({super.key, this.symbol, this.serverType, this.login});
 
   @override
   State<WebViewChartView> createState() => _WebViewChartViewState();
@@ -44,7 +39,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
   void initState() {
     super.initState();
     _previousTheme = Get.isDarkMode;
-    
+
     // Use symbol from widget parameter if provided, otherwise use chartController's saved value
     if (widget.symbol != null && widget.symbol!.isNotEmpty) {
       _currentSymbol = widget.symbol;
@@ -66,24 +61,24 @@ class _WebViewChartViewState extends State<WebViewChartView> {
   }
 
   String _buildChartUrl() {
-    final symbol = _currentSymbol ?? 
-                   widget.symbol ?? 
-                   chartController.selectedMarket.value;
-    final server = widget.serverType ?? 
-                   accountController.selectedAccount.value?.type ?? 
-                   'demo';
-    final login = widget.login ?? 
-                  accountController.selectedAccount.value?.login ?? 
-                  '';
+    final symbol =
+        _currentSymbol ?? widget.symbol ?? chartController.selectedMarket.value;
+    final server =
+        widget.serverType ??
+        accountController.selectedAccount.value?.type ??
+        'demo';
+    final login =
+        widget.login ?? accountController.selectedAccount.value?.login ?? '';
     final theme = Get.isDarkMode ? 'dark' : 'light';
-    
-    final baseUrl = 'http://207.148.119.106/rrfx/chart.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
-    
+
+    final baseUrl =
+        'http://207.148.119.106/rrfx/chart.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
+
     // Untuk iOS, tambahkan parameter khusus
     if (Platform.isIOS) {
       return '$baseUrl&platform=ios&mobile=1';
     }
-    
+
     return baseUrl;
   }
 
@@ -125,9 +120,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
         leadingWidth: size.width * 0.25,
         title: Text(
           _currentSymbol ?? 'XAUUSD.db',
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.w700,
-          ),
+          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
         ),
         leading: Center(
           child: Text(
@@ -164,9 +157,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
         children: [
           // WebView
           InAppWebView(
-            initialUrlRequest: URLRequest(
-              url: WebUri(_buildChartUrl()),
-            ),
+            initialUrlRequest: URLRequest(url: WebUri(_buildChartUrl())),
             initialSettings: InAppWebViewSettings(
               // Pengaturan umum
               useShouldOverrideUrlLoading: false, // Ubah ke false untuk iOS
@@ -181,20 +172,20 @@ class _WebViewChartViewState extends State<WebViewChartView> {
               cacheEnabled: true,
               minimumFontSize: 1,
               textZoom: 100,
-              
+
               // Untuk iOS, gunakan setting yang lebih simple
-              useHybridComposition: !Platform.isIOS, // Disable hybrid composition di iOS
-              
+              useHybridComposition:
+                  !Platform.isIOS, // Disable hybrid composition di iOS
               // Pengaturan khusus iOS
               allowsInlineMediaPlayback: true,
               allowsPictureInPictureMediaPlayback: false, // Disable PiP
               iframeAllow: "camera; microphone; geolocation",
               iframeAllowFullscreen: true,
-              
+
               // Pengaturan untuk kompatibilitas HTTP di iOS
               allowUniversalAccessFromFileURLs: true,
               allowFileAccessFromFileURLs: true,
-              
+
               // Network dan security settings untuk iOS
               mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
               resourceCustomSchemes: [],
@@ -202,8 +193,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
             onWebViewCreated: (controller) {
               webViewController = controller;
               print('🌐 WebView created');
-              print('📍 Chart URL: ${_buildChartUrl()}');
-              
+
               // Set timeout untuk iOS
               if (Platform.isIOS) {
                 Future.delayed(Duration(seconds: 10), () {
@@ -215,8 +205,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
               }
             },
             onLoadStart: (controller, url) {
-              print('📥 Loading started: $url');
-              print('🍎 Platform: ${Platform.isIOS ? 'iOS' : 'Android'}');
+              print('📥 Loading started...');
               if (mounted) {
                 setState(() {
                   isLoading = true;
@@ -227,11 +216,12 @@ class _WebViewChartViewState extends State<WebViewChartView> {
             },
             onLoadStop: (controller, url) async {
               print('✅ Loading finished: $url');
-              
+
               // Untuk iOS, inject JavaScript yang lebih simple
               if (Platform.isIOS) {
                 try {
-                  await controller.evaluateJavascript(source: """
+                  await controller.evaluateJavascript(
+                    source: """
                     console.log('iOS Chart loaded successfully');
                     
                     // Set basic viewport
@@ -242,12 +232,13 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                       meta.content = 'width=device-width, initial-scale=1.0, user-scalable=no';
                       document.head.appendChild(meta);
                     }
-                  """);
+                  """,
+                  );
                 } catch (e) {
                   print('⚠️ JavaScript injection error: $e');
                 }
               }
-              
+
               if (mounted) {
                 setState(() {
                   isLoading = false;
@@ -263,25 +254,21 @@ class _WebViewChartViewState extends State<WebViewChartView> {
             },
             onLoadError: (controller, url, code, message) {
               print('❌ Load error: $code - $message');
-              print('🌐 Failed URL: $url');
-              print('🍎 Platform: ${Platform.isIOS ? 'iOS' : 'Android'}');
               if (mounted) {
                 setState(() {
                   isLoading = false;
                   hasError = true;
-                  errorMessage = 'Error $code: $message';
+                  errorMessage = null;
                 });
               }
             },
             onLoadHttpError: (controller, url, statusCode, description) {
               print('❌ HTTP error: $statusCode - $description');
-              print('🌐 Failed URL: $url');
-              print('🍎 Platform: ${Platform.isIOS ? 'iOS' : 'Android'}');
               if (mounted) {
                 setState(() {
                   isLoading = false;
                   hasError = true;
-                  errorMessage = 'HTTP Error $statusCode: $description';
+                  errorMessage = null;
                 });
               }
             },
@@ -364,8 +351,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        errorMessage ?? 
-                        'Server chart sedang mengalami gangguan atau tidak dapat diakses.',
+                        'Terjadi kesalahan saat memuat chart. Silakan coba lagi nanti.',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                           fontSize: 14,
@@ -400,56 +386,6 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                           elevation: 0,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      // Show URL info
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: isDark
-                            ? Colors.grey.shade800
-                            : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Iconsax.info_circle_outline,
-                                  size: 16,
-                                  color: isDark
-                                    ? Colors.grey.shade400
-                                    : Colors.grey.shade600,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'URL Chart',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: isDark
-                                      ? Colors.grey.shade400
-                                      : Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            SelectableText(
-                              _buildChartUrl(),
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500,
-                                color: isDark
-                                  ? Colors.grey.shade500
-                                  : Colors.grey.shade700,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -457,27 +393,36 @@ class _WebViewChartViewState extends State<WebViewChartView> {
             ),
         ],
       ),
-      
+
       // Bottom info bar + Trading Panel
-      bottomNavigationBar: !hasError
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Trading panel
-                ChartTradingPanel(
-                  login: widget.login ?? accountController.selectedAccount.value?.login ?? '',
-                  symbol: _currentSymbol ?? widget.symbol ?? chartController.selectedMarket.value,
-                  onOrderExecuted: (operation) {
-                    print('✅ Order executed callback: $operation');
-                    print('🔄 Symbol: ${_currentSymbol ?? widget.symbol}');
-                    print('👤 Login: ${widget.login ?? accountController.selectedAccount.value?.login}');
-                    // Bisa tambahkan refresh chart atau logic lainnya jika diperlukan
-                    // _reloadChart(); // Uncomment jika ingin auto-reload chart setelah order
-                  },
-                ),
-              ],
-            )
-          : null,
+      bottomNavigationBar:
+          !hasError
+              ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Trading panel
+                  ChartTradingPanel(
+                    login:
+                        widget.login ??
+                        accountController.selectedAccount.value?.login ??
+                        '',
+                    symbol:
+                        _currentSymbol ??
+                        widget.symbol ??
+                        chartController.selectedMarket.value,
+                    onOrderExecuted: (operation) {
+                      print('✅ Order executed callback: $operation');
+                      print('🔄 Symbol: ${_currentSymbol ?? widget.symbol}');
+                      print(
+                        '👤 Login: ${widget.login ?? accountController.selectedAccount.value?.login}',
+                      );
+                      // Bisa tambahkan refresh chart atau logic lainnya jika diperlukan
+                      // _reloadChart(); // Uncomment jika ingin auto-reload chart setelah order
+                    },
+                  ),
+                ],
+              )
+              : null,
     );
   }
 
