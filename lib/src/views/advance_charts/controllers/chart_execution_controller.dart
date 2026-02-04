@@ -131,6 +131,179 @@ class ChartExecutionController extends GetxController {
     );
   }
 
+  /// Execute Pending Order (Buy Limit, Sell Limit, Buy Stop, Sell Stop)
+  /// 
+  /// Parameters:
+  /// - [login]: Account login number
+  /// - [symbol]: Market symbol (e.g., "EURJPY.db")
+  /// - [operation]: "buylimit", "selllimit", "buystop", "sellstop"
+  /// - [volume]: Lot size (default uses current lot.value)
+  /// - [price]: Entry price (required)
+  /// - [sl]: Stop Loss (optional)
+  /// - [tp]: Take Profit (optional)
+  /// 
+  /// Returns API response Map or throws exception on error
+  Future<Map<String, dynamic>> executePendingOrder({
+    required String login,
+    required String symbol,
+    required String operation,
+    required double price,
+    double? volume,
+    double? sl,
+    double? tp,
+  }) async {
+    if (isExecuting.value) {
+      throw Exception('Order sedang diproses');
+    }
+
+    try {
+      isExecuting.value = true;
+      executionMessage.value = 'Memproses pending order...';
+
+      final lotVolume = volume ?? lot.value;
+
+      print('📤 ===== EXECUTING PENDING ORDER =====');
+      print('   Operation: ${operation.toUpperCase()}');
+      print('   Symbol: $symbol');
+      print('   Volume: $lotVolume lot');
+      print('   Price: $price');
+      print('   SL: ${sl ?? "Not set"}');
+      print('   TP: ${tp ?? "Not set"}');
+      print('   Login: $login');
+      print('======================================');
+
+      final Map<String, String> requestBody = {
+        'login': login,
+        'symbol': symbol,
+        'operation': operation.toLowerCase(),
+        'volume': lotVolume.toString(),
+        'price': price.toString(),
+      };
+
+      // Add optional SL/TP if provided
+      if (sl != null && sl > 0) {
+        requestBody['sl'] = sl.toString();
+      }
+      if (tp != null && tp > 0) {
+        requestBody['tp'] = tp.toString();
+      }
+
+      print('📦 Request Body: $requestBody');
+
+      final response = await _authService.post(
+        'market/execution/open',
+        requestBody,
+      );
+
+      print('📥 Response received:');
+      print('   Status: ${response['status']}');
+      print('   Status Code: ${response['statusCode']}');
+      print('   Message: ${response['message']}');
+      print('   Response Data: ${response['response']}');
+
+      if (response['status'] == true) {
+        executionMessage.value = 'Pending order berhasil dibuat!';
+        print('✅ Pending order created successfully!');
+        return response;
+      } else {
+        final errorMsg = response['message'] ?? 'Pending order gagal dibuat';
+        executionMessage.value = errorMsg;
+        print('❌ Pending order failed: $errorMsg');
+        throw Exception(errorMsg);
+      }
+    } catch (e, stackTrace) {
+      print('❌ ===== PENDING ORDER ERROR =====');
+      print('   Error Type: ${e.runtimeType}');
+      print('   Error Message: $e');
+      print('   Stack Trace: $stackTrace');
+      print('==================================');
+      executionMessage.value = 'Error: $e';
+      rethrow;
+    } finally {
+      isExecuting.value = false;
+    }
+  }
+
+  /// Execute BUY LIMIT order
+  Future<Map<String, dynamic>> executeBuyLimit({
+    required String login,
+    required String symbol,
+    required double price,
+    double? volume,
+    double? sl,
+    double? tp,
+  }) async {
+    return executePendingOrder(
+      login: login,
+      symbol: symbol,
+      operation: 'buylimit',
+      price: price,
+      volume: volume,
+      sl: sl,
+      tp: tp,
+    );
+  }
+
+  /// Execute SELL LIMIT order
+  Future<Map<String, dynamic>> executeSellLimit({
+    required String login,
+    required String symbol,
+    required double price,
+    double? volume,
+    double? sl,
+    double? tp,
+  }) async {
+    return executePendingOrder(
+      login: login,
+      symbol: symbol,
+      operation: 'selllimit',
+      price: price,
+      volume: volume,
+      sl: sl,
+      tp: tp,
+    );
+  }
+
+  /// Execute BUY STOP order
+  Future<Map<String, dynamic>> executeBuyStop({
+    required String login,
+    required String symbol,
+    required double price,
+    double? volume,
+    double? sl,
+    double? tp,
+  }) async {
+    return executePendingOrder(
+      login: login,
+      symbol: symbol,
+      operation: 'buystop',
+      price: price,
+      volume: volume,
+      sl: sl,
+      tp: tp,
+    );
+  }
+
+  /// Execute SELL STOP order
+  Future<Map<String, dynamic>> executeSellStop({
+    required String login,
+    required String symbol,
+    required double price,
+    double? volume,
+    double? sl,
+    double? tp,
+  }) async {
+    return executePendingOrder(
+      login: login,
+      symbol: symbol,
+      operation: 'sellstop',
+      price: price,
+      volume: volume,
+      sl: sl,
+      tp: tp,
+    );
+  }
+
   /// Reset lot to default
   void resetLot() {
     lot.value = minLot;

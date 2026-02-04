@@ -237,6 +237,11 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     final lot = item['lot'] as double;
     final status = item['status'] as String; // 'loading', 'success', 'error'
     final openPrice = item['openPrice']; // Can be null
+    final pendingPrice = item['price']; // For pending orders
+    
+    // Determine color based on operation type
+    final isBuyOperation = operation.toLowerCase().contains('buy');
+    final operationColor = isBuyOperation ? Colors.green : Colors.red;
     
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -245,7 +250,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
         color: Get.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: operation == 'buy' ? Colors.green : Colors.red,
+          color: operationColor,
           width: 2,
         ),
       ),
@@ -264,9 +269,9 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
           Text(
             operation.toUpperCase(),
             style: GoogleFonts.inter(
-              fontSize: 12,
+              fontSize: 10,
               fontWeight: FontWeight.w700,
-              color: operation == 'buy' ? Colors.green : Colors.red,
+              color: operationColor,
             ),
           ),
           const SizedBox(width: 12),
@@ -278,7 +283,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
               color: Get.isDarkMode ? Colors.white70 : Colors.black87,
             ),
           ),
-          if (openPrice != null) ...[
+          // Show pending price for pending orders or open price for market orders
+          if (pendingPrice != null || openPrice != null) ...[
             const SizedBox(width: 8),
             Text(
               '@',
@@ -290,11 +296,11 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
             ),
             const SizedBox(width: 4),
             Text(
-              openPrice.toString(),
+              (openPrice ?? pendingPrice).toString(),
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: operation == 'buy' ? Colors.green : Colors.red,
+                color: operationColor,
               ),
             ),
           ],
@@ -306,7 +312,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  operation == 'buy' ? Colors.green : Colors.red,
+                  operationColor,
                 ),
               ),
             )
@@ -316,7 +322,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
               height: 16,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: operation == 'buy' ? Colors.green : Colors.red,
+                color: operationColor,
               ),
               child: const Icon(
                 Icons.check_rounded,
@@ -1030,7 +1036,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
               child: GestureDetector(
                 onTap: _executionType.value == 'Execution Market' 
                     ? _executeSell 
-                    : _showPendingOrderComingSoon,
+                    : () => _executePendingOrder('sell'),
                 child: Container(
                   height: 38,
                   decoration: BoxDecoration(
@@ -1040,10 +1046,15 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                               Colors.red.shade400,
                               Colors.red.shade500,
                             ]
-                          : [
-                              Colors.grey.shade400,
-                              Colors.grey.shade500,
-                            ],
+                          : (_executionType.value == 'Sell Limit' || _executionType.value == 'Sell Stop')
+                            ? [
+                                Colors.red.shade400,
+                                Colors.red.shade500,
+                              ]
+                            : [
+                                Colors.grey.shade400,
+                                Colors.grey.shade500,
+                              ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -1054,9 +1065,13 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                   ),
                   child: Center(
                     child: Text(
-                      'SELL',
+                      _executionType.value == 'Sell Limit' 
+                          ? 'SELL LIMIT' 
+                          : _executionType.value == 'Sell Stop' 
+                            ? 'SELL STOP' 
+                            : 'SELL',
                       style: GoogleFonts.inter(
-                        fontSize: 14,
+                        fontSize: _executionType.value == 'Execution Market' ? 14 : 11,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                         letterSpacing: 1,
@@ -1156,7 +1171,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
               child: GestureDetector(
                 onTap: _executionType.value == 'Execution Market' 
                     ? _executeBuy 
-                    : _showPendingOrderComingSoon,
+                    : () => _executePendingOrder('buy'),
                 child: Container(
                   height: 38,
                   decoration: BoxDecoration(
@@ -1166,10 +1181,15 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                               Colors.green.shade400,
                               Colors.green.shade500,
                             ]
-                          : [
-                              Colors.grey.shade400,
-                              Colors.grey.shade500,
-                            ],
+                          : (_executionType.value == 'Buy Limit' || _executionType.value == 'Buy Stop')
+                            ? [
+                                Colors.green.shade400,
+                                Colors.green.shade500,
+                              ]
+                            : [
+                                Colors.grey.shade400,
+                                Colors.grey.shade500,
+                              ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -1180,9 +1200,13 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                   ),
                   child: Center(
                     child: Text(
-                      'BUY',
+                      _executionType.value == 'Buy Limit' 
+                          ? 'BUY LIMIT' 
+                          : _executionType.value == 'Buy Stop' 
+                            ? 'BUY STOP' 
+                            : 'BUY',
                       style: GoogleFonts.inter(
-                        fontSize: 14,
+                        fontSize: _executionType.value == 'Execution Market' ? 14 : 11,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                         letterSpacing: 1,
@@ -1200,90 +1224,149 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     );
   }
 
-  void _showPendingOrderComingSoon() {
+  Future<void> _executePendingOrder(String direction) async {
     HapticFeedback.lightImpact();
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Get.isDarkMode ? Colors.grey.shade900 : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Icon
-              Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Iconsax.code_1_bold,
-                  size: 36,
-                  color: Colors.orange,
-                ),
-              ),
-              const SizedBox(height: 20),
-              
-              // Title
-              Text(
-                'Dalam Pengembangan',
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Get.isDarkMode ? Colors.white : Colors.black,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              
-              // Description
-              Text(
-                'Fitur ${_executionType.value} masih dalam tahap pengembangan. Silakan gunakan Execution Market untuk saat ini.',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: Get.isDarkMode ? Colors.white70 : Colors.black54,
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              
-              // Button
-              SizedBox(
-                width: double.infinity,
-                height: 44,
-                child: ElevatedButton(
-                  onPressed: () => Get.back(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    'Mengerti',
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      barrierDismissible: true,
-    );
+    
+    // Validate entry price
+    final entryPrice = double.tryParse(_entryPriceController.text.replaceAll(',', ''));
+    if (entryPrice == null || entryPrice <= 0) {
+      Get.snackbar(
+        'Error',
+        'Entry Price harus diisi dengan nilai yang valid',
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+        icon: const Icon(Iconsax.warning_2_bold, color: Colors.white),
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 3),
+      );
+      return;
+    }
+
+    // Parse optional SL and TP
+    final sl = double.tryParse(_stopLossController.text.replaceAll(',', ''));
+    final tp = double.tryParse(_takeProfitController.text.replaceAll(',', ''));
+
+    // Determine operation type based on execution type and direction
+    String operation;
+    if (_executionType.value == 'Buy Limit' && direction == 'buy') {
+      operation = 'buylimit';
+    } else if (_executionType.value == 'Sell Limit' && direction == 'sell') {
+      operation = 'selllimit';
+    } else if (_executionType.value == 'Buy Stop' && direction == 'buy') {
+      operation = 'buystop';
+    } else if (_executionType.value == 'Sell Stop' && direction == 'sell') {
+      operation = 'sellstop';
+    } else {
+      // Invalid combination (e.g., Buy Limit with sell direction)
+      Get.snackbar(
+        'Error',
+        'Kombinasi tidak valid. Silakan pilih tipe eksekusi yang sesuai.',
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+        icon: const Icon(Iconsax.warning_2_bold, color: Colors.white),
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 3),
+      );
+      return;
+    }
+
+    // Create unique ID for this execution
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    final lot = executionController.lot.value;
+
+    // Add to queue with loading status
+    _executionQueue.add({
+      'id': id,
+      'operation': operation,
+      'lot': lot,
+      'price': entryPrice,
+      'sl': sl,
+      'tp': tp,
+      'status': 'loading',
+      'openPrice': null,
+    });
+
+    // Show overlay if not already showing
+    _showQueueOverlay();
+
+    try {
+      print('🔄 Processing pending order: $operation');
+      print('📊 Price: $entryPrice, SL: $sl, TP: $tp');
+
+      final response = await executionController.executePendingOrder(
+        login: widget.login,
+        symbol: widget.symbol,
+        operation: operation,
+        price: entryPrice,
+        volume: lot,
+        sl: sl,
+        tp: tp,
+      );
+
+      print('✅ Pending order response: $response');
+
+      // Extract response data
+      final responseData = response['response'];
+      final orderTicket = responseData?['order'] ?? responseData?['ticket'];
+
+      // Update status to success
+      final index = _executionQueue.indexWhere((e) => e['id'] == id);
+      if (index != -1) {
+        _executionQueue[index]['status'] = 'success';
+        _executionQueue[index]['ticket'] = orderTicket;
+        _executionQueue.refresh();
+      }
+
+      // Play success notification
+      await _playSuccessNotification();
+
+      // Clear input fields
+      _entryPriceController.clear();
+      _stopLossController.clear();
+      _takeProfitController.clear();
+
+      // Remove after delay
+      await Future.delayed(const Duration(milliseconds: 1500));
+      _executionQueue.removeWhere((e) => e['id'] == id);
+
+      // Callback
+      if (mounted) {
+        widget.onOrderExecuted?.call(operation);
+      }
+
+    } catch (e) {
+      print('❌ Pending order error: $e');
+
+      // Update status to error
+      final index = _executionQueue.indexWhere((e) => e['id'] == id);
+      if (index != -1) {
+        _executionQueue[index]['status'] = 'error';
+        _executionQueue.refresh();
+      }
+
+      // Show error snackbar
+      if (mounted) {
+        String errorMsg = e.toString().replaceAll('Exception: ', '');
+        if (errorMsg.contains('524')) {
+          errorMsg = 'Server timeout. Coba lagi dalam beberapa saat.';
+        } else if (errorMsg.contains('500')) {
+          errorMsg = 'Server error. Silakan coba lagi.';
+        }
+
+        Get.snackbar(
+          'Pending Order Gagal',
+          errorMsg,
+          backgroundColor: Colors.red.shade800,
+          colorText: Colors.white,
+          icon: const Icon(Iconsax.close_circle_bold, color: Colors.white),
+          snackPosition: SnackPosition.TOP,
+          duration: const Duration(seconds: 3),
+        );
+      }
+
+      // Remove after delay
+      await Future.delayed(const Duration(milliseconds: 1000));
+      _executionQueue.removeWhere((e) => e['id'] == id);
+    }
   }
 }

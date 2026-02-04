@@ -336,11 +336,30 @@ class _DepositState extends State<Deposit> {
                             }
 
                             if (currencyCodeSelected.value == "IDR") {
+                              // ---- Maximum limit: 100 juta rupiah ----
+                              const int maxRupiah = 100000000;
+                              int amount = int.parse(clean);
+                              
+                              if (amount > maxRupiah) {
+                                // Set to max value if exceeds limit
+                                myAmount.text = NumberFormattersService.formatRupiah(maxRupiah);
+                                finalDepositAmount.value = maxRupiah.toString();
+                                
+                                // Show warning
+                                AppSnackbar.error("Maksimal deposit: Rp100.000.000");
+                                
+                                // Restore cursor position
+                                myAmount.selection = TextSelection.fromPosition(
+                                  TextPosition(offset: myAmount.text.length),
+                                );
+                                return;
+                              }
+
                               // ---- Format ke tampilan ----
-                              myAmount.text = NumberFormattersService.formatRupiah(int.parse(clean));
+                              myAmount.text = NumberFormattersService.formatRupiah(amount);
 
                               // ---- Simpan nilai final sebagai string ----
-                              finalDepositAmount.value = int.parse(clean).toString();
+                              finalDepositAmount.value = amount.toString();
                             } 
                             else {
                               // ---- USD: dua desimal ----
