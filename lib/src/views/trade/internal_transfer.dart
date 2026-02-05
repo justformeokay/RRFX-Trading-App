@@ -5,6 +5,7 @@ import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/loadings/default.dart';
 import 'package:rrfx/src/components/alerts/default.dart';
+import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
 import 'package:rrfx/src/controllers/setting.dart';
 import 'package:rrfx/src/controllers/trading.dart';
 
@@ -45,9 +46,11 @@ class _InternalTransferState extends State<InternalTransfer> {
         }
         if (!result) {
           if (mounted) {
-            CustomAlert.alertError(
-              context,
-              message: tradingController.responseMessage.value,
+            ModernAlertDialog.error(
+              title: "Gagal Memuat Data",
+              message: tradingController.responseMessage.value.isEmpty
+                  ? "Terjadi kesalahan saat memuat data akun. Silakan coba lagi."
+                  : tradingController.responseMessage.value,
             );
           }
         }
@@ -1199,9 +1202,19 @@ class _InternalTransferState extends State<InternalTransfer> {
       }
     } else {
       if (mounted) {
-        CustomAlert.alertError(
-          context,
-          message: settingController.responseMessage.value,
+        // Gunakan pesan yang user-friendly tanpa detail teknis
+        String errorMessage = "Transfer gagal dilakukan. Silakan periksa kembali data Anda dan coba lagi.";
+        
+        // Jika ada pesan dari server, gunakan pesan generic untuk security
+        if (settingController.responseMessage.value.isNotEmpty &&
+            !settingController.responseMessage.value.toLowerCase().contains('exception') &&
+            !settingController.responseMessage.value.toLowerCase().contains('error:')) {
+          errorMessage = settingController.responseMessage.value;
+        }
+        
+        ModernAlertDialog.error(
+          title: "Transfer Gagal",
+          message: errorMessage,
         );
       }
     }

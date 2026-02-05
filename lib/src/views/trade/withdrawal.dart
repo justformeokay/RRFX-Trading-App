@@ -306,8 +306,18 @@ class _WithdrawalState extends State<Withdrawal> {
               selectedTradingLogin.value.isEmpty ||
               settingController.isLoadingOTP.value ||
               isAmountExceedBalance.value;
+            
+            // Safe area padding untuk mengakomodasi 3-button navigation bar di Android
+            final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+            final totalBottomPadding = bottomPadding > 0 ? bottomPadding + 8 : 0.0;
+            
             return Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: EdgeInsets.only(
+                left: 16.0,
+                top: 16.0,
+                right: 16.0,
+                bottom: 16.0 + totalBottomPadding,
+              ),
               child: SizedBox(
                 height: 48,
                 width: double.infinity,

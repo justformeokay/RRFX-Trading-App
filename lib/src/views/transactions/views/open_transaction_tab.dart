@@ -6,6 +6,7 @@ import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/containers/no_account.dart';
 import 'package:rrfx/src/controllers/trading.dart';
+import 'package:rrfx/src/helpers/error_handler.dart';
 import 'package:rrfx/src/views/transactions/views/opened_tile.dart';
 import 'package:rrfx/src/views/transactions/views/popup_close_order.dart';
 import 'package:shimmer/shimmer.dart'; // pastikan tambahkan di pubspec.yaml
@@ -112,9 +113,18 @@ class _OpenTransactionTabState extends State<OpenTransactionTab> {
                         swap: item.swap.toString(),
                         commission: "0.00",
                         onConfirm: () async {
-                          await tradingController.closingOrder(loginID: loginID, ticketID: item.ticket.toString()).then((result){
+                          try {
+                            await tradingController.closingOrder(
+                              loginID: loginID,
+                              ticketID: item.ticket.toString(),
+                            );
                             _loadOrders();
-                          });
+                          } catch (e) {
+                            await ErrorHandler.showErrorDialog(
+                              e,
+                              title: 'Gagal Menutup Posisi',
+                            );
+                          }
                         },
                       );
                     },

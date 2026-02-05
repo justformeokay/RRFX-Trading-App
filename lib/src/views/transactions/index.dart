@@ -14,6 +14,7 @@ import 'package:rrfx/src/components/containers/popup.dart';
 import 'package:rrfx/src/controllers/home.dart';
 import 'package:rrfx/src/controllers/regol.dart';
 import 'package:rrfx/src/controllers/trading.dart';
+import 'package:rrfx/src/helpers/error_handler.dart';
 import 'package:rrfx/src/helpers/handlers/holiday.dart';
 import 'package:rrfx/src/models/trades/trading_account_models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -619,15 +620,27 @@ class _TransactionState extends State<Transaction> {
                           biaya: 0.0,
                           lot: tradingController.openOrderModel.value?.response?[index].lot != null ? tradingController.openOrderModel.value!.response![index].lot! : 0.0,
                           onConfirm: () async {
-                            await tradingController.closingOrder(loginID: allAccountTrading[selectedIndex.value].login, ticketID: tradingController.openOrderModel.value?.response?[index].ticket.toString()).then((result) async {
-                              if(result['status']){
-                                tradingController.openOrder(login: allAccountTrading[selectedIndex.value].login.toString());
-                                playSuccessSound();
-                                tradingController.closedOrder(login: allAccountTrading[selectedIndex.value].login.toString()).then((resultClosed){
-                                  CustomScaffoldMessanger.showAppSnackBar(context, message: "Berhasil close oder ${tradingController.openOrderModel.value?.response?[index].symbol} - ${tradingController.openOrderModel.value?.response?[index].lot}");
-                                });
-                              }
-                            });
+                            try {
+                              await tradingController.closingOrder(
+                                loginID: allAccountTrading[selectedIndex.value].login,
+                                ticketID: tradingController.openOrderModel.value?.response?[index].ticket.toString(),
+                              );
+                              
+                              tradingController.openOrder(login: allAccountTrading[selectedIndex.value].login.toString());
+                              playSuccessSound();
+                              
+                              tradingController.closedOrder(login: allAccountTrading[selectedIndex.value].login.toString()).then((resultClosed){
+                                CustomScaffoldMessanger.showAppSnackBar(
+                                  context,
+                                  message: "Berhasil menutup posisi ${tradingController.openOrderModel.value?.response?[index].symbol} - ${tradingController.openOrderModel.value?.response?[index].lot}",
+                                );
+                              });
+                            } catch (e) {
+                              await ErrorHandler.showErrorDialog(
+                                e,
+                                title: 'Gagal Menutup Posisi',
+                              );
+                            }
                           },
                           price: tradingController.openOrderModel.value?.response?[index].currentPrice != null ? tradingController.openOrderModel.value?.response![index].currentPrice! : 0.0,
                           profit: tradingController.openOrderModel.value?.response?[index].profit != null ? tradingController.openOrderModel.value?.response![index].profit! : 0.0,

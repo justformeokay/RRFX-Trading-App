@@ -19,6 +19,7 @@ import 'package:rrfx/src/views/settings/delete_account.dart';
 import 'package:rrfx/src/views/settings/documents/views/document_list_page.dart';
 import 'package:rrfx/src/views/settings/invite_link.dart';
 import 'package:rrfx/src/views/settings/request_ib_page.dart';
+import 'package:rrfx/src/views/settings/trading_chart_sample_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rrfx/src/components/alerts/default.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';

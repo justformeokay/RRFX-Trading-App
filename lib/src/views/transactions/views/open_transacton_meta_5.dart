@@ -11,6 +11,7 @@ import 'package:rrfx/src/components/containers/no_account.dart';
 import 'package:rrfx/src/controllers/account_balance_ws_controller.dart';
 import 'package:rrfx/src/controllers/trading.dart';
 import 'package:rrfx/src/controllers/websocket_controller.dart';
+import 'package:rrfx/src/helpers/error_handler.dart';
 import 'package:rrfx/src/views/transactions/views/popup_close_order.dart';
 import 'package:rrfx/src/views/transactions/views/edit_position_page.dart';
 
@@ -804,7 +805,15 @@ class _PositionTile extends StatelessWidget {
         } catch (e) {
           // Close loading
           if (Get.isDialogOpen ?? false) Get.back();
-          AppSnackbar.error("Error: ${e.toString()}");
+          // Show user-friendly error dialog
+          await ErrorHandler.showErrorDialog(
+            e,
+            title: 'Gagal Menutup Posisi',
+            onRetry: () {
+              // Retry closing the position
+              _onClosePosition(context);
+            },
+          );
         }
       },
     );
@@ -901,7 +910,11 @@ class _PositionTile extends StatelessWidget {
           } catch (e) {
             // Close loading dialog if still open
             if (Get.isDialogOpen ?? false) Get.back();
-            AppSnackbar.error("Error: ${e.toString()}");
+            // Show user-friendly error dialog
+            await ErrorHandler.showErrorDialog(
+              e,
+              title: 'Gagal Memodifikasi Posisi',
+            );
           }
         },
       ),

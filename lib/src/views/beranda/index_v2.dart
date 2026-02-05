@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -299,7 +300,9 @@ class _IndexV2State extends State<IndexV2> {
                         : Container(
                           margin: const EdgeInsets.all(16.0),
                           width: double.infinity,
-                          height: size.width / 2.3,
+                          height: kIsWeb 
+                            ? 200.0  // Fixed height untuk web platform
+                            : size.width / 2.3,  // Responsive height untuk mobile
                           decoration: BoxDecoration(
                             color: Theme.of(context).cardColor, // ✅ lebih tepat
                             borderRadius: BorderRadius.circular(10.0),
