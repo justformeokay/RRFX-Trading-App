@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Import ini dibutuhkan untuk SystemChrome
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get/get.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get_storage/get_storage.dart';
@@ -14,6 +14,8 @@ import 'src/components/languages/languages.dart';
 import 'src/components/themes/default.dart';
 import 'src/helpers/get_utilities/routes.dart';
 import 'src/views/authentications/splashscreen.dart';
+import 'src/helpers/http/http_overrides_stub.dart'
+    if (dart.library.io) 'src/helpers/http/http_overrides_mobile.dart';
 
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
@@ -24,8 +26,8 @@ void main() async {
   // Inisialisasi Storage
   try { await GetStorage.init(); } catch (e) { print(e); }
   
-  // Custom HTTP
-  HttpOverrides.global = _MyHttpOverrides();
+  // Custom HTTP - hanya untuk mobile (tidak didukung di Web)
+  setupHttpOverrides();
   
   // Firebase
   try { await initFirebaseAndNotifications(); } catch (e) { print(e); }
@@ -98,37 +100,65 @@ class _MyAppState extends State<MyApp> {
         systemNavigationBarColor: isDark ? Colors.black : Colors.white, // Inilah yang mengatasi warna putih
         systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark, // Icon Navigation Bar (Home, Back)
       );
+      
+      // Widget utama GetMaterialApp
+      final mainApp = GetMaterialApp(
+        scaffoldMessengerKey: scaffoldMessengerKey,
+        title: 'RRFX',
+        getPages: GetUtilities.routes,
+        defaultTransition: Transition.cupertino,
+        debugShowCheckedModeBanner: false,
+        translations: Languages(),
+        locale: Get.deviceLocale,
+        theme: CustomTheme.defaultLightTheme(),
+        darkTheme: CustomTheme.defaultDarkTheme(),
+        themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('en', '')],
+        home: networkController.hasConnection.value ? const Splashscreen() : const NoNetworkPage(),
+      );
+
+      // Jika Web, bungkus dengan mobile frame wrapper
+      if (kIsWeb) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData.light(),
+          darkTheme: ThemeData.dark(),
+          themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+          home: Scaffold(
+            backgroundColor: isDark ? const Color(0xFF0d0d1a) : const Color(0xFFe8e8f0),
+            body: Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 430), // iPhone 14 Pro Max width
+                decoration: BoxDecoration(
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.4),
+                      blurRadius: 40,
+                      spreadRadius: 0,
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  child: mainApp,
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      // Untuk Mobile, gunakan langsung tanpa wrapper
       return AnnotatedRegion<SystemUiOverlayStyle>(
         value: overlayStyle,
-        child: GetMaterialApp(
-          scaffoldMessengerKey: scaffoldMessengerKey,
-          title: 'RRFX',
-          getPages: GetUtilities.routes,
-          defaultTransition: Transition.cupertino,
-          debugShowCheckedModeBanner: false,
-          translations: Languages(),
-          locale: Get.deviceLocale,
-          theme: CustomTheme.defaultLightTheme(),
-          darkTheme: CustomTheme.defaultDarkTheme(),
-          themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: const [Locale('en', '')],
-          home: networkController.hasConnection.value ? const Splashscreen() : const NoNetworkPage(), // ⬅️ redirect otomatis
-        ),
+        child: mainApp,
       );
     });
   }
 }
 
-/// Custom HTTP overrides untuk handle image loading dengan status code 300
-class _MyHttpOverrides extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
-  }
-}
+

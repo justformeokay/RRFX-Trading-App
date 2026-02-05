@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -6,27 +6,46 @@ class DeviceUtilitiesController {
   static Future<Map<String, String>> getDeviceInfo() async {
     final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
 
-    if (Platform.isAndroid) {
-      final androidInfo = await deviceInfo.androidInfo;
+    // Handle Web platform
+    if (kIsWeb) {
+      final webInfo = await deviceInfo.webBrowserInfo;
       return {
-        "device": androidInfo.model, // Nama device
-        "brand": androidInfo.brand, // Brand (Samsung, Xiaomi, dst)
-        "version": androidInfo.version.release, // Android version (misal 13)
-      };
-    } else if (Platform.isIOS) {
-      final iosInfo = await deviceInfo.iosInfo;
-      return {
-        "device": iosInfo.utsname.machine, // Model device (iPhone14,7)
-        "brand": "Apple",
-        "version": iosInfo.systemVersion, // iOS version
+        "device": webInfo.browserName.name,
+        "brand": "Web Browser",
+        "version": webInfo.appVersion ?? "Unknown",
       };
     }
 
-    return {
-      "device": "Unsupported",
-      "brand": "Unsupported",
-      "version": "Unsupported",
-    };
+    // Handle mobile platforms using conditional import
+    return await _getMobileDeviceInfo(deviceInfo);
+  }
+
+  static Future<Map<String, String>> _getMobileDeviceInfo(DeviceInfoPlugin deviceInfo) async {
+    try {
+      // Try Android first
+      final androidInfo = await deviceInfo.androidInfo;
+      return {
+        "device": androidInfo.model,
+        "brand": androidInfo.brand,
+        "version": androidInfo.version.release,
+      };
+    } catch (_) {
+      try {
+        // Try iOS
+        final iosInfo = await deviceInfo.iosInfo;
+        return {
+          "device": iosInfo.utsname.machine,
+          "brand": "Apple",
+          "version": iosInfo.systemVersion,
+        };
+      } catch (_) {
+        return {
+          "device": "Unsupported",
+          "brand": "Unsupported",
+          "version": "Unsupported",
+        };
+      }
+    }
   }
 
   static Future<String> getAppVersion() async {

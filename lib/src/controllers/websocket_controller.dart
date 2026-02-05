@@ -2,7 +2,7 @@ import 'dart:async';
 // import 'package:deriv_chart/deriv_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:web_socket_channel/io.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 enum WebSocketStatus { connecting, connected, failed, disconnected }
 
@@ -99,7 +99,7 @@ class MarketDataModel {
 
 class MarketWebSocketController extends GetxController
     with WidgetsBindingObserver {
-  IOWebSocketChannel? channel;
+  WebSocketChannel? channel;
   Timer? _reconnectTimer;
   bool _isManuallyDisconnected = false;
   int _reconnectAttempts = 0;

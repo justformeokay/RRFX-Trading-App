@@ -8,7 +8,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 // Asumsi ini adalah import untuk dialog Anda
 import 'package:rrfx/src/components/alerts/popup.dart';
 import 'package:rrfx/src/components/colors/default.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter/webview_flutter.dart'
+    if (dart.library.html) 'package:rrfx/src/helpers/http/webview_flutter_stub.dart';
 
 class TradingChartView extends StatefulWidget {
   final String marketName;
@@ -84,7 +85,7 @@ class _TradingChartViewState extends State<TradingChartView> {
     }
     final theme = Get.isDarkMode ? 'dark' : 'light';
     
-    return 'http://207.148.119.106/rrfx/chart.php?symbol=$symbol&server=demo&theme=$theme';
+    return 'https://chart-rrfx.techcrm.dev/chart.php?symbol=$symbol&server=demo&theme=$theme';
   }
 
   @override

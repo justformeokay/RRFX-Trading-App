@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../controllers/chart_execution_controller.dart';
 
 class ChartTradingPanel extends StatefulWidget {
@@ -551,7 +553,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (BuildContext context) {
-        return Container(
+        // Wrap dengan PointerInterceptor untuk web platform agar bisa menangkap tap di atas WebView
+        Widget bottomSheetContent = Container(
           decoration: BoxDecoration(
             color: isDark ? Colors.grey.shade900 : Colors.white,
             borderRadius: const BorderRadius.only(
@@ -671,6 +674,12 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
             ),
           ),
         );
+        
+        // Gunakan PointerInterceptor untuk web platform
+        if (kIsWeb) {
+          return PointerInterceptor(child: bottomSheetContent);
+        }
+        return bottomSheetContent;
       },
     );
   }

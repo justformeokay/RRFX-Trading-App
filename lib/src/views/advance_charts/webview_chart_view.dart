@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -118,8 +119,8 @@ class _WebViewChartViewState extends State<WebViewChartView> {
     final baseUrl =
         'https://chart-rrfx.techcrm.dev/chart.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
 
-    // Untuk iOS, tambahkan parameter khusus
-    if (Platform.isIOS) {
+    // Untuk iOS, tambahkan parameter khusus (skip untuk web)
+    if (!kIsWeb && Platform.isIOS) {
       return '$baseUrl&platform=ios&mobile=1';
     }
 
@@ -241,9 +242,9 @@ class _WebViewChartViewState extends State<WebViewChartView> {
               minimumFontSize: 1,
               textZoom: 100,
 
-              // Untuk iOS, gunakan setting yang lebih simple
+              // Untuk iOS, gunakan setting yang lebih simple (skip untuk web)
               useHybridComposition:
-                  !Platform.isIOS, // Disable hybrid composition di iOS
+                  kIsWeb ? false : !Platform.isIOS, // Disable hybrid composition di iOS
               // Pengaturan khusus iOS
               allowsInlineMediaPlayback: true,
               allowsPictureInPictureMediaPlayback: false, // Disable PiP
@@ -262,26 +263,41 @@ class _WebViewChartViewState extends State<WebViewChartView> {
               webViewController = controller;
               print('🌐 WebView created');
               
-              // JavaScript handler untuk menerima price updates dari chart
-              controller.addJavaScriptHandler(
-                handlerName: 'priceUpdate',
-                callback: (args) {
-                  if (args.isNotEmpty && mounted) {
-                    try {
-                      final price = double.tryParse(args[0].toString());
-                      if (price != null) {
-                        currentPrice.value = price;
-                        print('📊 Current price updated: $price');
-                      }
-                    } catch (e) {
-                      print('⚠️ Error parsing price: $e');
-                    }
+              // Untuk Web, langsung set loading false setelah delay karena onLoadStop tidak reliable
+              if (kIsWeb) {
+                Future.delayed(const Duration(seconds: 2), () {
+                  if (mounted && isLoading) {
+                    print('🌐 [Web] Auto-hiding loading overlay');
+                    setState(() {
+                      isLoading = false;
+                      loadingProgress = 1.0;
+                    });
                   }
-                },
-              );
+                });
+              }
+              
+              // JavaScript handler untuk menerima price updates dari chart (skip untuk web)
+              if (!kIsWeb) {
+                controller.addJavaScriptHandler(
+                  handlerName: 'priceUpdate',
+                  callback: (args) {
+                    if (args.isNotEmpty && mounted) {
+                      try {
+                        final price = double.tryParse(args[0].toString());
+                        if (price != null) {
+                          currentPrice.value = price;
+                          print('📊 Current price updated: $price');
+                        }
+                      } catch (e) {
+                        print('⚠️ Error parsing price: $e');
+                      }
+                    }
+                  },
+                );
+              }
 
-              // Set timeout untuk iOS
-              if (Platform.isIOS) {
+              // Set timeout untuk iOS (skip untuk web)
+              if (!kIsWeb && Platform.isIOS) {
                 Future.delayed(Duration(seconds: 10), () {
                   if (mounted && isLoading) {
                     print('⏰ WebView timeout pada iOS, mencoba reload...');
@@ -306,45 +322,46 @@ class _WebViewChartViewState extends State<WebViewChartView> {
               print('✅ Loading finished: $url');
               _cancelTimeoutTimer();
 
-              // Inject JavaScript untuk ambil price dari chart
-              try {
-                await controller.evaluateJavascript(
-                  source: """
-                  (function() {
-                    console.log('🚀 Initializing price tracker...');
-                    
-                    // Function untuk kirim price ke Flutter
-                    function sendPriceToFlutter(price) {
-                      try {
-                        if (window.flutter_inappwebview) {
-                          window.flutter_inappwebview.callHandler('priceUpdate', price.toString());
-                          console.log('📊 Price sent to Flutter:', price);
-                        }
-                      } catch (e) {
-                        console.error('❌ Error sending price:', e);
-                      }
-                    }
-                    
-                    // Coba ambil price dari berbagai sumber
-                    function findAndSendPrice() {
-                      // Method 1: Cari di price element yang umum
-                      const priceSelectors = [
-                        '.current-price',
-                        '.price-value',
-                        '#current-price',
-                        '[data-price]',
-                        '.last-price'
-                      ];
+              // Inject JavaScript untuk ambil price dari chart (skip untuk web)
+              if (!kIsWeb) {
+                try {
+                  await controller.evaluateJavascript(
+                    source: """
+                    (function() {
+                      console.log('🚀 Initializing price tracker...');
                       
-                      for (let selector of priceSelectors) {
-                        const element = document.querySelector(selector);
-                        if (element) {
-                          const priceText = element.innerText || element.textContent;
-                          const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
-                          if (!isNaN(price) && price > 0) {
-                            sendPriceToFlutter(price);
-                            return true;
+                      // Function untuk kirim price ke Flutter
+                      function sendPriceToFlutter(price) {
+                        try {
+                          if (window.flutter_inappwebview) {
+                            window.flutter_inappwebview.callHandler('priceUpdate', price.toString());
+                            console.log('📊 Price sent to Flutter:', price);
                           }
+                        } catch (e) {
+                          console.error('❌ Error sending price:', e);
+                        }
+                      }
+                      
+                      // Coba ambil price dari berbagai sumber
+                      function findAndSendPrice() {
+                        // Method 1: Cari di price element yang umum
+                        const priceSelectors = [
+                          '.current-price',
+                          '.price-value',
+                          '#current-price',
+                          '[data-price]',
+                          '.last-price'
+                        ];
+                        
+                        for (let selector of priceSelectors) {
+                          const element = document.querySelector(selector);
+                          if (element) {
+                            const priceText = element.innerText || element.textContent;
+                            const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
+                            if (!isNaN(price) && price > 0) {
+                              sendPriceToFlutter(price);
+                              return true;
+                            }
                         }
                       }
                       
@@ -388,11 +405,13 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                     console.log('✅ Price tracker initialized');
                   })();
                   """,
-                );
-              } catch (e) {
-                print('⚠️ JavaScript injection error: $e');
+                  );
+                } catch (e) {
+                  print('⚠️ JavaScript injection error: $e');
+                }
               }
 
+              // Update loading state untuk semua platform (mobile dan web)
               if (mounted) {
                 setState(() {
                   isLoading = false;
@@ -446,8 +465,8 @@ class _WebViewChartViewState extends State<WebViewChartView> {
               ),
             ),
 
-          // Loading Overlay (only on initial load)
-          if (isLoading && loadingProgress < 0.5)
+          // Loading Overlay (only on initial load, skip for web after brief moment)
+          if (isLoading && loadingProgress < 0.5 && !kIsWeb)
             Container(
               color: isDark ? Colors.black87 : Colors.white70,
               child: Center(

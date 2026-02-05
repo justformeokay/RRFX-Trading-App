@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:web_socket_channel/io.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/controllers/trading.dart';
 import 'package:rrfx/src/models/trades/open_order_model.dart';
@@ -11,7 +11,7 @@ enum AccountWSStatus { connecting, connected, failed, disconnected }
 
 class AccountBalanceWSController extends GetxController
     with WidgetsBindingObserver {
-  IOWebSocketChannel? channel;
+  WebSocketChannel? channel;
   Timer? _reconnectTimer;
   bool _isManuallyDisconnected = false;
   int _reconnectAttempts = 0;
@@ -89,7 +89,7 @@ class AccountBalanceWSController extends GetxController
       status.value = AccountWSStatus.connecting;
       // print('🔌 [AccountWS] Connecting to ws://207.148.119.106:9006');
 
-      channel = IOWebSocketChannel.connect('ws://207.148.119.106:9006');
+      channel = WebSocketChannel.connect(Uri.parse('ws://207.148.119.106:9006'));
 
       channel!.stream.listen(
         (message) {

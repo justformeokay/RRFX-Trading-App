@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -72,8 +73,8 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
 
     final baseUrl = 'http://207.148.119.106/rrfx/chart.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
     
-    // Untuk iOS, tambahkan parameter khusus
-    if (Platform.isIOS) {
+    // Untuk iOS, tambahkan parameter khusus (skip untuk web)
+    if (!kIsWeb && Platform.isIOS) {
       return '$baseUrl&platform=ios&mobile=1';
     }
     
@@ -161,7 +162,7 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
               horizontalScrollBarEnabled: true,
               
               // Untuk iOS, gunakan setting yang lebih simple
-              useHybridComposition: !Platform.isIOS, // Disable hybrid composition di iOS
+              useHybridComposition: kIsWeb ? false : !Platform.isIOS, // Disable hybrid composition di iOS
               
               // Pengaturan khusus iOS
               allowsInlineMediaPlayback: true,
@@ -181,10 +182,10 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
               webViewController = controller;
               print('🌐 WebView created for ${widget.marketName}');
               print('📍 Chart URL: ${_buildChartUrl()}');
-              print('🍎 Platform: ${Platform.isIOS ? 'iOS' : 'Android'}');
+              print('🍎 Platform: ${kIsWeb ? 'Web' : (Platform.isIOS ? 'iOS' : 'Android')}');
               
-              // Set timeout untuk iOS
-              if (Platform.isIOS) {
+              // Set timeout untuk iOS (skip untuk web)
+              if (!kIsWeb && Platform.isIOS) {
                 Future.delayed(Duration(seconds: 10), () {
                   if (mounted && isLoading) {
                     print('⏰ WebView timeout pada iOS, mencoba reload...');
@@ -195,7 +196,7 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
             },
             onLoadStart: (controller, url) {
               print('📥 Loading started: $url');
-              print('🍎 Platform: ${Platform.isIOS ? 'iOS' : 'Android'}');
+              print('🍎 Platform: ${kIsWeb ? 'Web' : (Platform.isIOS ? 'iOS' : 'Android')}');
               if (mounted) {
                 setState(() {
                   isLoading = true;
@@ -207,8 +208,8 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
             onLoadStop: (controller, url) async {
               print('✅ Loading finished: $url');
               
-              // Untuk iOS, inject JavaScript yang lebih simple
-              if (Platform.isIOS) {
+              // Untuk iOS, inject JavaScript yang lebih simple (skip untuk web)
+              if (!kIsWeb && Platform.isIOS) {
                 try {
                   await controller.evaluateJavascript(source: """
                     console.log('iOS Chart loaded successfully');
@@ -266,7 +267,7 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
             onLoadError: (controller, url, code, message) {
               print('❌ Load error: $code - $message');
               print('🌐 Failed URL: $url');
-              print('🍎 Platform: ${Platform.isIOS ? 'iOS' : 'Android'}');
+              print('🍎 Platform: ${kIsWeb ? 'Web' : (Platform.isIOS ? 'iOS' : 'Android')}');
               if (mounted) {
                 setState(() {
                   isLoading = false;
@@ -278,7 +279,7 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
             onLoadHttpError: (controller, url, statusCode, description) {
               print('❌ HTTP error: $statusCode - $description');
               print('🌐 Failed URL: $url');
-              print('🍎 Platform: ${Platform.isIOS ? 'iOS' : 'Android'}');
+              print('🍎 Platform: ${kIsWeb ? 'Web' : (Platform.isIOS ? 'iOS' : 'Android')}');
               if (mounted) {
                 setState(() {
                   isLoading = false;

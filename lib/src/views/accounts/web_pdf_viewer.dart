@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter/webview_flutter.dart'
+    if (dart.library.html) 'package:rrfx/src/helpers/http/webview_flutter_stub.dart';
 
 class WebPdfViewer extends StatefulWidget {
   final String pdfUrl;
