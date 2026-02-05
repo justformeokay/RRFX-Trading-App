@@ -710,7 +710,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
+          // Title with Info Icon
           Row(
             children: [
               Icon(
@@ -719,12 +719,103 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                 color: isDark ? Colors.white70 : Colors.black87,
               ),
               const SizedBox(width: 6),
-              Text(
-                'Pending Order Settings',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : Colors.black,
+              Expanded(
+                child: Text(
+                  'Pending Order Settings',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  Get.dialog(
+                    Dialog(
+                      backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Iconsax.info_circle_bold,
+                                  size: 20,
+                                  color: Colors.blue,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Entry Price Requirements',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: isDark ? Colors.white : Colors.black,
+                                    ),
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () => Get.back(),
+                                  child: Icon(
+                                    Iconsax.close_square_bold,
+                                    size: 20,
+                                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Obx(() {
+                              return Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  _getInfoText(),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: isDark ? Colors.blue.shade200 : Colors.blue.shade700,
+                                    height: 1.5,
+                                  ),
+                                ),
+                              );
+                            }),
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                TextButton(
+                                  onPressed: () => Get.back(),
+                                  child: Text(
+                                    'Close',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                child: Icon(
+                  Iconsax.info_circle_bold,
+                  size: 16,
+                  color: Colors.blue,
                 ),
               ),
             ],
@@ -742,61 +833,36 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
           ),
           const SizedBox(height: 10),
 
-          // Stop Loss (Optional)
-          _buildInputField(
-            controller: _stopLossController,
-            label: 'Stop Loss (SL)',
-            hint: 'Optional',
-            icon: Iconsax.shield_cross_bold,
-            isDark: isDark,
-            isRequired: false,
-          ),
-          const SizedBox(height: 10),
-
-          // Take Profit (Optional)
-          _buildInputField(
-            controller: _takeProfitController,
-            label: 'Take Profit (TP)',
-            hint: 'Optional',
-            icon: Iconsax.medal_star_bold,
-            isDark: isDark,
-            isRequired: false,
+          // Stop Loss (Optional) and Take Profit (Optional) - Side by side
+          Row(
+            children: [
+              // Stop Loss
+              Expanded(
+                child: _buildInputField(
+                  controller: _stopLossController,
+                  label: 'Stop Loss (SL)',
+                  hint: 'Optional',
+                  icon: Iconsax.shield_cross_bold,
+                  isDark: isDark,
+                  isRequired: false,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Take Profit
+              Expanded(
+                child: _buildInputField(
+                  controller: _takeProfitController,
+                  label: 'Take Profit (TP)',
+                  hint: 'Optional',
+                  icon: Iconsax.medal_star_bold,
+                  isDark: isDark,
+                  isRequired: false,
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: 8),
-
-          // Info text
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Colors.blue.withOpacity(0.2),
-              ),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Iconsax.info_circle_bold,
-                  size: 14,
-                  color: Colors.blue,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _getInfoText(),
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: isDark ? Colors.blue.shade200 : Colors.blue.shade700,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -942,15 +1008,57 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   }
 
   String _getInfoText() {
+    final currentPrice = widget.currentPrice?.value;
+    final stopLevel = _getStopLevel(widget.symbol);
+    
+    // Format harga sesuai desimal symbol
+    String formatPrice(double price) {
+      if (widget.symbol.toUpperCase().contains('XAU')) {
+        return price.toStringAsFixed(2);
+      } else if (widget.symbol.toUpperCase().contains('XAG')) {
+        return price.toStringAsFixed(3);
+      } else if (widget.symbol.toUpperCase().contains('JPY') || 
+                 widget.symbol.toUpperCase().contains('US30') || 
+                 widget.symbol.toUpperCase().contains('NAS')) {
+        return price.toStringAsFixed(3);
+      } else {
+        return price.toStringAsFixed(5);
+      }
+    }
+    
     switch (_executionType.value) {
       case 'Buy Limit':
-        return 'Order akan dieksekusi ketika harga turun mencapai Entry Price yang ditentukan.';
+        if (currentPrice != null && currentPrice > 0) {
+          final maxEntry = currentPrice - stopLevel;
+          return 'Entry Price harus DI BAWAH harga saat ini.\n'
+                 'Harga saat ini: ${formatPrice(currentPrice)}\n'
+                 'Entry maksimal: ${formatPrice(maxEntry)}';
+        }
+        return 'Order akan dieksekusi ketika harga turun mencapai Entry Price. Entry Price harus di bawah harga saat ini.';
       case 'Sell Limit':
-        return 'Order akan dieksekusi ketika harga naik mencapai Entry Price yang ditentukan.';
+        if (currentPrice != null && currentPrice > 0) {
+          final minEntry = currentPrice + stopLevel;
+          return 'Entry Price harus DI ATAS harga saat ini.\n'
+                 'Harga saat ini: ${formatPrice(currentPrice)}\n'
+                 'Entry minimal: ${formatPrice(minEntry)}';
+        }
+        return 'Order akan dieksekusi ketika harga naik mencapai Entry Price. Entry Price harus di atas harga saat ini.';
       case 'Buy Stop':
-        return 'Order akan dieksekusi ketika harga naik menembus Entry Price yang ditentukan.';
+        if (currentPrice != null && currentPrice > 0) {
+          final minEntry = currentPrice + stopLevel;
+          return 'Entry Price harus DI ATAS harga saat ini.\n'
+                 'Harga saat ini: ${formatPrice(currentPrice)}\n'
+                 'Entry minimal: ${formatPrice(minEntry)}';
+        }
+        return 'Order akan dieksekusi ketika harga naik menembus Entry Price. Entry Price harus di atas harga saat ini.';
       case 'Sell Stop':
-        return 'Order akan dieksekusi ketika harga turun menembus Entry Price yang ditentukan.';
+        if (currentPrice != null && currentPrice > 0) {
+          final maxEntry = currentPrice - stopLevel;
+          return 'Entry Price harus DI BAWAH harga saat ini.\n'
+                 'Harga saat ini: ${formatPrice(currentPrice)}\n'
+                 'Entry maksimal: ${formatPrice(maxEntry)}';
+        }
+        return 'Order akan dieksekusi ketika harga turun menembus Entry Price. Entry Price harus di bawah harga saat ini.';
       default:
         return '';
     }
@@ -1242,6 +1350,35 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       return;
     }
 
+    // Get current price for validation
+    final currentPrice = widget.currentPrice?.value;
+    
+    // Validate entry price based on order type with stop level requirement
+    // Stop Level: minimal jarak dari current price (biasanya 50-100 points untuk Gold, 10-30 untuk Forex)
+    final stopLevel = _getStopLevel(widget.symbol);
+    
+    if (currentPrice != null && currentPrice > 0) {
+      final validationResult = _validateEntryPrice(
+        executionType: _executionType.value,
+        entryPrice: entryPrice,
+        currentPrice: currentPrice,
+        stopLevel: stopLevel,
+      );
+      
+      if (!validationResult['isValid']) {
+        Get.snackbar(
+          'Entry Price Tidak Valid',
+          validationResult['message'],
+          backgroundColor: Colors.orange.shade800,
+          colorText: Colors.white,
+          icon: const Icon(Iconsax.warning_2_bold, color: Colors.white),
+          snackPosition: SnackPosition.TOP,
+          duration: const Duration(seconds: 4),
+        );
+        return;
+      }
+    }
+
     // Parse optional SL and TP
     final sl = double.tryParse(_stopLossController.text.replaceAll(',', ''));
     final tp = double.tryParse(_takeProfitController.text.replaceAll(',', ''));
@@ -1368,5 +1505,118 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       await Future.delayed(const Duration(milliseconds: 1000));
       _executionQueue.removeWhere((e) => e['id'] == id);
     }
+  }
+
+  /// Get stop level (minimal distance from current price) based on symbol type
+  /// Stop level in points:
+  /// - Gold (XAU): 50 points = 0.50
+  /// - Forex major (5 digits): 30 points = 0.00030
+  /// - JPY pairs (3 digits): 30 points = 0.030
+  double _getStopLevel(String symbol) {
+    final symbolUpper = symbol.toUpperCase();
+    
+    // Gold pairs
+    if (symbolUpper.contains('XAU') || symbolUpper.contains('GOLD')) {
+      return 0.50; // 50 points for Gold
+    }
+    
+    // Silver
+    if (symbolUpper.contains('XAG') || symbolUpper.contains('SILVER')) {
+      return 0.030; // 30 points for Silver
+    }
+    
+    // JPY pairs (3 decimal places)
+    if (symbolUpper.contains('JPY')) {
+      return 0.030; // 30 points for JPY pairs
+    }
+    
+    // Indices (like US30, NAS100, etc.)
+    if (symbolUpper.contains('US30') || 
+        symbolUpper.contains('NAS') || 
+        symbolUpper.contains('SPX') ||
+        symbolUpper.contains('DAX') ||
+        symbolUpper.contains('UK100')) {
+      return 5.0; // 50 points for indices
+    }
+    
+    // Default for Forex pairs (5 decimal places)
+    return 0.00030; // 30 points
+  }
+
+  /// Validate entry price based on order type
+  /// Returns Map with 'isValid' (bool) and 'message' (String)
+  Map<String, dynamic> _validateEntryPrice({
+    required String executionType,
+    required double entryPrice,
+    required double currentPrice,
+    required double stopLevel,
+  }) {
+    switch (executionType) {
+      case 'Buy Limit':
+        // Entry price harus DI BAWAH current price dengan minimal stopLevel
+        if (entryPrice >= currentPrice) {
+          return {
+            'isValid': false,
+            'message': 'Buy Limit: Entry Price harus di BAWAH harga saat ini (${currentPrice.toStringAsFixed(2)})',
+          };
+        }
+        if ((currentPrice - entryPrice) < stopLevel) {
+          return {
+            'isValid': false,
+            'message': 'Buy Limit: Entry Price minimal ${stopLevel.toString()} di bawah harga saat ini.\nMinimal: ${(currentPrice - stopLevel).toStringAsFixed(2)}',
+          };
+        }
+        break;
+        
+      case 'Sell Limit':
+        // Entry price harus DI ATAS current price dengan minimal stopLevel
+        if (entryPrice <= currentPrice) {
+          return {
+            'isValid': false,
+            'message': 'Sell Limit: Entry Price harus di ATAS harga saat ini (${currentPrice.toStringAsFixed(2)})',
+          };
+        }
+        if ((entryPrice - currentPrice) < stopLevel) {
+          return {
+            'isValid': false,
+            'message': 'Sell Limit: Entry Price minimal ${stopLevel.toString()} di atas harga saat ini.\nMinimal: ${(currentPrice + stopLevel).toStringAsFixed(2)}',
+          };
+        }
+        break;
+        
+      case 'Buy Stop':
+        // Entry price harus DI ATAS current price dengan minimal stopLevel
+        if (entryPrice <= currentPrice) {
+          return {
+            'isValid': false,
+            'message': 'Buy Stop: Entry Price harus di ATAS harga saat ini (${currentPrice.toStringAsFixed(2)})',
+          };
+        }
+        if ((entryPrice - currentPrice) < stopLevel) {
+          return {
+            'isValid': false,
+            'message': 'Buy Stop: Entry Price minimal ${stopLevel.toString()} di atas harga saat ini.\nMinimal: ${(currentPrice + stopLevel).toStringAsFixed(2)}',
+          };
+        }
+        break;
+        
+      case 'Sell Stop':
+        // Entry price harus DI BAWAH current price dengan minimal stopLevel
+        if (entryPrice >= currentPrice) {
+          return {
+            'isValid': false,
+            'message': 'Sell Stop: Entry Price harus di BAWAH harga saat ini (${currentPrice.toStringAsFixed(2)})',
+          };
+        }
+        if ((currentPrice - entryPrice) < stopLevel) {
+          return {
+            'isValid': false,
+            'message': 'Sell Stop: Entry Price minimal ${stopLevel.toString()} di bawah harga saat ini.\nMinimal: ${(currentPrice - stopLevel).toStringAsFixed(2)}',
+          };
+        }
+        break;
+    }
+    
+    return {'isValid': true, 'message': ''};
   }
 }

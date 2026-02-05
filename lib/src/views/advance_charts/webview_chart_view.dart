@@ -116,7 +116,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
     final theme = Get.isDarkMode ? 'dark' : 'light';
 
     final baseUrl =
-        'http://207.148.119.106/rrfx/chart.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
+        'https://chart-rrfx.techcrm.dev/chart.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
 
     // Untuk iOS, tambahkan parameter khusus
     if (Platform.isIOS) {
@@ -164,25 +164,30 @@ class _WebViewChartViewState extends State<WebViewChartView> {
 
     // Show error if no connection
     if (!_hasConnection) {
-      return Scaffold(
+      return GestureDetector(
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        child: Scaffold(
+          backgroundColor: isDark ? Colors.black : Colors.white,
+          appBar: AppBar(
+            leadingWidth: size.width * 0.25,
+            title: Text(
+              _currentSymbol ?? 'XAUUSD.db',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+            ),
+          ),
+          body: _buildConnectionErrorState(theme, isDark),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      child: Scaffold(
         backgroundColor: isDark ? Colors.black : Colors.white,
         appBar: AppBar(
           leadingWidth: size.width * 0.25,
           title: Text(
             _currentSymbol ?? 'XAUUSD.db',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-          ),
-        ),
-        body: _buildConnectionErrorState(theme, isDark),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: isDark ? Colors.black : Colors.white,
-      appBar: AppBar(
-        leadingWidth: size.width * 0.25,
-        title: Text(
-          _currentSymbol ?? 'XAUUSD.db',
           style: GoogleFonts.inter(fontWeight: FontWeight.w700),
         ),
         leading: Center(
@@ -507,7 +512,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                 ],
               )
               : null,
-    );
+    ));
   }
 
   @override
