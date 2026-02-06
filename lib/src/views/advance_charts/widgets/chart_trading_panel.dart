@@ -721,6 +721,363 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     }
   }
 
+  void _showPendingOrderDialog(bool isDark) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.3),
+      barrierLabel: 'Close',
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (BuildContext buildContext, Animation<double> animation,
+          Animation<double> secondaryAnimation) {
+        return Container(); // Empty container, will be replaced by transitionBuilder
+      },
+      transitionBuilder: (BuildContext context, Animation<double> animation,
+          Animation<double> secondaryAnimation, Widget child) {
+        final curvedAnimation = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+        final slideAnimation = Tween<Offset>(
+          begin: const Offset(0, 1),
+          end: Offset.zero,
+        ).animate(curvedAnimation);
+
+        return SlideTransition(
+          position: slideAnimation,
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: FractionallySizedBox(
+              heightFactor: 0.55, // 55% of screen height
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+                child: Container(
+                  color: isDark ? Colors.grey.shade900 : Colors.white,
+                  child: SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(),
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        left: 16,
+                        right: 16,
+                        top: 16,
+                        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Handle bar
+                          Center(
+                            child: Container(
+                              width: 40,
+                              height: 4,
+                              margin: const EdgeInsets.only(bottom: 16),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? Colors.grey.shade700
+                                    : Colors.grey.shade300,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+
+                          // Title with Info Icon
+                          Row(
+                            children: [
+                              Icon(
+                                Iconsax.setting_2_bold,
+                                size: 16,
+                                color: isDark
+                                    ? Colors.white70
+                                    : Colors.black87,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Pending Order Settings',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark
+                                        ? Colors.white
+                                        : Colors.black,
+                                  ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  Get.dialog(
+                                    Dialog(
+                                      backgroundColor: isDark
+                                          ? Colors.grey.shade900
+                                          : Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12),
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  Iconsax.info_circle_bold,
+                                                  size: 20,
+                                                  color: Colors.blue,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    'Entry Price Requirements',
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      color: isDark
+                                                          ? Colors.white
+                                                          : Colors.black,
+                                                    ),
+                                                  ),
+                                                ),
+                                                GestureDetector(
+                                                  onTap: () => Get.back(),
+                                                  child: Icon(
+                                                    Iconsax.close_square_bold,
+                                                    size: 20,
+                                                    color: isDark
+                                                        ? Colors.grey.shade500
+                                                        : Colors
+                                                            .grey.shade400,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 10),
+                                            Obx(() {
+                                              return Container(
+                                                padding:
+                                                    const EdgeInsets.all(10),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.blue
+                                                      .withOpacity(0.1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          8),
+                                                ),
+                                                child: Text(
+                                                  _getInfoText(),
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 12,
+                                                    color: isDark
+                                                        ? Colors.blue.shade200
+                                                        : Colors.blue.shade700,
+                                                    height: 1.5,
+                                                  ),
+                                                ),
+                                              );
+                                            }),
+                                            const SizedBox(height: 6),
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.end,
+                                              children: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Get.back(),
+                                                  child: Text(
+                                                    'Close',
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.blue,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Icon(
+                                  Iconsax.info_circle_bold,
+                                  size: 16,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Entry Price (Required)
+                          _buildInputField(
+                            controller: _entryPriceController,
+                            label: 'Entry Price',
+                            hint: _getEntryPriceHint(),
+                            icon: Iconsax.tag_bold,
+                            isDark: isDark,
+                            isRequired: true,
+                          ),
+                          const SizedBox(height: 10),
+
+                          // Stop Loss (Optional) and Take Profit (Optional)
+                          Row(
+                            children: [
+                              // Stop Loss
+                              Expanded(
+                                child: _buildInputField(
+                                  controller: _stopLossController,
+                                  label: 'Stop Loss (Points)',
+                                  hint: 'e.g., 50',
+                                  icon: Iconsax.shield_cross_bold,
+                                  isDark: isDark,
+                                  isRequired: false,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // Take Profit
+                              Expanded(
+                                child: _buildInputField(
+                                  controller: _takeProfitController,
+                                  label: 'Take Profit (Points)',
+                                  hint: 'e.g., 100',
+                                  icon: Iconsax.medal_star_bold,
+                                  isDark: isDark,
+                                  isRequired: false,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          // Info text for SL/TP points
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6, bottom: 12),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Iconsax.info_circle_bold,
+                                  size: 13,
+                                  color: Colors.grey.shade500,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    'SL/TP menggunakan points. Contoh: 50 points = 0.0050 dari entry price',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      color: Colors.grey.shade500,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Action buttons
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextButton(
+                                  onPressed: () {
+                                    _entryPriceController.clear();
+                                    _stopLossController.clear();
+                                    _takeProfitController.clear();
+                                    Navigator.of(context).pop();
+                                  },
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Cancel',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    // Validate and submit
+                                    final entryPrice = double.tryParse(
+                                        _entryPriceController.text
+                                            .replaceAll(',', ''));
+                                    if (entryPrice == null || entryPrice <= 0) {
+                                      Get.snackbar(
+                                        'Error',
+                                        'Entry Price harus diisi dengan nilai yang valid',
+                                        backgroundColor:
+                                            Colors.red.shade800,
+                                        colorText: Colors.white,
+                                        icon: const Icon(
+                                            Iconsax.warning_2_bold,
+                                            color: Colors.white),
+                                        snackPosition: SnackPosition.TOP,
+                                        duration:
+                                            const Duration(seconds: 3),
+                                      );
+                                      return;
+                                    }
+
+                                    // Close dialog and execute
+                                    Navigator.of(context).pop();
+
+                                    // Determine direction based on execution type
+                                    final direction = _executionType.value
+                                            .toLowerCase()
+                                            .contains('sell')
+                                        ? 'sell'
+                                        : 'buy';
+                                    _executePendingOrder(direction);
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Execute',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildPendingOrderFields(bool isDark) {
     if (_executionType.value == 'Execution Market') {
       return const SizedBox.shrink(); // No additional fields for market execution
@@ -1196,7 +1553,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
               child: GestureDetector(
                 onTap: _executionType.value == 'Execution Market' 
                     ? _executeSell 
-                    : () => _executePendingOrder('sell'),
+                    : () => _showPendingOrderDialog(isDark),
                 child: Container(
                   height: 38,
                   decoration: BoxDecoration(
@@ -1331,7 +1688,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
               child: GestureDetector(
                 onTap: _executionType.value == 'Execution Market' 
                     ? _executeBuy 
-                    : () => _executePendingOrder('buy'),
+                    : () => _showPendingOrderDialog(isDark),
                 child: Container(
                   height: 38,
                   decoration: BoxDecoration(
