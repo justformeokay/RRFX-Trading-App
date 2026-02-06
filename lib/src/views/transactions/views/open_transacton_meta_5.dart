@@ -23,18 +23,13 @@ class OpenTransactonMeta5 extends StatefulWidget {
 }
 
 class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
-  final TradingController tradingController = Get.put(TradingController());
-  final AccountController controller = Get.put(AccountController());
-  final AccountBalanceWSController accountWS = Get.put(
-    AccountBalanceWSController(),
-    permanent: true,
-  );
-
-  // Ensure MarketWebSocketController is registered
-  final MarketWebSocketController marketWS = Get.put(
-    MarketWebSocketController(),
-    permanent: true,
-  );
+  // ✅ Gunakan Get.find() karena controller sudah di-register saat login/main
+  // Get.put() akan re-trigger onInit() jika controller pernah di-delete,
+  // yang menyebabkan GET /account/info dipanggil berulang-ulang.
+  late final TradingController tradingController;
+  late final AccountController controller;
+  late final AccountBalanceWSController accountWS;
+  late final MarketWebSocketController marketWS;
 
   Worker? _accountListener;
   String? _lastLoadedLogin;
@@ -44,6 +39,20 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
   void initState() {
     super.initState();
 
+    // ✅ Safe find: gunakan existing instance, hanya put() jika belum terdaftar
+    tradingController = Get.isRegistered<TradingController>()
+        ? Get.find<TradingController>()
+        : Get.put(TradingController());
+    controller = Get.isRegistered<AccountController>()
+        ? Get.find<AccountController>()
+        : Get.put(AccountController());
+    accountWS = Get.isRegistered<AccountBalanceWSController>()
+        ? Get.find<AccountBalanceWSController>()
+        : Get.put(AccountBalanceWSController(), permanent: true);
+    marketWS = Get.isRegistered<MarketWebSocketController>()
+        ? Get.find<MarketWebSocketController>()
+        : Get.put(MarketWebSocketController(), permanent: true);
+
     // Setup listener ONCE for account changes
     _accountListener = ever(controller.selectedAccount, (account) {
       if (account != null) {
@@ -51,8 +60,6 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
 
         // Only reload if account actually changed
         if (_lastLoadedLogin != newLogin) {
-          // print('🔄 [OpenTransaction] Account changed: $_lastLoadedLogin → $newLogin');
-
           // Clear old data immediately to prevent blinking
           tradingController.openOrderModel.value = null;
           accountWS.profit.value = 0.0;
@@ -66,10 +73,19 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
       }
     });
 
-    // Initial load
+    // Initial load — skip jika data sudah ada di cache dari page lain
     if (controller.selectedAccount.value != null) {
       _lastLoadedLogin = controller.selectedAccount.value!.login;
-      _loadOrders();
+
+      // ✅ Hanya panggil API jika data belum ada atau login berbeda
+      final cachedLogin = tradingController.openOrderModel.value?.response != null
+          ? controller.selectedAccount.value!.login
+          : null;
+      if (tradingController.openOrderModel.value == null || cachedLogin != _lastLoadedLogin) {
+        _loadOrders();
+      }
+
+      // ✅ Hanya subscribe WS jika belum connected ke akun yang sama
       _subscribeToAccountWS();
     }
   }
@@ -741,8 +757,9 @@ class _PositionTile extends StatelessWidget {
   }
 
   void _onClosePosition(BuildContext context) async {
-    final accountController = Get.put(AccountController());
-    final tradingController = Get.put(TradingController());
+    // ✅ Get.find() — controller sudah terdaftar, tidak perlu Get.put() lagi
+    final accountController = Get.find<AccountController>();
+    final tradingController = Get.find<TradingController>();
 
     String? loginID = accountController.selectedAccount.value?.login;
     if (loginID == null) {
@@ -817,8 +834,9 @@ class _PositionTile extends StatelessWidget {
   }
 
   void _onEditPosition(BuildContext context) async {
-    final tradingController = Get.put(TradingController());
-    final accountController = Get.put(AccountController());
+    // ✅ Get.find() — controller sudah terdaftar, tidak perlu Get.put() lagi
+    final tradingController = Get.find<TradingController>();
+    final accountController = Get.find<AccountController>();
     final marketWS = Get.find<MarketWebSocketController>();
 
     String? loginID = accountController.selectedAccount.value?.login;
