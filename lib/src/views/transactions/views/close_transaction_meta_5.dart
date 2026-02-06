@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
@@ -19,62 +18,71 @@ class CloseTransactionMeta5 extends StatefulWidget {
 class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
   final TradingController tradingController = Get.put(TradingController());
   final AccountController controller = Get.put(AccountController());
-  RxBool isLoading = false.obs;
-  
+
   // Filter & Sort state
   String selectedSymbol = 'All';
-  String sortBy = 'closeTime'; // ticket, type, volume, openTime, closeTime, profit
+  String sortBy = 'closeTime';
   bool sortAscending = false;
-  String filterPeriod = 'All'; // All, Today, Last Week, Last Month, Last 3 Months, Custom
+  String filterPeriod = 'All';
   DateTime? customStartDate;
   DateTime? customEndDate;
+
+  // Cache to avoid recomputation every frame
+  List<String> _cachedSymbols = const ['All'];
+  List<dynamic>? _lastRawOrders;
 
   @override
   void initState() {
     super.initState();
-    Future.delayed(Duration.zero, _loadClosedOrders);
+    _loadClosedOrders();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   Future<void> _loadClosedOrders() async {
-    if (!controller.hasAccounts) {
-      Get.log("TIDAK MEMILIKI AKUN TRADING DEMO MAUPUN REAL");
-      return;
-    }
+    if (!controller.hasAccounts) return;
 
-    isLoading.value = true;
-    String? loginID = controller.selectedAccount.value?.login;
-
+    final loginID = controller.selectedAccount.value?.login;
     if (loginID != null) {
       await tradingController.closedOrder(login: loginID);
     }
-
-    isLoading.value = false;
-
-    await Future.delayed(const Duration(milliseconds: 600)); // smooth
   }
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
       if (!controller.hasAccounts) return noAccountDetected();
-      
-      var closed = tradingController.tradingHistoryModel.value?.response;
-      
+
+      final closed = tradingController.tradingHistoryModel.value?.response;
+
+      // Compute ONCE, reuse everywhere (sebelumnya dihitung 3-5x per frame)
+      final filteredOrders =
+          closed != null && closed.isNotEmpty
+              ? _getFilteredAndSortedOrders(closed)
+              : <dynamic>[];
+      final totals = _calculateTotals(filteredOrders);
+
+      // Cache unique symbols hanya saat raw data berubah
+      if (closed != null && !identical(closed, _lastRawOrders)) {
+        _lastRawOrders = closed;
+        _cachedSymbols = _getUniqueSymbols(closed);
+      }
+
       return Scaffold(
         body: CustomScrollView(
           slivers: [
-            // Filter & Sort Bar - only show when data is loaded
             if (closed != null)
-              SliverToBoxAdapter(
-                child: _buildFilterBar(context, closed),
-              ),
+              SliverToBoxAdapter(child: _buildFilterBar(context)),
 
             SliverPersistentHeader(
               pinned: true,
               delegate: _BalanceHeaderDelegate(
-                totalSwap: closed != null ? _calculateTotals(_getFilteredAndSortedOrders(closed))['swap']! : 0.0,
-                totalCommission: closed != null ? _calculateTotals(_getFilteredAndSortedOrders(closed))['commission']! : 0.0,
-                totalProfit: closed != null ? _calculateTotals(_getFilteredAndSortedOrders(closed))['profit']! : 0.0,
+                totalSwap: totals['swap']!,
+                totalCommission: totals['commission']!,
+                totalProfit: totals['profit']!,
               ),
             ),
 
@@ -105,7 +113,9 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                 child: Center(
                   child: Padding(
                     padding: const EdgeInsets.all(40.0),
-                    child: CircularProgressIndicator(color: CustomColor.secondaryColor),
+                    child: CircularProgressIndicator(
+                      color: CustomColor.secondaryColor,
+                    ),
                   ),
                 ),
               )
@@ -128,7 +138,9 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                CustomColor.secondaryColor.withValues(alpha: 0.15),
+                                CustomColor.secondaryColor.withValues(
+                                  alpha: 0.15,
+                                ),
                                 Colors.orange.withValues(alpha: 0.15),
                               ],
                             ),
@@ -141,9 +153,9 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                             ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 24),
-                        
+
                         // Title
                         Text(
                           "No Trading History",
@@ -153,9 +165,9 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                             color: Theme.of(context).textTheme.bodyLarge?.color,
                           ),
                         ),
-                        
+
                         const SizedBox(height: 12),
-                        
+
                         // Description
                         Text(
                           "You haven't closed any trading positions yet. Your trading history will appear here.",
@@ -166,21 +178,24 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                             color: Theme.of(context).textTheme.bodySmall?.color,
                           ),
                         ),
-                        
+
                         const SizedBox(height: 32),
-                        
+
                         // Info cards
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey.shade900
-                                : Colors.grey.shade50,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade900
+                                    : Colors.grey.shade50,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.grey.shade800
-                                  : Colors.grey.shade200,
+                              color:
+                                  Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.grey.shade800
+                                      : Colors.grey.shade200,
                               width: 1,
                             ),
                           ),
@@ -190,21 +205,25 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                                 context,
                                 icon: Iconsax.clock_outline,
                                 title: "Automatic Recording",
-                                description: "All closed positions are automatically saved here",
+                                description:
+                                    "All closed positions are automatically saved here",
                               ),
                               const SizedBox(height: 16),
                               Divider(
                                 height: 1,
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade800
-                                    : Colors.grey.shade200,
+                                color:
+                                    Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.grey.shade800
+                                        : Colors.grey.shade200,
                               ),
                               const SizedBox(height: 16),
                               _buildInfoRow(
                                 context,
                                 icon: Iconsax.document_text_outline,
                                 title: "Detailed Reports",
-                                description: "View profit/loss, open/close prices, and more",
+                                description:
+                                    "View profit/loss, open/close prices, and more",
                               ),
                             ],
                           ),
@@ -217,19 +236,14 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
             else
               SliverList(
                 delegate: SliverChildBuilderDelegate((context, index) {
-                  final filteredAndSorted = _getFilteredAndSortedOrders(closed);
-                  if (index >= filteredAndSorted.length) return null;
-                  
-                  final order = filteredAndSorted[index];
+                  final order = filteredOrders[index];
                   return _PositionTile(
-                    index: index,
                     positionId: "${order.ticket}",
                     swap: "${order.swap}",
                     stopLoss: "${order.stopLoss}",
                     openTime: "${order.openTime}",
                     closeTime: "${order.closeTime}",
                     takeProfit: "${order.takeProfit}",
-                    doubleProfit: -0.10 * index,
                     profit: order.profit != null ? "${order.profit}" : "0.00",
                     symbol: "${order.symbol}",
                     direction: "${order.orderType}",
@@ -238,7 +252,7 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                     closePrice: "${order.closePrice}",
                     commission: "${order.commission}",
                   );
-                }, childCount: _getFilteredAndSortedOrders(closed).length),
+                }, childCount: filteredOrders.length),
               ),
           ],
         ),
@@ -249,57 +263,59 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
   // Filter dan Sort Logic
   List<dynamic> _getFilteredAndSortedOrders(List<dynamic> orders) {
     if (orders.isEmpty) return [];
-    
-    var filtered = orders.where((order) {
-      // Filter by symbol
-      if (selectedSymbol != 'All' && order.symbol != selectedSymbol) {
-        return false;
-      }
-      
-      // Filter by period
-      if (filterPeriod != 'All') {
-        final closeTime = _parseDateTime(order.closeTime);
-        if (closeTime == null) return false;
-        
-        final now = DateTime.now();
-        DateTime startDate;
-        
-        switch (filterPeriod) {
-          case 'Today':
-            startDate = DateTime(now.year, now.month, now.day);
-            break;
-          case 'Last Week':
-            startDate = now.subtract(const Duration(days: 7));
-            break;
-          case 'Last Month':
-            startDate = now.subtract(const Duration(days: 30));
-            break;
-          case 'Last 3 Months':
-            startDate = now.subtract(const Duration(days: 90));
-            break;
-          case 'Custom':
-            if (customStartDate != null && customEndDate != null) {
-              if (closeTime.isBefore(customStartDate!) || closeTime.isAfter(customEndDate!)) {
-                return false;
-              }
+
+    var filtered =
+        orders.where((order) {
+          // Filter by symbol
+          if (selectedSymbol != 'All' && order.symbol != selectedSymbol) {
+            return false;
+          }
+
+          // Filter by period
+          if (filterPeriod != 'All') {
+            final closeTime = _parseDateTime(order.closeTime);
+            if (closeTime == null) return false;
+
+            final now = DateTime.now();
+            DateTime startDate;
+
+            switch (filterPeriod) {
+              case 'Today':
+                startDate = DateTime(now.year, now.month, now.day);
+                break;
+              case 'Last Week':
+                startDate = now.subtract(const Duration(days: 7));
+                break;
+              case 'Last Month':
+                startDate = now.subtract(const Duration(days: 30));
+                break;
+              case 'Last 3 Months':
+                startDate = now.subtract(const Duration(days: 90));
+                break;
+              case 'Custom':
+                if (customStartDate != null && customEndDate != null) {
+                  if (closeTime.isBefore(customStartDate!) ||
+                      closeTime.isAfter(customEndDate!)) {
+                    return false;
+                  }
+                }
+                return true;
+              default:
+                return true;
             }
-            return true;
-          default:
-            return true;
-        }
-        
-        if (closeTime.isBefore(startDate)) {
-          return false;
-        }
-      }
-      
-      return true;
-    }).toList();
-    
+
+            if (closeTime.isBefore(startDate)) {
+              return false;
+            }
+          }
+
+          return true;
+        }).toList();
+
     // Sort
     filtered.sort((a, b) {
       int result = 0;
-      
+
       switch (sortBy) {
         case 'ticket':
           result = (a.ticket ?? 0).compareTo(b.ticket ?? 0);
@@ -332,13 +348,13 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
           result = aProfit.compareTo(bProfit);
           break;
       }
-      
+
       return sortAscending ? result : -result;
     });
-    
+
     return filtered;
   }
-  
+
   DateTime? _parseDateTime(dynamic dateStr) {
     if (dateStr == null) return null;
     try {
@@ -347,18 +363,23 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
       return null;
     }
   }
-  
+
   List<String> _getUniqueSymbols(List<dynamic> orders) {
-    final symbols = orders.map((o) => o.symbol?.toString() ?? '').where((s) => s.isNotEmpty).toSet().toList();
+    final symbols =
+        orders
+            .map((o) => o.symbol?.toString() ?? '')
+            .where((s) => s.isNotEmpty)
+            .toSet()
+            .toList();
     symbols.sort();
     return ['All', ...symbols];
   }
 
-  Widget _buildFilterBar(BuildContext context, List<dynamic> orders) {
+  Widget _buildFilterBar(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final symbols = _getUniqueSymbols(orders);
-    
+    final symbols = _cachedSymbols;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -399,7 +420,9 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                 ),
               ),
               const Spacer(),
-              if (selectedSymbol != 'All' || sortBy != 'closeTime' || filterPeriod != 'All')
+              if (selectedSymbol != 'All' ||
+                  sortBy != 'closeTime' ||
+                  filterPeriod != 'All')
                 TextButton.icon(
                   onPressed: () {
                     setState(() {
@@ -414,18 +437,24 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                   icon: const Icon(Iconsax.refresh_outline, size: 16),
                   label: Text(
                     'Reset',
-                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   style: TextButton.styleFrom(
                     foregroundColor: CustomColor.secondaryColor,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                   ),
                 ),
             ],
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Icon Dropdown Row
           Row(
             children: [
@@ -444,9 +473,9 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                   },
                 ),
               ),
-              
+
               const SizedBox(width: 12),
-              
+
               // Sort By Dropdown (Icon Only)
               Expanded(
                 child: _buildIconDropdown(
@@ -454,7 +483,14 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                   icon: Iconsax.sort_outline,
                   tooltip: 'Sort By',
                   value: sortBy,
-                  items: const ['ticket', 'type', 'volume', 'openTime', 'closeTime', 'profit'],
+                  items: const [
+                    'ticket',
+                    'type',
+                    'volume',
+                    'openTime',
+                    'closeTime',
+                    'profit',
+                  ],
                   itemLabels: const {
                     'ticket': 'Ticket',
                     'type': 'Type',
@@ -470,7 +506,9 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                   },
                   suffixIcon: IconButton(
                     icon: Icon(
-                      sortAscending ? Iconsax.arrow_up_3_outline : Iconsax.arrow_down_outline,
+                      sortAscending
+                          ? Iconsax.arrow_up_3_outline
+                          : Iconsax.arrow_down_outline,
                       size: 16,
                       color: CustomColor.secondaryColor,
                     ),
@@ -484,9 +522,9 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(width: 12),
-              
+
               // Period Dropdown (Icon Only)
               Expanded(
                 child: _buildIconDropdown(
@@ -494,7 +532,14 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                   icon: Iconsax.calendar_outline,
                   tooltip: 'Period',
                   value: filterPeriod,
-                  items: const ['All', 'Today', 'Last Week', 'Last Month', 'Last 3 Months', 'Custom'],
+                  items: const [
+                    'All',
+                    'Today',
+                    'Last Week',
+                    'Last Month',
+                    'Last 3 Months',
+                    'Custom',
+                  ],
                   onChanged: (value) {
                     setState(() {
                       filterPeriod = value!;
@@ -508,7 +553,7 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
               ),
             ],
           ),
-          
+
           // Custom Date Range
           if (filterPeriod == 'Custom') ...[
             const SizedBox(height: 12),
@@ -564,7 +609,7 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
       ),
     );
   }
-  
+
   Widget _buildIconDropdown({
     required BuildContext context,
     required IconData icon,
@@ -577,15 +622,7 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
-    // Get display value
-    // String getDisplayValue() {
-    //   if (itemLabels != null && itemLabels.containsKey(value)) {
-    //     return itemLabels[value]!;
-    //   }
-    //   return value;
-    // }
-    
+
     return Container(
       decoration: BoxDecoration(
         color: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
@@ -631,56 +668,66 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
             dropdownColor: isDark ? Colors.grey.shade800 : Colors.white,
             borderRadius: BorderRadius.circular(12),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-            items: items.map((String item) {
-              final displayLabel = itemLabels?[item] ?? item;
-              final isSelected = value == item;
-              
-              return DropdownMenuItem<String>(
-                value: item,
-                child: Row(
-                  children: [
-                    Icon(
-                      icon,
-                      size: 18,
-                      color: isSelected 
-                        ? CustomColor.secondaryColor 
-                        : theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        displayLabel,
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: isSelected 
-                            ? CustomColor.secondaryColor 
-                            : theme.textTheme.bodyMedium?.color,
+            items:
+                items.map((String item) {
+                  final displayLabel = itemLabels?[item] ?? item;
+                  final isSelected = value == item;
+
+                  return DropdownMenuItem<String>(
+                    value: item,
+                    child: Row(
+                      children: [
+                        Icon(
+                          icon,
+                          size: 18,
+                          color:
+                              isSelected
+                                  ? CustomColor.secondaryColor
+                                  : theme.textTheme.bodyMedium?.color
+                                      ?.withOpacity(0.5),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            displayLabel,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight:
+                                  isSelected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                              color:
+                                  isSelected
+                                      ? CustomColor.secondaryColor
+                                      : theme.textTheme.bodyMedium?.color,
+                            ),
+                          ),
+                        ),
+                        if (isSelected)
+                          Icon(
+                            Iconsax.tick_circle_bold,
+                            size: 18,
+                            color: CustomColor.secondaryColor,
+                          ),
+                      ],
                     ),
-                    if (isSelected)
-                      Icon(
-                        Iconsax.tick_circle_bold,
-                        size: 18,
-                        color: CustomColor.secondaryColor,
-                      ),
-                  ],
-                ),
-              );
-            }).toList(),
+                  );
+                }).toList(),
             onChanged: onChanged,
           ),
         ),
       ),
     );
   }
-  
-  
-  Widget _buildDateButton(BuildContext context, String label, VoidCallback onTap) {
+
+  Widget _buildDateButton(
+    BuildContext context,
+    String label,
+    VoidCallback onTap,
+  ) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -698,8 +745,8 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Iconsax.calendar_1_outline, 
-              size: 16, 
+              Iconsax.calendar_1_outline,
+              size: 16,
               color: CustomColor.secondaryColor,
             ),
             const SizedBox(width: 8),
@@ -738,11 +785,13 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
       totalSwap += swapValue;
 
       // Handle commission - treat null, empty, or invalid as 0
-      final commissionValue = double.tryParse(order.commission?.toString() ?? '0') ?? 0.0;
+      final commissionValue =
+          double.tryParse(order.commission?.toString() ?? '0') ?? 0.0;
       totalCommission += commissionValue;
 
       // Handle profit - treat null, empty, or invalid as 0
-      final profitValue = double.tryParse(order.profit?.toString() ?? '0') ?? 0.0;
+      final profitValue =
+          double.tryParse(order.profit?.toString() ?? '0') ?? 0.0;
       totalProfit += profitValue;
     }
 
@@ -760,7 +809,7 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
     required String description,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -771,11 +820,7 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
             color: CustomColor.secondaryColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: CustomColor.secondaryColor,
-          ),
+          child: Icon(icon, size: 20, color: CustomColor.secondaryColor),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -850,7 +895,11 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
           ),
           _balanceRow("Profit", totalProfit.toStringAsFixed(2), context),
           _balanceRow("Swap", totalSwap.toStringAsFixed(2), context),
-          _balanceRow("Commission", totalCommission.toStringAsFixed(2), context),
+          _balanceRow(
+            "Commission",
+            totalCommission.toStringAsFixed(2),
+            context,
+          ),
           Obx(
             () => _balanceRow(
               "Balance",
@@ -869,11 +918,14 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: GoogleFonts.roboto(
-            fontSize: 12,
-            color: Theme.of(context).textTheme.bodyLarge?.color,
-            fontWeight: FontWeight.w700,
-          )),
+          Text(
+            label,
+            style: GoogleFonts.roboto(
+              fontSize: 12,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -897,7 +949,7 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
               fontSize: 12,
               color: Get.textTheme.bodyLarge?.color,
               fontWeight: FontWeight.w700,
-            )
+            ),
           ),
         ],
       ),
@@ -905,18 +957,18 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) =>
-      false;
+  bool shouldRebuild(covariant _BalanceHeaderDelegate oldDelegate) =>
+      totalSwap != oldDelegate.totalSwap ||
+      totalCommission != oldDelegate.totalCommission ||
+      totalProfit != oldDelegate.totalProfit;
 }
 
 class _PositionTile extends StatelessWidget {
-  final int index;
   final String? positionId;
   final String? openTime;
   final String? swap;
   final String? stopLoss;
   final String? takeProfit;
-  final double? doubleProfit;
   final String? profit;
   final String? symbol;
   final String? direction;
@@ -927,14 +979,12 @@ class _PositionTile extends StatelessWidget {
   final String? commission;
 
   const _PositionTile({
-    required this.index,
     this.positionId,
     this.openTime,
     this.closeTime,
     this.swap,
     this.stopLoss,
     this.takeProfit,
-    this.doubleProfit,
     this.profit,
     this.symbol,
     this.direction,
@@ -965,209 +1015,151 @@ class _PositionTile extends StatelessWidget {
             ? Colors.red
             : Theme.of(context).colorScheme.onSurfaceVariant;
 
-    final Color buySellColor = direction?.toLowerCase() == "buy" ? Colors.blue : Colors.red;
-    return Slidable(
-      key: ValueKey(positionId),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          dense: true,
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-          childrenPadding: EdgeInsets.zero,
-          title: RichText(
-            text: TextSpan(
-              children: [
-                TextSpan(
-                  text: symbol ?? "-",
-                  style: GoogleFonts.oswald(
-                    fontSize: 14.0,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const TextSpan(text: ", "),
-                TextSpan(
-                  text:
-                      direction != null
-                          ? "${direction!.toLowerCase()} ${volume ?? "0.0"}"
-                          : "-",
-                  style: GoogleFonts.oswald(
-                    color: buySellColor,
-                    fontSize: 12.0,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          subtitle: Text(
-            "${openPrice ?? '0.00000'} → ${closePrice == "null" || closePrice == null || closePrice == "" ? '0' : closePrice}",
-            style: GoogleFonts.oswald(
-              fontSize: 13.0,
-              fontWeight: FontWeight.w700,
-              color: Get.theme.textTheme.bodySmall?.color,
-            ),
-          ),
-
-          trailing: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+    final Color buySellColor =
+        direction?.toLowerCase() == "buy" ? Colors.blue : Colors.red;
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        key: ValueKey(positionId),
+        dense: true,
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+        childrenPadding: EdgeInsets.zero,
+        title: RichText(
+          text: TextSpan(
             children: [
-              Text(
-                "$closeTime",
+              TextSpan(
+                text: symbol ?? "-",
                 style: GoogleFonts.oswald(
-                  color: Get.theme.textTheme.bodySmall?.color,
+                  fontSize: 14.0,
                   fontWeight: FontWeight.w600,
-                  fontSize: 11.0,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                profitText,
+              const TextSpan(text: ", "),
+              TextSpan(
+                text:
+                    direction != null
+                        ? "${direction!.toLowerCase()} ${volume ?? "0.0"}"
+                        : "-",
                 style: GoogleFonts.oswald(
-                  color: profitColor,
+                  color: buySellColor,
+                  fontSize: 12.0,
                   fontWeight: FontWeight.w600,
-                  fontSize: 13.0,
                 ),
               ),
             ],
           ),
+        ),
 
+        subtitle: Text(
+          "${openPrice ?? '0.00000'} → ${closePrice == "null" || closePrice == null || closePrice == "" ? '0' : closePrice}",
+          style: GoogleFonts.oswald(
+            fontSize: 13.0,
+            fontWeight: FontWeight.w700,
+            color: Get.theme.textTheme.bodySmall?.color,
+          ),
+        ),
+
+        trailing: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: Get.theme.dividerColor.withOpacity(0.2),
-                    width: 1,
-                  ),
+            Text(
+              "$closeTime",
+              style: GoogleFonts.oswald(
+                color: Get.theme.textTheme.bodySmall?.color,
+                fontWeight: FontWeight.w600,
+                fontSize: 11.0,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              profitText,
+              style: GoogleFonts.oswald(
+                color: profitColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 13.0,
+              ),
+            ),
+          ],
+        ),
+
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: Get.theme.dividerColor.withOpacity(0.2),
+                  width: 1,
                 ),
               ),
+            ),
 
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ROW 1: Position ID + Open Time
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          "#${positionId ?? "-"}",
-                          style: GoogleFonts.oswald(
-                            fontSize: 13.0,
-                            fontWeight: FontWeight.w700,
-                            color: Get.theme.textTheme.bodySmall?.color,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ROW 1: Position ID + Open Time
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        "#${positionId ?? "-"}",
+                        style: GoogleFonts.oswald(
+                          fontSize: 13.0,
+                          fontWeight: FontWeight.w700,
+                          color: Get.theme.textTheme.bodySmall?.color,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Text(
+                            "Open: ",
+                            style: GoogleFonts.oswald(
+                              fontSize: 13.0,
+                              fontWeight: FontWeight.w700,
+                              color: Get.theme.textTheme.bodySmall?.color,
+                            ),
                           ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Text(
-                              "Open: ",
+                          Expanded(
+                            child: Text(
+                              openTime ?? "-",
+                              textAlign: TextAlign.right,
                               style: GoogleFonts.oswald(
                                 fontSize: 13.0,
                                 fontWeight: FontWeight.w700,
                                 color: Get.theme.textTheme.bodySmall?.color,
                               ),
                             ),
-                            Expanded(
-                              child: Text(
-                                openTime ?? "-",
-                                textAlign: TextAlign.right,
-                                style: GoogleFonts.oswald(
-                                  fontSize: 13.0,
-                                  fontWeight: FontWeight.w700,
-                                  color: Get.theme.textTheme.bodySmall?.color,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
 
-                  const SizedBox(height: 8),
+                const SizedBox(height: 8),
 
-                  // ROW 2: SL + Swap
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Text(
-                              "S / L: ",
-                              style: GoogleFonts.oswald(
-                                fontSize: 13.0,
-                                fontWeight: FontWeight.w700,
-                                color: Get.theme.textTheme.bodySmall?.color,
-                              ),
+                // ROW 2: SL + Swap
+                Row(
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Text(
+                            "S / L: ",
+                            style: GoogleFonts.oswald(
+                              fontSize: 13.0,
+                              fontWeight: FontWeight.w700,
+                              color: Get.theme.textTheme.bodySmall?.color,
                             ),
-                            Expanded(
-                              child: Text(
-                                (stopLoss != null && stopLoss != "0")
-                                    ? stopLoss!
-                                    : "–",
-                                style: GoogleFonts.oswald(
-                                  fontSize: 13.0,
-                                  fontWeight: FontWeight.w700,
-                                  color: Get.theme.textTheme.bodySmall?.color,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Text(
-                              "Swap: ",
-                              style: GoogleFonts.oswald(
-                                fontSize: 13.0,
-                                fontWeight: FontWeight.w700,
-                                color: Get.theme.textTheme.bodySmall?.color,
-                              ),
-                            ),
-                            Expanded(
-                              child: Text(
-                                swap ?? "0.00",
-                                textAlign: TextAlign.right,
-                                style: GoogleFonts.oswald(
-                                  fontSize: 13.0,
-                                  fontWeight: FontWeight.w700,
-                                  color: Get.theme.textTheme.bodySmall?.color,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // ROW 3: TP only (Left)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Text(
-                              "T / P: ",
-                              style: GoogleFonts.oswald(
-                                fontSize: 13.0,
-                                fontWeight: FontWeight.w700,
-                                color: Get.theme.textTheme.bodySmall?.color,
-                              ),
-                            ),
-                            Text(
-                              (takeProfit != null && takeProfit != "0")
-                                  ? takeProfit!
+                          ),
+                          Expanded(
+                            child: Text(
+                              (stopLoss != null && stopLoss != "0")
+                                  ? stopLoss!
                                   : "–",
                               style: GoogleFonts.oswald(
                                 fontSize: 13.0,
@@ -1175,41 +1167,98 @@ class _PositionTile extends StatelessWidget {
                                 color: Get.theme.textTheme.bodySmall?.color,
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Text(
-                              "Commission: ",
+                    ),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Text(
+                            "Swap: ",
+                            style: GoogleFonts.oswald(
+                              fontSize: 13.0,
+                              fontWeight: FontWeight.w700,
+                              color: Get.theme.textTheme.bodySmall?.color,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              swap ?? "0.00",
+                              textAlign: TextAlign.right,
                               style: GoogleFonts.oswald(
                                 fontSize: 13.0,
                                 fontWeight: FontWeight.w700,
                                 color: Get.theme.textTheme.bodySmall?.color,
                               ),
                             ),
-                            Expanded(
-                              child: Text(
-                                commission ?? "-",
-                                textAlign: TextAlign.right,
-                                style: GoogleFonts.oswald(
-                                  fontSize: 13.0,
-                                  fontWeight: FontWeight.w700,
-                                  color: Get.theme.textTheme.bodySmall?.color,
-                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
+                // ROW 3: TP only (Left)
+                Row(
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Text(
+                            "T / P: ",
+                            style: GoogleFonts.oswald(
+                              fontSize: 13.0,
+                              fontWeight: FontWeight.w700,
+                              color: Get.theme.textTheme.bodySmall?.color,
+                            ),
+                          ),
+                          Text(
+                            (takeProfit != null && takeProfit != "0")
+                                ? takeProfit!
+                                : "–",
+                            style: GoogleFonts.oswald(
+                              fontSize: 13.0,
+                              fontWeight: FontWeight.w700,
+                              color: Get.theme.textTheme.bodySmall?.color,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Text(
+                            "Commission: ",
+                            style: GoogleFonts.oswald(
+                              fontSize: 13.0,
+                              fontWeight: FontWeight.w700,
+                              color: Get.theme.textTheme.bodySmall?.color,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              commission ?? "-",
+                              textAlign: TextAlign.right,
+                              style: GoogleFonts.oswald(
+                                fontSize: 13.0,
+                                fontWeight: FontWeight.w700,
+                                color: Get.theme.textTheme.bodySmall?.color,
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

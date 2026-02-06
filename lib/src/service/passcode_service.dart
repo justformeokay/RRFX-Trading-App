@@ -15,8 +15,6 @@ class PasscodeService {
     String? biometricType,
   }) async {
     try {
-      print('[PasscodeService] Saving passcode: length=${passcode.length}, value=$passcode');
-      
       final box = GetStorage();
       final model = PasscodeModel(
         passcode: passcode,
@@ -27,7 +25,7 @@ class PasscodeService {
       );
 
       final jsonData = model.toJson();
-      print('[PasscodeService] JSON data before save: $jsonData');
+
       
       await box.write(_passcodeKey, jsonData);
 
@@ -36,11 +34,11 @@ class PasscodeService {
 
       // Verify it was saved
       final saved = box.read(_passcodeKey);
-      print('[PasscodeService] Saved and verified: $saved');
+
 
       return true;
     } catch (e) {
-      print('Error saving passcode: $e');
+
       return false;
     }
   }
@@ -56,7 +54,7 @@ class PasscodeService {
       }
       return null;
     } catch (e) {
-      print('Error getting passcode: $e');
+
       return null;
     }
   }
@@ -67,7 +65,7 @@ class PasscodeService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getBool(_passcodeSetupKey) ?? false;
     } catch (e) {
-      print('Error checking passcode setup: $e');
+
       return false;
     }
   }
@@ -78,7 +76,7 @@ class PasscodeService {
       final passcode = await getPasscode();
       return passcode?.useBiometric ?? false;
     } catch (e) {
-      print('Error checking biometric status: $e');
+
       return false;
     }
   }
@@ -89,7 +87,7 @@ class PasscodeService {
       final passcode = await getPasscode();
       return passcode?.biometricType;
     } catch (e) {
-      print('Error getting biometric type: $e');
+
       return null;
     }
   }
@@ -100,17 +98,17 @@ class PasscodeService {
     String? biometricType,
   }) async {
     try {
-      print('[PasscodeService] updateBiometricStatus called with enabled=$enabled, biometricType=$biometricType');
+
       
       final passcode = await getPasscode();
-      print('[PasscodeService] Current passcode model: $passcode');
+
       
       // Jika passcode tidak ada di local storage, buat model baru dengan placeholder
       // (ini terjadi karena passcode disimpan di server, bukan local)
       final PasscodeModel updatedModel;
       
       if (passcode == null) {
-        print('[PasscodeService] Passcode not found, creating new model with biometric flags only');
+
         updatedModel = PasscodeModel(
           passcode: 'SERVER_STORED', // Placeholder karena disimpan di server
           createdAt: DateTime.now(),
@@ -125,27 +123,27 @@ class PasscodeService {
         );
       }
 
-      print('[PasscodeService] Updated model: useBiometric=${updatedModel.useBiometric}, biometricType=${updatedModel.biometricType}');
+
 
       final box = GetStorage();
-      print('[PasscodeService] GetStorage initialized');
+
       
       await box.write(_passcodeKey, updatedModel.toJson());
-      print('[PasscodeService] Data written to storage');
+
 
       // Verify it was saved
       final saved = box.read(_passcodeKey);
-      print('[PasscodeService] Verification read from storage: $saved');
+
 
       if (saved != null) {
         final verifiedModel = PasscodeModel.fromJson(saved as Map<String, dynamic>);
-        print('[PasscodeService] Verified saved model: useBiometric=${verifiedModel.useBiometric}, biometricType=${verifiedModel.biometricType}');
+
       }
 
       return true;
     } catch (e) {
-      print('[PasscodeService] ERROR updating biometric status: $e');
-      print('[PasscodeService] Error type: ${e.runtimeType}');
+
+
       return false;
     }
   }
@@ -153,20 +151,20 @@ class PasscodeService {
   /// Verify passcode
   static Future<bool> verifyPasscode(String inputPasscode) async {
     try {
-      print('[PasscodeService] Verifying passcode: input=$inputPasscode, length=${inputPasscode.length}');
+
       
       final savedPasscode = await getPasscode();
       if (savedPasscode == null) {
-        print('[PasscodeService] No saved passcode found');
+
         return false;
       }
 
-      print('[PasscodeService] Saved passcode: ${savedPasscode.passcode}, length=${savedPasscode.passcode.length}');
-      print('[PasscodeService] Match result: ${savedPasscode.passcode == inputPasscode}');
+
+
       
       return savedPasscode.passcode == inputPasscode;
     } catch (e) {
-      print('Error verifying passcode: $e');
+
       return false;
     }
   }
@@ -182,7 +180,7 @@ class PasscodeService {
 
       return true;
     } catch (e) {
-      print('Error deleting passcode: $e');
+
       return false;
     }
   }
@@ -204,7 +202,6 @@ class PasscodeService {
       await box.write(_passcodeKey, model.toJson());
       return true;
     } catch (e) {
-      print('Error updating passcode: $e');
       return false;
     }
   }
