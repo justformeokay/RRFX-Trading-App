@@ -209,18 +209,9 @@ class PasscodeService {
   /// Store passcode to server API
   static Future<bool> storePasscodeToServer(String passcode, String passcodeConfirm) async {
     try {
-      print('[PasscodeService] Storing passcode to server...');
       
       // Get AuthService instance
       final authService = Get.find<AuthService>();
-      
-      // Prepare headers with Authorization
-      final headers = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Bearer ${authService.accessToken}',
-      };
-      
-      print('[PasscodeService] Headers: $headers');
       
       // Prepare body
       final body = {
@@ -228,23 +219,18 @@ class PasscodeService {
         'passcode_confirm': passcodeConfirm,
       };
       
-      print('[PasscodeService] Body: $body');
       
       // Make POST request
       final response = await authService.post('passcode/create', body);
       
-      print('[PasscodeService] Response: $response');
       
       // Check if response is successful
       if (response['status'] == true) {
-        print('[PasscodeService] ✅ Passcode stored to server successfully');
         return true;
       } else {
-        print('[PasscodeService] ❌ Failed to store passcode: ${response['message']}');
         return false;
       }
     } catch (e) {
-      print('[PasscodeService] ❌ Error storing passcode to server: $e');
       return false;
     }
   }
@@ -253,7 +239,6 @@ class PasscodeService {
   /// Returns a Map with 'status' (bool) and 'attempt' (int from API response)
   static Future<Map<String, dynamic>> verifyPasscodeWithServer(String passcode) async {
     try {
-      print('[PasscodeService] Verifying passcode with server...');
       
       // Get AuthService instance
       final authService = Get.find<AuthService>();
@@ -263,22 +248,18 @@ class PasscodeService {
         'passcode': passcode,
       };
       
-      print('[PasscodeService] Verifying passcode: $passcode');
       
       // Make POST request
       final response = await authService.post('passcode/verify', body);
       
-      print('[PasscodeService] Verification response: $response');
       
       // Check if response is successful
       if (response['status'] == true) {
-        print('[PasscodeService] ✅ Passcode verified successfully');
         return {
           'status': true,
           'attempt': 0,
         };
       } else {
-        print('[PasscodeService] ❌ Passcode verification failed: ${response['message']}');
         
         // Extract attempt from response
         int attempt = 1;
@@ -292,7 +273,6 @@ class PasscodeService {
         };
       }
     } catch (e) {
-      print('[PasscodeService] ❌ Error verifying passcode with server: $e');
       return {
         'status': false,
         'attempt': 0,
@@ -303,17 +283,13 @@ class PasscodeService {
   /// Request passcode reset via email
   static Future<Map<String, dynamic>> requestPasscodeReset() async {
     try {
-      print('[PasscodeService] Requesting passcode reset...');
       
       // Get AuthService instance
       final authService = Get.find<AuthService>();
       
-      print('[PasscodeService] Using Bearer token: ${authService.accessToken?.substring(0, 20)}...');
-      
       // Make POST request (no body needed, only Bearer token)
       final response = await authService.post('passcode/request-reset', {});
       
-      print('[PasscodeService] Reset request response: $response');
       
       // Return the full response
       return {
@@ -322,7 +298,6 @@ class PasscodeService {
         'statusCode': response['statusCode'] ?? 0,
       };
     } catch (e) {
-      print('[PasscodeService] ❌ Error requesting passcode reset: $e');
       return {
         'status': false,
         'message': 'Gagal mengirim request reset: $e',
@@ -334,17 +309,14 @@ class PasscodeService {
   /// Send OTP for passcode change
   static Future<Map<String, dynamic>> sendOTPForPasscodeChange() async {
     try {
-      print('[PasscodeService] Sending OTP for passcode change...');
       
       // Get AuthService instance
       final authService = Get.find<AuthService>();
       
-      print('[PasscodeService] Using Bearer token: ${authService.accessToken?.substring(0, 20)}...');
       
       // Make POST request (no body needed, only Bearer token)
       final response = await authService.post('passcode/send-otp', {});
       
-      print('[PasscodeService] OTP send response: $response');
       
       // Return the full response
       return {
@@ -353,7 +325,6 @@ class PasscodeService {
         'statusCode': response['statusCode'] ?? 0,
       };
     } catch (e) {
-      print('[PasscodeService] ❌ Error sending OTP: $e');
       return {
         'status': false,
         'message': 'Gagal mengirim OTP: $e',
@@ -370,7 +341,6 @@ class PasscodeService {
     required String otp,
   }) async {
     try {
-      print('[PasscodeService] Changing passcode...');
       
       // Get AuthService instance
       final authService = Get.find<AuthService>();
@@ -383,12 +353,10 @@ class PasscodeService {
         'otp': otp,
       };
       
-      print('[PasscodeService] Change passcode body: $body');
       
       // Make POST request
       final response = await authService.post('passcode/change-passcode', body);
       
-      print('[PasscodeService] Change passcode response: $response');
       
       // Return the full response
       return {
@@ -397,7 +365,6 @@ class PasscodeService {
         'statusCode': response['statusCode'] ?? 0,
       };
     } catch (e) {
-      print('[PasscodeService] ❌ Error changing passcode: $e');
       return {
         'status': false,
         'message': 'Gagal mengubah passcode: $e',

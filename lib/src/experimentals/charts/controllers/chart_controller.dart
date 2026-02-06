@@ -136,7 +136,6 @@ class ChartControllerExperimentals extends GetxController {
                     currentAsk.value = ticker.ask;
                     marketDigits.value = ticker.digits;
                     currentPrice.value = (ticker.bid + ticker.ask) / 2;
-                    print('🔔 [experimentals] matched single ticker -> symbol: $wsSymbol bid:${ticker.bid} ask:${ticker.ask}');
                   }
                 } else if (jsonResponse is Map<String, dynamic>) {
                   // multiple markets: { "XAUUSD.db": {..}, "GBPNZD.db": {..} }
@@ -152,7 +151,6 @@ class ChartControllerExperimentals extends GetxController {
                           currentAsk.value = ticker.ask;
                           marketDigits.value = ticker.digits;
                           currentPrice.value = (ticker.bid + ticker.ask) / 2;
-                          print('🔔 [experimentals] matched map ticker -> symbol: $symbolKey bid:${ticker.bid} ask:${ticker.ask}');
                         }
                       }
                     } catch (e) {
@@ -161,7 +159,7 @@ class ChartControllerExperimentals extends GetxController {
                   });
                 }
           } catch (e) {
-                print('⚠️ [experimentals] error parsing WS message: $e');
+            Get.log('⚠️ [experimentals] error parsing WS message: $e');
           }
         },
         onError: (error) {

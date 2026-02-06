@@ -183,150 +183,151 @@ class _WebViewChartViewState extends State<WebViewChartView> {
 
     return GestureDetector(
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-      child: Scaffold(
-        backgroundColor: isDark ? Colors.black : Colors.white,
-        appBar: AppBar(
-          leadingWidth: size.width * 0.25,
-          title: Text(
-            _currentSymbol ?? 'XAUUSD.db',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-        ),
-        leading: Center(
-          child: Text(
-            '${widget.serverType ?? accountController.selectedAccount.value?.type ?? 'Demo'} • ${widget.login ?? accountController.selectedAccount.value?.login ?? ''}',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: isDark ? Colors.grey.shade300 : Colors.grey.shade600,
-            ),
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Iconsax.chart_square_outline),
-            onPressed: _showMarketSelector,
-            color: CustomColor.secondaryColor,
-            tooltip: 'Pilih Market',
-          ),
-          IconButton(
-            icon: Icon(Iconsax.refresh_outline),
-            onPressed: _reloadChart,
-            color: CustomColor.secondaryColor,
-            tooltip: 'Reload Chart',
-          ),
-          // IconButton(
-          //   icon: Icon(Iconsax.home_outline),
-          //   onPressed: () => webViewController?.loadUrl(
-          //     urlRequest: URLRequest(url: WebUri(_buildChartUrl())),
-          //   ),
-          //   tooltip: 'Reset to Home',
-          // ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          // WebView
-          InAppWebView(
-            initialUrlRequest: URLRequest(url: WebUri(_buildChartUrl())),
-            initialSettings: InAppWebViewSettings(
-              // Pengaturan umum
-              useShouldOverrideUrlLoading: false, // Ubah ke false untuk iOS
-              mediaPlaybackRequiresUserGesture: false,
-              javaScriptEnabled: true,
-              javaScriptCanOpenWindowsAutomatically: false,
-              supportZoom: false,
-              builtInZoomControls: false,
-              displayZoomControls: false,
-              transparentBackground: false,
-              clearCache: false,
-              cacheEnabled: true,
-              minimumFontSize: 1,
-              textZoom: 100,
-
-              // Untuk iOS, gunakan setting yang lebih simple (skip untuk web)
-              useHybridComposition:
-                  kIsWeb ? false : !Platform.isIOS, // Disable hybrid composition di iOS
-              // Pengaturan khusus iOS
-              allowsInlineMediaPlayback: true,
-              allowsPictureInPictureMediaPlayback: false, // Disable PiP
-              iframeAllow: "camera; microphone; geolocation",
-              iframeAllowFullscreen: true,
-
-              // Pengaturan untuk kompatibilitas HTTP di iOS
-              allowUniversalAccessFromFileURLs: true,
-              allowFileAccessFromFileURLs: true,
-
-              // Network dan security settings untuk iOS
-              mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
-              resourceCustomSchemes: [],
-            ),
-            onWebViewCreated: (controller) {
-              webViewController = controller;
-              print('🌐 WebView created');
-              
-              // Untuk Web, langsung set loading false setelah delay karena onLoadStop tidak reliable
-              if (kIsWeb) {
-                Future.delayed(const Duration(seconds: 2), () {
-                  if (mounted && isLoading) {
-                    print('🌐 [Web] Auto-hiding loading overlay');
-                    setState(() {
-                      isLoading = false;
-                      loadingProgress = 1.0;
-                    });
-                  }
-                });
-              }
-              
-              // JavaScript handler untuk menerima price updates dari chart (skip untuk web)
-              if (!kIsWeb) {
-                controller.addJavaScriptHandler(
-                  handlerName: 'priceUpdate',
-                  callback: (args) {
-                    if (args.isNotEmpty && mounted) {
-                      try {
-                        final price = double.tryParse(args[0].toString());
-                        if (price != null) {
-                          currentPrice.value = price;
-                          print('📊 Current price updated: $price');
-                        }
-                      } catch (e) {
-                        print('⚠️ Error parsing price: $e');
-                      }
+      child: SafeArea(
+        child: Scaffold(
+          backgroundColor: isDark ? Colors.black : Colors.white,
+        //   appBar: AppBar(
+        //     leadingWidth: size.width * 0.25,
+        //     title: Text(
+        //       _currentSymbol ?? 'XAUUSD.db',
+        //     style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+        //   ),
+        //   leading: Center(
+        //     child: Text(
+        //       '${widget.serverType ?? accountController.selectedAccount.value?.type ?? 'Demo'} • ${widget.login ?? accountController.selectedAccount.value?.login ?? ''}',
+        //       style: GoogleFonts.inter(
+        //         fontSize: 12,
+        //         color: isDark ? Colors.grey.shade300 : Colors.grey.shade600,
+        //       ),
+        //     ),
+        //   ),
+        //   actions: [
+        //     IconButton(
+        //       icon: Icon(Iconsax.chart_square_outline),
+        //       onPressed: _showMarketSelector,
+        //       color: CustomColor.secondaryColor,
+        //       tooltip: 'Pilih Market',
+        //     ),
+        //     IconButton(
+        //       icon: Icon(Iconsax.refresh_outline),
+        //       onPressed: _reloadChart,
+        //       color: CustomColor.secondaryColor,
+        //       tooltip: 'Reload Chart',
+        //     ),
+        //     // IconButton(
+        //     //   icon: Icon(Iconsax.home_outline),
+        //     //   onPressed: () => webViewController?.loadUrl(
+        //     //     urlRequest: URLRequest(url: WebUri(_buildChartUrl())),
+        //     //   ),
+        //     //   tooltip: 'Reset to Home',
+        //     // ),
+        //   ],
+        // ),
+        body: Stack(
+          children: [
+            // WebView
+            InAppWebView(
+              initialUrlRequest: URLRequest(url: WebUri(_buildChartUrl())),
+              initialSettings: InAppWebViewSettings(
+                // Pengaturan umum
+                useShouldOverrideUrlLoading: false, // Ubah ke false untuk iOS
+                mediaPlaybackRequiresUserGesture: false,
+                javaScriptEnabled: true,
+                javaScriptCanOpenWindowsAutomatically: false,
+                supportZoom: false,
+                builtInZoomControls: false,
+                displayZoomControls: false,
+                transparentBackground: false,
+                clearCache: false,
+                cacheEnabled: true,
+                minimumFontSize: 1,
+                textZoom: 100,
+        
+                // Untuk iOS, gunakan setting yang lebih simple (skip untuk web)
+                useHybridComposition:
+                    kIsWeb ? false : !Platform.isIOS, // Disable hybrid composition di iOS
+                // Pengaturan khusus iOS
+                allowsInlineMediaPlayback: true,
+                allowsPictureInPictureMediaPlayback: false, // Disable PiP
+                iframeAllow: "camera; microphone; geolocation",
+                iframeAllowFullscreen: true,
+        
+                // Pengaturan untuk kompatibilitas HTTP di iOS
+                allowUniversalAccessFromFileURLs: true,
+                allowFileAccessFromFileURLs: true,
+        
+                // Network dan security settings untuk iOS
+                mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+                resourceCustomSchemes: [],
+              ),
+              onWebViewCreated: (controller) {
+                webViewController = controller;
+                print('🌐 WebView created');
+                
+                // Untuk Web, langsung set loading false setelah delay karena onLoadStop tidak reliable
+                if (kIsWeb) {
+                  Future.delayed(const Duration(seconds: 2), () {
+                    if (mounted && isLoading) {
+                      print('🌐 [Web] Auto-hiding loading overlay');
+                      setState(() {
+                        isLoading = false;
+                        loadingProgress = 1.0;
+                      });
                     }
-                  },
-                );
-              }
-
-              // Set timeout untuk iOS (skip untuk web)
-              if (!kIsWeb && Platform.isIOS) {
-                Future.delayed(Duration(seconds: 10), () {
-                  if (mounted && isLoading) {
-                    print('⏰ WebView timeout pada iOS, mencoba reload...');
-                    _reloadChart();
-                  }
-                });
-              }
-            },
-            onLoadStart: (controller, url) {
-              print('📥 Loading started...');
-              _startTimeoutTimer();
-              if (mounted) {
-                setState(() {
-                  isLoading = true;
-                  hasError = false;
-                  _isTimeout = false;
-                  errorMessage = null;
-                });
-              }
-            },
-            onLoadStop: (controller, url) async {
-              print('✅ Loading finished: $url');
-              _cancelTimeoutTimer();
-
-              // Inject JavaScript untuk ambil price dari chart (skip untuk web)
-              if (!kIsWeb) {
-                try {
-                  await controller.evaluateJavascript(
-                    source: """
+                  });
+                }
+                
+                // JavaScript handler untuk menerima price updates dari chart (skip untuk web)
+                if (!kIsWeb) {
+                  controller.addJavaScriptHandler(
+                    handlerName: 'priceUpdate',
+                    callback: (args) {
+                      if (args.isNotEmpty && mounted) {
+                        try {
+                          final price = double.tryParse(args[0].toString());
+                          if (price != null) {
+                            currentPrice.value = price;
+                            print('📊 Current price updated: $price');
+                          }
+                        } catch (e) {
+                          print('⚠️ Error parsing price: $e');
+                        }
+                      }
+                    },
+                  );
+                }
+        
+                // Set timeout untuk iOS (skip untuk web)
+                if (!kIsWeb && Platform.isIOS) {
+                  Future.delayed(Duration(seconds: 10), () {
+                    if (mounted && isLoading) {
+                      print('⏰ WebView timeout pada iOS, mencoba reload...');
+                      _reloadChart();
+                    }
+                  });
+                }
+              },
+              onLoadStart: (controller, url) {
+                print('📥 Loading started...');
+                _startTimeoutTimer();
+                if (mounted) {
+                  setState(() {
+                    isLoading = true;
+                    hasError = false;
+                    _isTimeout = false;
+                    errorMessage = null;
+                  });
+                }
+              },
+              onLoadStop: (controller, url) async {
+                print('✅ Loading finished: $url');
+                _cancelTimeoutTimer();
+        
+                // Inject JavaScript untuk ambil price dari chart (skip untuk web)
+                if (!kIsWeb) {
+                  try {
+                    await controller.evaluateJavascript(
+                      source: """
                     (function() {
                       console.log('🚀 Initializing price tracker...');
                       
@@ -405,133 +406,215 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                     console.log('✅ Price tracker initialized');
                   })();
                   """,
-                  );
-                } catch (e) {
-                  print('⚠️ JavaScript injection error: $e');
+                    );
+                  } catch (e) {
+                    print('⚠️ JavaScript injection error: $e');
+                  }
                 }
-              }
+        
+                // Update loading state untuk semua platform (mobile dan web)
+                if (mounted) {
+                  setState(() {
+                    isLoading = false;
+                  });
+                }
+              },
+              onProgressChanged: (controller, progress) {
+                if (mounted) {
+                  setState(() {
+                    loadingProgress = progress / 100;
+                  });
+                }
+              },
+              onLoadError: (controller, url, code, message) {
+                print('❌ Load error: $code - $message');
+                if (mounted) {
+                  setState(() {
+                    isLoading = false;
+                    hasError = true;
+                    errorMessage = null;
+                  });
+                }
+              },
+              onLoadHttpError: (controller, url, statusCode, description) {
+                print('❌ HTTP error: $statusCode - $description');
+                if (mounted) {
+                  setState(() {
+                    isLoading = false;
+                    hasError = true;
+                    errorMessage = null;
+                  });
+                }
+              },
+              onConsoleMessage: (controller, consoleMessage) {
+                print('💬 Console: ${consoleMessage.message}');
+              },
+            ),
 
-              // Update loading state untuk semua platform (mobile dan web)
-              if (mounted) {
-                setState(() {
-                  isLoading = false;
-                });
-              }
-            },
-            onProgressChanged: (controller, progress) {
-              if (mounted) {
-                setState(() {
-                  loadingProgress = progress / 100;
-                });
-              }
-            },
-            onLoadError: (controller, url, code, message) {
-              print('❌ Load error: $code - $message');
-              if (mounted) {
-                setState(() {
-                  isLoading = false;
-                  hasError = true;
-                  errorMessage = null;
-                });
-              }
-            },
-            onLoadHttpError: (controller, url, statusCode, description) {
-              print('❌ HTTP error: $statusCode - $description');
-              if (mounted) {
-                setState(() {
-                  isLoading = false;
-                  hasError = true;
-                  errorMessage = null;
-                });
-              }
-            },
-            onConsoleMessage: (controller, consoleMessage) {
-              print('💬 Console: ${consoleMessage.message}');
-            },
-          ),
-
-          // Loading Progress Bar
-          if (isLoading && !hasError)
             Positioned(
-              top: 0,
-              left: 0,
+              top: 10,
               right: 0,
-              child: LinearProgressIndicator(
-                value: loadingProgress,
-                backgroundColor: Colors.transparent,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  CustomColor.secondaryColor,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.grey.shade900 : Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20.0),
+                      bottomLeft: Radius.circular(20.0),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Market Button
+                      GestureDetector(
+                        onTap: _showMarketSelector,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: CustomColor.secondaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(30.0),
+                            border: Border.all(
+                              color: CustomColor.secondaryColor.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Iconsax.chart_square_outline,
+                                size: 16,
+                                color: CustomColor.secondaryColor,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _currentSymbol ?? 'XAUUSD.db',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: CustomColor.secondaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      
+                      // Divider
+                      Container(
+                        width: 1,
+                        height: 20,
+                        color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                      ),
+                      const SizedBox(width: 12),
+                      
+                      // Login Info
+                      Text(
+                        '${widget.serverType ?? (accountController.selectedAccount.value?.type?.capitalize ?? 'Demo')} • ${widget.login ?? accountController.selectedAccount.value?.login ?? ''}',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-
-          // Loading Overlay (only on initial load, skip for web after brief moment)
-          if (isLoading && loadingProgress < 0.5 && !kIsWeb)
-            Container(
-              color: isDark ? Colors.black87 : Colors.white70,
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(
-                      color: CustomColor.secondaryColor,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Memuat Chart...',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: isDark ? Colors.white70 : Colors.black87,
+        
+            // Loading Progress Bar
+            if (isLoading && !hasError)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: LinearProgressIndicator(
+                  value: loadingProgress,
+                  backgroundColor: Colors.transparent,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    CustomColor.secondaryColor,
+                  ),
+                ),
+              ),
+        
+            // Loading Overlay (only on initial load, skip for web after brief moment)
+            if (isLoading && loadingProgress < 0.5 && !kIsWeb)
+              Container(
+                color: isDark ? Colors.black87 : Colors.white70,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        color: CustomColor.secondaryColor,
                       ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Memuat Chart...',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+        
+            // Error State
+            if (hasError)
+              Container(
+                color: isDark ? Colors.black : Colors.white,
+                child: Center(
+                  child: _buildErrorStateContent(theme, isDark),
+                ),
+              ),
+          ],
+        ),
+        
+        // Bottom info bar + Trading Panel
+        bottomNavigationBar:
+            !hasError
+                ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Trading panel
+                    ChartTradingPanel(
+                      login:
+                          widget.login ??
+                          accountController.selectedAccount.value?.login ??
+                          '',
+                      symbol:
+                          _currentSymbol ??
+                          widget.symbol ??
+                          chartController.selectedMarket.value,
+                      currentPrice: currentPrice,
+                      onOrderExecuted: (operation) {
+                        print('✅ Order executed callback: $operation');
+                        print('🔄 Symbol: ${_currentSymbol ?? widget.symbol}');
+                        print(
+                          '👤 Login: ${widget.login ?? accountController.selectedAccount.value?.login}',
+                        );
+                        // Bisa tambahkan refresh chart atau logic lainnya jika diperlukan
+                        // _reloadChart(); // Uncomment jika ingin auto-reload chart setelah order
+                      },
                     ),
                   ],
-                ),
-              ),
+                )
+                : null,
             ),
-
-          // Error State
-          if (hasError)
-            Container(
-              color: isDark ? Colors.black : Colors.white,
-              child: Center(
-                child: _buildErrorStateContent(theme, isDark),
-              ),
-            ),
-        ],
-      ),
-
-      // Bottom info bar + Trading Panel
-      bottomNavigationBar:
-          !hasError
-              ? Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Trading panel
-                  ChartTradingPanel(
-                    login:
-                        widget.login ??
-                        accountController.selectedAccount.value?.login ??
-                        '',
-                    symbol:
-                        _currentSymbol ??
-                        widget.symbol ??
-                        chartController.selectedMarket.value,
-                    currentPrice: currentPrice,
-                    onOrderExecuted: (operation) {
-                      print('✅ Order executed callback: $operation');
-                      print('🔄 Symbol: ${_currentSymbol ?? widget.symbol}');
-                      print(
-                        '👤 Login: ${widget.login ?? accountController.selectedAccount.value?.login}',
-                      );
-                      // Bisa tambahkan refresh chart atau logic lainnya jika diperlukan
-                      // _reloadChart(); // Uncomment jika ingin auto-reload chart setelah order
-                    },
-                  ),
-                ],
-              )
-              : null,
-    ));
+      ));
   }
 
   @override

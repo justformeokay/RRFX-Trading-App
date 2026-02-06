@@ -613,8 +613,6 @@ class UtilitiesController extends GetxController {
         return false;
       }
 
-      print('🔑 Token: ${token.substring(0, 20)}...');
-
       final response = await http.get(
         Uri.parse("${GlobalVariable.mainURL}/refferal/list"),
         headers: {
@@ -623,20 +621,11 @@ class UtilitiesController extends GetxController {
         },
       );
 
-      print('📡 Response Status Code: ${response.statusCode}');
-      print('📊 Response Body: ${response.body}');
-
       final result = jsonDecode(response.body);
-      
-      print('✅ Decoded Result: $result');
-      print('📦 Status: ${result['status']}');
-      print('📦 Message: ${result['message']}');
-      print('📦 Data: ${result['data']}');
 
       if (response.statusCode == 200 && result['status'] == true) {
         // Check if data is a List (empty array for non-sales)
         if (result['data'] is List) {
-          print('⚠️ Data is List (non-sales account)');
           responseMessage.value = result['message'] ?? "Tidak ada link referral";
           inviteLinkModel.value = null;
           isLoading.value = false;
@@ -648,7 +637,6 @@ class UtilitiesController extends GetxController {
             (result['data'] is Map && 
              (result['data']['general'] == null || result['data']['general'].isEmpty) && 
              (result['data']['spesific'] == null || result['data']['spesific'].isEmpty))) {
-          print('⚠️ Data is empty Map');
           responseMessage.value = result['message'] ?? "Tidak ada link referral";
           inviteLinkModel.value = null;
           isLoading.value = false;
@@ -659,8 +647,6 @@ class UtilitiesController extends GetxController {
           "data": result["data"],
         });
         
-        print('🎯 Parsed Model - General: ${inviteLinkModel.value?.data?.general?.length}, Specific: ${inviteLinkModel.value?.data?.spesific?.length}');
-        
         responseMessage.value = result['message'] ?? "Berhasil memuat data";
         isLoading.value = false;
         return true;
@@ -670,7 +656,7 @@ class UtilitiesController extends GetxController {
       isLoading.value = false;
       return false;
     } catch (e) {
-      print('❌ Error in getRefferalLinks: $e');
+      Get.log('❌ Error in getRefferalLinks: $e');
       isLoading.value = false;
       responseMessage.value = e.toString();
       return false;

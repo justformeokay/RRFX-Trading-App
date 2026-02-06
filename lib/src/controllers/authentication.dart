@@ -97,9 +97,6 @@ class AuthController extends GetxController {
           throw TimeoutException("Request timeout");
         },
       );
-
-      print(response.body);
-      print(response.statusCode);
       Get.log("Device Information Sent: ${jsonEncode(deviceInfo)}");
       Get.log("Device ID Sent: ${deviceId ?? 'NULL'}");
       Get.log("📥 [AUTH] Login response status: ${response.statusCode}");
@@ -434,9 +431,7 @@ class AuthController extends GetxController {
         body: {'email': email},
       );
       var result = jsonDecode(response.body);
-      print("INI RESULT FORGOT PASSWORD: $result");
       responseMessage.value = result['message'];
-      print("INI RESPONSE MESSAGE: ${result['message']}");
       isLoading(false);
       if (result['status'] == true) {
         return true;
@@ -482,7 +477,7 @@ class AuthController extends GetxController {
         onTimeout: () => '1.0',
       );
     } catch (e) {
-      print('⚠️ [AUTH] getAppVersion error: $e, using fallback version');
+      Get.log('⚠️ [AUTH] getAppVersion error: $e, using fallback version');
       appVersion = '1.0';
     }
 

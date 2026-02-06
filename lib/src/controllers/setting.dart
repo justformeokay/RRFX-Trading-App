@@ -127,11 +127,6 @@ class SettingController extends GetxController{
   }) async {
     try {
       isLoading(true);
-      print('imageURL deposit: $imageURL');
-      print("accountID deposit: $accountID");
-      print("amount deposit: $amount");
-      print("bankUserID deposit: $bankUserID");
-      print("bankAdminID deposit: $bankAdminID");
       Map<String, dynamic> result = {};
       Map<String, String> body = {
         'account': accountID!,
@@ -233,10 +228,6 @@ class SettingController extends GetxController{
         return false;
       }
       
-      print("=== Withdrawal HTTP Direct ===");
-      print("URL: ${GlobalVariable.mainURL}/transaction/withdrawal");
-      print("Token: $accessToken");
-      
       // Buat multipart request seperti di Postman
       var request = http.MultipartRequest(
         'POST',
@@ -259,10 +250,7 @@ class SettingController extends GetxController{
       // Kirim request
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
-      
-      print("=== Response ===");
-      print("Status Code: ${response.statusCode}");
-      print("Body: ${response.body}");
+    
       
       // Cek jika response kosong
       if (response.body.trim().isEmpty) {
@@ -292,7 +280,7 @@ class SettingController extends GetxController{
       
     } catch (e) {
       isLoading(false);
-      print("Withdrawal Exception: $e");
+      Get.log("Withdrawal Exception: $e");
       responseMessage('Terjadi kesalahan: ${e.toString()}');
       return false;
     }

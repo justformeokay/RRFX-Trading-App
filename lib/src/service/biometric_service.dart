@@ -1,3 +1,4 @@
+import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
 import 'dart:io' show Platform;
@@ -18,7 +19,7 @@ class BiometricService {
     try {
       return await _localAuth.canCheckBiometrics;
     } catch (e) {
-      print('Error checking biometrics: $e');
+      Get.log('Error checking biometrics: $e');
       return false;
     }
   }
@@ -31,7 +32,7 @@ class BiometricService {
       final biometrics = await _localAuth.getAvailableBiometrics();
       return canCheck && biometrics.isNotEmpty;
     } catch (e) {
-      print('Error checking device support: $e');
+      Get.log('Error checking device support: $e');
       return false;
     }
   }
@@ -41,7 +42,7 @@ class BiometricService {
     try {
       return await _localAuth.getAvailableBiometrics();
     } catch (e) {
-      print('Error getting available biometrics: $e');
+      Get.log('Error getting available biometrics: $e');
       return [];
     }
   }
@@ -53,12 +54,9 @@ class BiometricService {
     bool stickyAuth = true,
   }) async {
     try {
-      print('[BiometricService] Starting authentication...');
-      print('[BiometricService] Platform: ${Platform.operatingSystem}');
       
       // Check if device supports biometric
       final isDeviceSupported = await deviceSupportsBiometric();
-      print('[BiometricService] Device supported: $isDeviceSupported');
       
       if (!isDeviceSupported) {
         // Untuk iOS, coba tetap authenticate meskipun check gagal
@@ -66,19 +64,16 @@ class BiometricService {
         if (!Platform.isIOS) {
           throw Exception('Device tidak mendukung biometric authentication');
         }
-        print('[BiometricService] iOS device - attempting anyway...');
+        Get.log('[BiometricService] iOS device - attempting anyway...');
       }
 
       // Get available biometrics
       final availableBiometrics = await getAvailableBiometrics();
-      print('[BiometricService] Available biometrics: $availableBiometrics');
       
       // Untuk iOS, kadang availableBiometrics bisa kosong tapi tetap bisa authenticate
       if (availableBiometrics.isEmpty && !Platform.isIOS) {
         throw Exception('Tidak ada biometric terdaftar di device');
       }
-
-      print('[BiometricService] Calling authenticate with reason: $reason');
       
       // iOS memerlukan localizedReason yang lebih spesifik
       final localizedReason = Platform.isIOS 
@@ -96,11 +91,9 @@ class BiometricService {
         ),
       );
 
-      print('[BiometricService] Authentication result: $isAuthenticated');
+      Get.log('[BiometricService] Authentication result: $isAuthenticated');
       return isAuthenticated;
     } on PlatformException catch (e) {
-      print('[BiometricService] PlatformException: ${e.code} - ${e.message}');
-      print('[BiometricService] Full error details: $e');
       
       // Handle specific errors
       if (e.code == 'NotAvailable') {
@@ -112,12 +105,9 @@ class BiometricService {
       } else if (e.code == 'PermanentlyLockedOut') {
         throw Exception('Biometric terkunci permanen. Gunakan passcode');
       } else if (e.code == 'UserCanceled' || e.code == 'PasscodeNotSet' || e.code == 'AuthenticationCanceled') {
-        // Don't throw error for user cancellation
-        print('[BiometricService] User canceled authentication');
         return false;
       } else if (e.code == 'BiometricOnlyNotSupported') {
         // iOS specific - retry with biometricOnly: false
-        print('[BiometricService] BiometricOnly not supported, retrying...');
         try {
           final retryAuth = await _localAuth.authenticate(
             localizedReason: reason,
@@ -130,14 +120,14 @@ class BiometricService {
           );
           return retryAuth;
         } catch (retryError) {
-          print('[BiometricService] Retry failed: $retryError');
+          Get.log('[BiometricService] Retry failed: $retryError');
           return false;
         }
       }
       
       throw Exception('Autentikasi biometric gagal: ${e.message}');
     } catch (e) {
-      print('[BiometricService] Error during authentication: $e');
+      Get.log('[BiometricService] Error during authentication: $e');
       throw Exception('Terjadi kesalahan: $e');
     }
   }
@@ -151,7 +141,7 @@ class BiometricService {
       final availableBiometrics = await getAvailableBiometrics();
       return availableBiometrics.contains(BiometricType.fingerprint);
     } catch (e) {
-      print('Error checking enrollment: $e');
+      Get.log('Error checking enrollment: $e');
       return false;
     }
   }
@@ -171,7 +161,7 @@ class BiometricService {
       
       return 'Biometric';
     } catch (e) {
-      print('Error getting biometric type: $e');
+      Get.log('Error getting biometric type: $e');
       return 'Biometric';
     }
   }

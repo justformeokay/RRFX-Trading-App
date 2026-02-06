@@ -46,7 +46,6 @@ class PasscodeController extends GetxController {
       isBiometricEnabled.value = await PasscodeService.isBiometricEnabled();
       biometricType.value = await PasscodeService.getBiometricType() ?? 'Biometric';
     } catch (e) {
-      print('Error initializing biometric: $e');
       biometricAvailable.value = false;
     }
   }
@@ -57,13 +56,10 @@ class PasscodeController extends GetxController {
       final canCheck = await _biometricService.canCheckBiometrics();
       final isDeviceSupported = await _biometricService.deviceSupportsBiometric();
       biometricAvailable.value = canCheck && isDeviceSupported;
-      
       isBiometricEnabled.value = await PasscodeService.isBiometricEnabled();
       biometricType.value = await PasscodeService.getBiometricType() ?? 'Biometric';
-      
-      print('[PasscodeController] Biometric status refreshed - available: ${biometricAvailable.value}, enabled: ${isBiometricEnabled.value}');
     } catch (e) {
-      print('[PasscodeController] Error refreshing biometric status: $e');
+      Get.log('[PasscodeController] Error refreshing biometric status: $e');
     }
   }
   
@@ -124,20 +120,13 @@ class PasscodeController extends GetxController {
   
   /// Verify confirm passcode
   Future<bool> savePasscode({bool enableBiometric = false}) async {
-    print('[PasscodeController] savePasscode called');
-    print('[PasscodeController] enteredPasscode=${enteredPasscode.value}, length=${enteredPasscode.value.length}');
-    print('[PasscodeController] confirmPasscode=${confirmPasscode.value}, length=${confirmPasscode.value.length}');
-    
     if (confirmPasscode.value.length != 6) {
-      print('[PasscodeController] confirmPasscode length is not 6');
       return false;
     }
     
     if (enteredPasscode.value == confirmPasscode.value) {
-      print('[PasscodeController] Passcodes match! Storing to server...');
       isLoading.value = true;
       
-      String? biometricType;
       if (enableBiometric && biometricAvailable.value) {
         try {
           // Authenticate with biometric first
@@ -147,39 +136,34 @@ class PasscodeController extends GetxController {
           );
           
           if (isAuthenticated) {
-            biometricType = await _biometricService.getBiometricTypeName();
+            await _biometricService.getBiometricTypeName();
             useBiometric.value = true;
           }
         } catch (e) {
-          print('Error during biometric setup: $e');
+          Get.log('Error during biometric setup: $e');
         }
       }
       
       // Store passcode to server only (no local storage)
-      print('[PasscodeController] Storing passcode to server...');
       final serverSuccess = await PasscodeService.storePasscodeToServer(
         enteredPasscode.value,
         confirmPasscode.value,
       );
       
-      print('[PasscodeController] Server store result: $serverSuccess');
-      
       isLoading.value = false;
       return serverSuccess;
     } else {
       // Passcodes don't match
-      print('[PasscodeController] Passcodes do NOT match!');
+      Get.log('[PasscodeController] Passcodes do NOT match!');
       return false;
     }
   }
   
   /// Verify passcode (uses server API - no local storage)
   Future<bool> verifyPasscode() async {
-    print('[PasscodeController] verifyPasscode called');
-    print('[PasscodeController] enteredPasscode=${enteredPasscode.value}, length=${enteredPasscode.value.length}');
     
     if (enteredPasscode.value.length != 6) {
-      print('[PasscodeController] enteredPasscode length is not 6, returning false');
+      Get.log('[PasscodeController] enteredPasscode length is not 6, returning false');
       return false;
     }
     
@@ -187,7 +171,7 @@ class PasscodeController extends GetxController {
     final response = await PasscodeService.verifyPasscodeWithServer(enteredPasscode.value);
     isLoading.value = false;
     
-    print('[PasscodeController] verifyPasscode response: $response');
+    Get.log('[PasscodeController] verifyPasscode response: $response');
     
     final success = response['status'] == true;
     final attempt = response['attempt'] ?? 0;
@@ -195,7 +179,7 @@ class PasscodeController extends GetxController {
     // Store the attempt count from API response
     lastAttemptCount.value = attempt;
     
-    print('[PasscodeController] Success: $success, Attempt from API: $attempt');
+    Get.log('[PasscodeController] Success: $success, Attempt from API: $attempt');
     
     if (!success) {
       remainingAttempts.value--;
@@ -212,23 +196,20 @@ class PasscodeController extends GetxController {
   /// @param forSetup: true jika untuk setup biometric pertama kali
   Future<bool> authenticateWithBiometric({bool forSetup = false}) async {
     try {
-      print('[PasscodeController] authenticateWithBiometric called with forSetup=$forSetup');
-      print('[PasscodeController] biometricAvailable=${biometricAvailable.value}');
-      print('[PasscodeController] isBiometricEnabled=${isBiometricEnabled.value}');
       
       if (!biometricAvailable.value) {
-        print('[PasscodeController] Biometric not available');
+        Get.log('[PasscodeController] Biometric not available');
         throw Exception('Biometric tidak tersedia di device ini');
       }
 
       // Jika tidak untuk setup, check apakah sudah enabled
       if (!forSetup && !isBiometricEnabled.value) {
-        print('[PasscodeController] Biometric not enabled (and not for setup)');
+        Get.log('[PasscodeController] Biometric not enabled (and not for setup)');
         throw Exception('Biometric belum diaktifkan');
       }
       
       isLoading.value = true;
-      print('[PasscodeController] Calling _biometricService.authenticate()...');
+      Get.log('[PasscodeController] Calling _biometricService.authenticate()...');
       
       final isAuthenticated = await _biometricService.authenticate(
         reason: forSetup 
@@ -237,7 +218,7 @@ class PasscodeController extends GetxController {
         useErrorDialogs: false,
       );
       
-      print('[PasscodeController] authenticate() returned: $isAuthenticated');
+      Get.log('[PasscodeController] authenticate() returned: $isAuthenticated');
       
       if (isAuthenticated) {
         remainingAttempts.value = 5;
@@ -250,7 +231,7 @@ class PasscodeController extends GetxController {
       return false;
     } catch (e) {
       isLoading.value = false;
-      print('[PasscodeController] Error during biometric authentication: $e');
+      Get.log('[PasscodeController] Error during biometric authentication: $e');
       return false;
     }
   }

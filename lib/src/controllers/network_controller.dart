@@ -27,7 +27,7 @@ class NetworkController extends GetxController {
         }
       });
     } catch (e) {
-      print('⚠️ [NETWORK] Connectivity listener error: $e');
+      Get.log('⚠️ [NETWORK] Connectivity listener error: $e');
       // Assume connected if listener fails
       hasConnection.value = true;
     }
@@ -45,7 +45,7 @@ class NetworkController extends GetxController {
         checkNetworkSpeed();
       }
     } catch (e) {
-      print('⚠️ [NETWORK] Connection check error: $e');
+      Get.log('⚠️ [NETWORK] Connection check error: $e');
       // Assume connected if check fails
       hasConnection.value = true;
     }
@@ -77,8 +77,6 @@ class NetworkController extends GetxController {
       
       if (speed != null) {
         networkSpeed.value = speed;
-        print('🌐 Network Latency: ${speed}ms');
-        
         // Jika network speed > 800ms, tampilkan warning dialog
         if (speed > 800) {
           await Future.delayed(const Duration(milliseconds: 300));
@@ -86,7 +84,7 @@ class NetworkController extends GetxController {
         }
       }
     } catch (e) {
-      print('Error checking network speed: $e');
+      Get.log('Error checking network speed: $e');
       // Close loading dialog jika ada error
       try {
         Get.back();
@@ -115,7 +113,7 @@ class NetworkController extends GetxController {
       
       return speed;
     } catch (e) {
-      print('Error getting network speed: $e');
+      Get.log('Error getting network speed: $e');
       return null;
     }
   }

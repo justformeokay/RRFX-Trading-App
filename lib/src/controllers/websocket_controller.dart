@@ -122,20 +122,16 @@ class MarketWebSocketController extends GetxController
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    // print('🔄 App lifecycle changed: $state');
 
     switch (state) {
       case AppLifecycleState.resumed:
         // App kembali ke foreground, reconnect jika perlu
         if (status.value == WebSocketStatus.failed ||
             status.value == WebSocketStatus.disconnected) {
-          // print('📱 App resumed, reconnecting WebSocket...');
           _reconnectWebSocket();
         }
         break;
       case AppLifecycleState.paused:
-        // App ke background, jangan disconnect (biarkan tetap berjalan)
-        // print('📱 App paused, keeping WebSocket alive...');
         break;
       case AppLifecycleState.inactive:
       case AppLifecycleState.detached:
@@ -269,15 +265,9 @@ class MarketWebSocketController extends GetxController
   void _scheduleReconnect() {
     if (_reconnectTimer?.isActive == true) return;
     if (_reconnectAttempts >= _maxReconnectAttempts) {
-      print('❌ Max reconnection attempts reached. Stopping reconnect.');
       return;
     }
-
     _reconnectAttempts++;
-    print(
-      '🔄 Scheduling reconnect attempt $_reconnectAttempts/$_maxReconnectAttempts in ${_reconnectDelay.inSeconds}s...',
-    );
-
     _reconnectTimer = Timer(_reconnectDelay, () {
       if (!_isManuallyDisconnected) {
         _reconnectWebSocket();
@@ -286,11 +276,10 @@ class MarketWebSocketController extends GetxController
   }
 
   void _reconnectWebSocket() {
-    print('🔄 Attempting to reconnect WebSocket...');
     try {
       channel?.sink.close();
     } catch (e) {
-      print('⚠️ Error closing old channel: $e');
+      Get.log('⚠️ Error closing old channel: $e');
     }
     // _connectWebSocket();
   }
@@ -301,13 +290,12 @@ class MarketWebSocketController extends GetxController
   }
 
   void disconnect() {
-    print('🛑 Manually disconnecting WebSocket');
     _isManuallyDisconnected = true;
     _reconnectTimer?.cancel();
     try {
       channel?.sink.close();
     } catch (e) {
-      print('⚠️ Error closing channel: $e');
+      Get.log('⚠️ Error closing channel: $e');
     }
     status.value = WebSocketStatus.disconnected;
   }
@@ -320,7 +308,7 @@ class MarketWebSocketController extends GetxController
     try {
       channel?.sink.close();
     } catch (e) {
-      print('⚠️ Error closing channel on dispose: $e');
+      Get.log('⚠️ Error closing channel on dispose: $e');
     }
     super.onClose();
   }

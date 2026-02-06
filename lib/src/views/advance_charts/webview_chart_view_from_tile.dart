@@ -277,9 +277,6 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
               }
             },
             onLoadHttpError: (controller, url, statusCode, description) {
-              print('❌ HTTP error: $statusCode - $description');
-              print('🌐 Failed URL: $url');
-              print('🍎 Platform: ${kIsWeb ? 'Web' : (Platform.isIOS ? 'iOS' : 'Android')}');
               if (mounted) {
                 setState(() {
                   isLoading = false;
@@ -288,9 +285,7 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
                 });
               }
             },
-            onConsoleMessage: (controller, consoleMessage) {
-              print('💬 Console: ${consoleMessage.message}');
-            },
+            onConsoleMessage: (controller, consoleMessage) {},
           ),
 
           // Loading Progress Bar
