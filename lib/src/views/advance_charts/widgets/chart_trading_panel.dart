@@ -258,55 +258,67 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
         ),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            symbolClean,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: Get.isDarkMode ? Colors.white : Colors.black,
+          Flexible(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    symbolClean,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Get.isDarkMode ? Colors.white : Colors.black,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  operation.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: operationColor,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  lot.toStringAsFixed(1),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Get.isDarkMode ? Colors.white70 : Colors.black87,
+                  ),
+                ),
+                // Show pending price for pending orders or open price for market orders
+                if (pendingPrice != null || openPrice != null) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    '@',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      color: Get.isDarkMode ? Colors.white38 : Colors.black38,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      (openPrice ?? pendingPrice).toString(),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: operationColor,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          const SizedBox(width: 12),
-          Text(
-            operation.toUpperCase(),
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: operationColor,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            lot.toStringAsFixed(1),
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Get.isDarkMode ? Colors.white70 : Colors.black87,
-            ),
-          ),
-          // Show pending price for pending orders or open price for market orders
-          if (pendingPrice != null || openPrice != null) ...[
-            const SizedBox(width: 8),
-            Text(
-              '@',
-              style: GoogleFonts.inter(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                color: Get.isDarkMode ? Colors.white38 : Colors.black38,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              (openPrice ?? pendingPrice).toString(),
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: operationColor,
-              ),
-            ),
-          ],
           const SizedBox(width: 12),
           if (status == 'loading')
             SizedBox(

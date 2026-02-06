@@ -172,6 +172,7 @@ class ChartExecutionController extends GetxController {
       print('   Login: $login');
       print('======================================');
 
+
       final Map<String, String> requestBody = {
         'login': login,
         'symbol': symbol,
@@ -179,6 +180,8 @@ class ChartExecutionController extends GetxController {
         'volume': lotVolume.toString(),
         'price': price.toString(),
       };
+
+      print("INI REQUEST BODY: $requestBody");
 
       // Add optional SL/TP if provided
       if (sl != null && sl > 0) {

@@ -269,20 +269,14 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
                 delegate: SliverChildBuilderDelegate((context, index) {
                   return _PositionTile(
                     index: index,
-                    digits:
-                        opened[index].digits != null
-                            ? int.tryParse("${opened[index].digits}")
-                            : null,
+                    digits: opened[index].digits != null ? int.tryParse("${opened[index].digits}") : null,
                     positionId: "${opened[index].ticket}",
                     openTime: "${opened[index].openTime}",
                     swap: "${opened[index].swap}",
                     stopLoss: "${opened[index].stopLoss}",
                     takeProfit: "${opened[index].takeProfit}",
                     doubleProfit: -0.10 * index,
-                    profit:
-                        opened[index].profit != null
-                            ? "${opened[index].profit}"
-                            : "0.00",
+                    profit: opened[index].profit != null ? "${opened[index].profit}" : "0.00",
                     symbol: "${opened[index].symbol}",
                     direction: "${opened[index].orderType}",
                     volume: "${opened[index].lot}",
@@ -801,7 +795,7 @@ class _PositionTile extends StatelessWidget {
           AppSnackbar.success("Posisi $positionId berhasil ditutup.");
 
           // Reload positions once
-          await tradingController.openOrder(login: loginID);
+          // [DISABLED] await tradingController.openOrder(login: loginID);
         } catch (e) {
           // Close loading
           if (Get.isDialogOpen ?? false) Get.back();
