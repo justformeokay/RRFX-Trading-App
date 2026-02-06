@@ -73,8 +73,7 @@ class AuthController extends GetxController {
 
       Get.log("📡 [AUTH] Sending login request...");
       final response = await http.post(
-        // Uri.tryParse("${GlobalVariable.mainURL}/auth/login")!,
-        Uri.tryParse("https://upload-aws.techcrm.net/auth/login")!,
+        Uri.tryParse("${GlobalVariable.mainURL}/auth/login")!,
         headers: {
           'x-api-key': GlobalVariable.x_api_key,
           'Content-Type': 'application/x-www-form-urlencoded',

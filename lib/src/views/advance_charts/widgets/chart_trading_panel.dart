@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
+import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
 import '../controllers/chart_execution_controller.dart';
 
 class ChartTradingPanel extends StatefulWidget {
@@ -501,23 +502,30 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
         _executionQueue.refresh();
       }
       
-      // Show error snackbar with more details
+      // Show error popup dengan ModernAlertDialog
       if (mounted) {
         String errorMsg = e.toString().replaceAll('Exception: ', '');
+        String userFriendlyMsg = 'Order gagal dilakukan. Silakan periksa kembali data Anda dan coba lagi.';
+        
+        // Map error codes ke pesan yang user-friendly
         if (errorMsg.contains('524')) {
-          errorMsg = 'Server timeout. Coba lagi dalam beberapa saat.';
-        } else if (errorMsg.contains('500')) {
-          errorMsg = 'Server error. Silakan coba lagi.';
+          userFriendlyMsg = 'Koneksi ke server bermasalah. Silakan coba lagi dalam beberapa saat.';
+        } else if (errorMsg.contains('500') || errorMsg.contains('502')) {
+          userFriendlyMsg = 'Server sedang mengalami gangguan. Silakan coba lagi.';
+        } else if (errorMsg.toLowerCase().contains('invalid') || errorMsg.toLowerCase().contains('ticket')) {
+          userFriendlyMsg = 'Pesanan tidak dapat diproses karena data tidak valid. Silakan coba lagi.';
+        } else if (errorMsg.toLowerCase().contains('insufficient') || errorMsg.toLowerCase().contains('balance')) {
+          userFriendlyMsg = 'Saldo Anda tidak cukup untuk melakukan pesanan ini.';
+        } else if (errorMsg.toLowerCase().contains('market')) {
+          userFriendlyMsg = 'Pasar sedang ditutup atau tidak tersedia saat ini.';
         }
         
-        Get.snackbar(
-          'Order Gagal',
-          errorMsg,
-          backgroundColor: Colors.red.shade800,
-          colorText: Colors.white,
-          icon: const Icon(Iconsax.close_circle_bold, color: Colors.white),
-          snackPosition: SnackPosition.TOP,
-          duration: const Duration(seconds: 3),
+        ModernAlertDialog.error(
+          title: 'Order Gagal',
+          message: userFriendlyMsg,
+          onPressed: () {
+            Get.back();
+          },
         );
       }
       
@@ -849,8 +857,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
               Expanded(
                 child: _buildInputField(
                   controller: _stopLossController,
-                  label: 'Stop Loss (SL)',
-                  hint: 'Optional',
+                  label: 'Stop Loss (Points)',
+                  hint: 'e.g., 50',
                   icon: Iconsax.shield_cross_bold,
                   isDark: isDark,
                   isRequired: false,
@@ -861,8 +869,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
               Expanded(
                 child: _buildInputField(
                   controller: _takeProfitController,
-                  label: 'Take Profit (TP)',
-                  hint: 'Optional',
+                  label: 'Take Profit (Points)',
+                  hint: 'e.g., 100',
                   icon: Iconsax.medal_star_bold,
                   isDark: isDark,
                   isRequired: false,
@@ -870,8 +878,31 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
               ),
             ],
           ),
-
-          const SizedBox(height: 8),
+          
+          // Info text for SL/TP points
+          Padding(
+            padding: const EdgeInsets.only(top: 6, bottom: 8),
+            child: Row(
+              children: [
+                Icon(
+                  Iconsax.info_circle_bold,
+                  size: 12,
+                  color: isDark ? Colors.blue.shade300 : Colors.blue.shade600,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    'SL/TP menggunakan points. Contoh: 50 points = 0.0050 dari entry price',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -1388,9 +1419,34 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       }
     }
 
-    // Parse optional SL and TP
-    final sl = double.tryParse(_stopLossController.text.replaceAll(',', ''));
-    final tp = double.tryParse(_takeProfitController.text.replaceAll(',', ''));
+    // Parse optional SL and TP (now in points, need to convert to price)
+    final slPoints = double.tryParse(_stopLossController.text.replaceAll(',', ''));
+    final tpPoints = double.tryParse(_takeProfitController.text.replaceAll(',', ''));
+    
+    // Convert points to price based on entry price and direction
+    // For buy orders: SL = entryPrice - (slPoints * point), TP = entryPrice + (tpPoints * point)
+    // For sell orders: SL = entryPrice + (slPoints * point), TP = entryPrice - (tpPoints * point)
+    // point value = 0.0001 for most pairs (0.01 for JPY pairs)
+    final pointValue = widget.symbol.toUpperCase().contains('JPY') ? 0.01 : 0.0001;
+    
+    double? sl;
+    double? tp;
+    
+    if (slPoints != null && slPoints > 0) {
+      if (direction == 'buy') {
+        sl = entryPrice - (slPoints * pointValue);
+      } else {
+        sl = entryPrice + (slPoints * pointValue);
+      }
+    }
+    
+    if (tpPoints != null && tpPoints > 0) {
+      if (direction == 'buy') {
+        tp = entryPrice + (tpPoints * pointValue);
+      } else {
+        tp = entryPrice - (tpPoints * pointValue);
+      }
+    }
 
     // Determine operation type based on execution type and direction
     String operation;
@@ -1437,7 +1493,9 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
     try {
       print('🔄 Processing pending order: $operation');
-      print('📊 Price: $entryPrice, SL: $sl, TP: $tp');
+      print('📊 Entry Price: $entryPrice');
+      print('📊 SL Points: ${slPoints ?? "Not set"} → Price: ${sl ?? "Not set"}');
+      print('📊 TP Points: ${tpPoints ?? "Not set"} → Price: ${tp ?? "Not set"}');
 
       final response = await executionController.executePendingOrder(
         login: widget.login,
@@ -1490,23 +1548,30 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
         _executionQueue.refresh();
       }
 
-      // Show error snackbar
+      // Show error popup dengan ModernAlertDialog
       if (mounted) {
         String errorMsg = e.toString().replaceAll('Exception: ', '');
+        String userFriendlyMsg = 'Pending order gagal dibuat. Silakan periksa kembali data Anda dan coba lagi.';
+        
+        // Map error codes ke pesan yang user-friendly
         if (errorMsg.contains('524')) {
-          errorMsg = 'Server timeout. Coba lagi dalam beberapa saat.';
-        } else if (errorMsg.contains('500')) {
-          errorMsg = 'Server error. Silakan coba lagi.';
+          userFriendlyMsg = 'Koneksi ke server bermasalah. Silakan coba lagi dalam beberapa saat.';
+        } else if (errorMsg.contains('500') || errorMsg.contains('502')) {
+          userFriendlyMsg = 'Server sedang mengalami gangguan. Silakan coba lagi.';
+        } else if (errorMsg.toLowerCase().contains('invalid') || errorMsg.toLowerCase().contains('ticket') || errorMsg.toLowerCase().contains('price')) {
+          userFriendlyMsg = 'Data pending order tidak valid. Periksa entry price, SL, dan TP yang Anda masukkan.';
+        } else if (errorMsg.toLowerCase().contains('insufficient') || errorMsg.toLowerCase().contains('balance')) {
+          userFriendlyMsg = 'Saldo Anda tidak cukup untuk membuat pending order ini.';
+        } else if (errorMsg.toLowerCase().contains('market')) {
+          userFriendlyMsg = 'Pasar sedang ditutup atau tidak tersedia saat ini.';
         }
-
-        Get.snackbar(
-          'Pending Order Gagal',
-          errorMsg,
-          backgroundColor: Colors.red.shade800,
-          colorText: Colors.white,
-          icon: const Icon(Iconsax.close_circle_bold, color: Colors.white),
-          snackPosition: SnackPosition.TOP,
-          duration: const Duration(seconds: 3),
+        
+        ModernAlertDialog.error(
+          title: 'Pending Order Gagal',
+          message: userFriendlyMsg,
+          onPressed: () {
+            Get.back();
+          },
         );
       }
 
