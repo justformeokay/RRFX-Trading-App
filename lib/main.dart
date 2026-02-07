@@ -30,7 +30,13 @@ void main() async {
   setupHttpOverrides();
   
   // Firebase
-  try { await initFirebaseAndNotifications(); } catch (e) { print(e); }
+  try { 
+    print('🔥 Initializing Firebase and Notifications...');
+    await initFirebaseAndNotifications(); 
+    print('✅ Firebase initialization completed');
+  } catch (e) { 
+    print('❌ Firebase initialization failed: $e'); 
+  }
   
   final themeController = Get.put(ThemeController());
 

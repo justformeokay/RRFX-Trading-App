@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:rrfx/src/components/appbars/default.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 
@@ -19,6 +20,44 @@ class _ResourcesCenterState extends State<ResourcesCenter> {
     'edukasi': false,
     'perusahaan': false,
   };
+
+  // URL mapping untuk setiap resource
+  final Map<String, String> resourceUrls = {
+    'Jenis Akun': 'https://rrfx.co.id/live-account',
+    'Info Spread': 'https://rrfx.co.id/spread-info',
+    'Deposit & Withdrawal': 'https://rrfx.co.id/deposit-and-withdrawal',
+    'Platform': 'https://rrfx.co.id/platform',
+    'Forex': 'https://rrfx.co.id/forex',
+    'Komoditi': 'https://rrfx.co.id/commodity',
+    'Indeks': 'https://rrfx.co.id/stock',
+    'Hubungi Kami': 'https://rrfx.co.id/contact-us',
+    'Legalitas': 'https://rrfx.co.id/legal',
+    'Tentang Kami': 'https://rrfx.co.id/about-us',
+  };
+
+  // Function untuk membuka URL
+  Future<void> _launchURL(String url) async {
+    try {
+      final Uri uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Tidak dapat membuka URL: $url'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   final Map<String, Map<String, dynamic>> resourcesData = {
     'trading': {
@@ -406,13 +445,17 @@ class _ResourcesCenterState extends State<ResourcesCenter> {
   }) {
     return InkWell(
       onTap: () {
-        // Akan diintegrasikan dengan navigasi actual nanti
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Buka: $label"),
-            duration: const Duration(milliseconds: 1500),
-          ),
-        );
+        // Check if URL exists for this resource
+        if (resourceUrls.containsKey(label)) {
+          _launchURL(resourceUrls[label]!);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Resource belum tersedia: $label"),
+              duration: const Duration(milliseconds: 1500),
+            ),
+          );
+        }
       },
       borderRadius: BorderRadius.circular(10),
       child: Padding(

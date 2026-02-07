@@ -123,25 +123,88 @@ class AuthService extends GetxController {
       Get.log('📥 POST RESPONSE');
       Get.log('Status Code: ${response.statusCode}');
       Get.log('Response Headers: ${response.headers}');
-      Get.log('Response Body: ${response.body}');
+      Get.log('Body Preview: ${response.body.length > 200 ? response.body.substring(0, 200) + '...' : response.body}');
       Get.log('Body Length: ${response.body.length} characters');
       Get.log('Body is empty: ${response.body.isEmpty}');
       Get.log('═══════════════════════════════════════════');
 
-      print("POST ${GlobalVariable.mainURL}/$url");
+      // Handle server errors (5xx)
+      if (response.statusCode >= 500) {
+        print("❌ Server Error ${response.statusCode}");
+        print("Response preview: ${response.body.substring(0, min(500, response.body.length))}");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Server error (${response.statusCode}). Please try again later.',
+          'response': {},
+        };
+      }
+
+      // Check if response is HTML (error page) instead of JSON
+      if (response.body.trimLeft().startsWith('<') || response.body.contains('<br')) {
+        print("❌ Server returned HTML instead of JSON (possibly error page)");
+        print("Response preview: ${response.body.substring(0, min(500, response.body.length))}");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Server returned an error page. Please check your connection or try again later.',
+          'response': {},
+        };
+      }
+
+      // Handle empty response
+      if (response.body.isEmpty) {
+        print("❌ Server returned empty response body");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Server returned empty response',
+          'response': {},
+        };
+      }
 
       if (response.statusCode == 300) {
         if(maxReload > 3) {
-          throw Exception("Telah mencapai max reload, silahkan login kembali");
+          return {
+            'status': false,
+            'statusCode': 300,
+            'message': 'Max reload attempts exceeded, please login again',
+            'response': {},
+          };
         }
         
         Map<String, dynamic> refreshTokenResponse = await refreshingToken(body: {
           'refresh_token': refreshToken ?? "",
         });
 
-        // Initialize new access & refresh token from response
-        accessToken = refreshTokenResponse['response']['access_token'];
-        refreshToken = refreshTokenResponse['response']['refresh_token'];
+        // Check if token refresh failed
+        if (refreshTokenResponse['status'] != true) {
+          print("❌ Token refresh failed: ${refreshTokenResponse['message']}");
+          // Clear tokens and return error
+          SharedPreferences preferences = await SharedPreferences.getInstance();
+          await preferences.remove('accessToken');
+          await preferences.remove('refreshToken');
+          return {
+            'status': false,
+            'statusCode': 401,
+            'message': 'Session expired, please login again',
+            'response': {},
+          };
+        }
+
+        // Safely access response data
+        try {
+          accessToken = refreshTokenResponse['response']['access_token'];
+          refreshToken = refreshTokenResponse['response']['refresh_token'];
+        } catch (e) {
+          print("❌ Error extracting tokens from refresh response: $e");
+          return {
+            'status': false,
+            'statusCode': 500,
+            'message': 'Failed to extract tokens from refresh response',
+            'response': {},
+          };
+        }
 
         // Set new access & refresh token to SharedPreferences
         SharedPreferences preferences = await SharedPreferences.getInstance();
@@ -151,7 +214,21 @@ class AuthService extends GetxController {
         return await post(url, body, maxReload: maxReload + 1);
       }
 
-      Map<String, dynamic> respBody = jsonDecode(response.body);
+      // Safe JSON decode
+      Map<String, dynamic> respBody;
+      try {
+        respBody = jsonDecode(response.body);
+      } catch (e) {
+        print("❌ JSON Decode Error in POST: ${e.toString()}");
+        print("Response preview: ${response.body.substring(0, min(500, response.body.length))}");
+        print("Response Status Code: ${response.statusCode}");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Invalid server response format. Server might be down.',
+          'response': {},
+        };
+      }
       
       // DEBUG: Log parsed response
       Get.log('✅ PARSED RESPONSE DATA');
@@ -167,10 +244,19 @@ class AuthService extends GetxController {
         'response': respBody['response'],
       };
 
-    } catch (e) {
-      Get.log('❌ ERROR DI AUTHSERVICE.POST: $e');
-      Get.log('Stack trace: $e');
-      throw Exception("authService post error: $e");
+    } catch (e, stackTrace) {
+      final message = e.toString();
+      Get.log('❌ ERROR DI AUTHSERVICE.POST: $message');
+      Get.log('Stack trace: $stackTrace');
+      print('❌ AuthService POST Error: $message');
+      
+      // Return graceful error response instead of throwing
+      return {
+        'status': false,
+        'statusCode': 0,
+        'message': 'Request failed: $message',
+        'response': {},
+      };
     }
   }
 
@@ -225,16 +311,45 @@ class AuthService extends GetxController {
       // 🔹 Kalau status 300 → refresh token
       if (response.statusCode == 300) {
         if (maxReload > 3) {
-          throw Exception("Telah mencapai max reload, silahkan login kembali");
+          return {
+            'status': false,
+            'statusCode': 300,
+            'message': 'Max reload attempts exceeded, please login again',
+            'response': {},
+          };
         }
 
         Map<String, dynamic> refreshTokenResponse = await refreshingToken(body: {
           'refresh_token': refreshToken ?? "",
         });
 
-        // 🔹 Update token baru
-        accessToken = refreshTokenResponse['response']['access_token'];
-        refreshToken = refreshTokenResponse['response']['refresh_token'];
+        // Check if token refresh failed
+        if (refreshTokenResponse['status'] != true) {
+          print("❌ Token refresh failed in multipart: ${refreshTokenResponse['message']}");
+          SharedPreferences preferences = await SharedPreferences.getInstance();
+          await preferences.remove('accessToken');
+          await preferences.remove('refreshToken');
+          return {
+            'status': false,
+            'statusCode': 401,
+            'message': 'Session expired, please login again',
+            'response': {},
+          };
+        }
+
+        // Safely access response data
+        try {
+          accessToken = refreshTokenResponse['response']['access_token'];
+          refreshToken = refreshTokenResponse['response']['refresh_token'];
+        } catch (e) {
+          print("❌ Error extracting tokens from refresh response in multipart: $e");
+          return {
+            'status': false,
+            'statusCode': 500,
+            'message': 'Failed to extract tokens from refresh response',
+            'response': {},
+          };
+        }
 
         // 🔹 Simpan token ke SharedPreferences
         SharedPreferences preferences = await SharedPreferences.getInstance();
@@ -254,10 +369,15 @@ class AuthService extends GetxController {
             : "Server mengembalikan response non-JSON",
         'response': respBody != null ? respBody['response'] ?? {} : responseString,
       };
-    } catch (e) {
-      // print("authService multipart error: $e");
-      // print(stack);
-      throw "authService multipart error: $e";
+    } catch (e, stackTrace) {
+      print("❌ Multipart error: $e");
+      print("Stack trace: $stackTrace");
+      return {
+        'status': false,
+        'statusCode': 0,
+        'message': 'Multipart request failed: ${e.toString()}',
+        'response': {},
+      };
     }
   }
 
@@ -268,14 +388,30 @@ class AuthService extends GetxController {
       await init();
       headers['Authorization'] = 'Bearer $accessToken';
 
+      final fullUrl = "${GlobalVariable.mainURL}/$url";
+      Get.log('═══════════════════════════════════════════');
+      Get.log('🚀 GET REQUEST');
+      Get.log('═══════════════════════════════════════════');
+      Get.log('URL: $fullUrl');
+      Get.log('Headers: $headers');
+      Get.log('Access Token (first 20 chars): ${accessToken?.substring(0, min(20, accessToken?.length ?? 0)) ?? 'NULL'}...');
+      Get.log('───────────────────────────────────────────');
+
       http.Response response = await http.get(
-        Uri.parse("${GlobalVariable.mainURL}/$url"), 
+        Uri.parse(fullUrl), 
         headers: headers,
       );
 
+      Get.log('📥 GET RESPONSE');
+      Get.log('Status Code: ${response.statusCode}');
+      Get.log('Response Headers: ${response.headers}');
+      Get.log('Body Preview: ${response.body.length > 200 ? response.body.substring(0, 200) + '...' : response.body}');
+      Get.log('═══════════════════════════════════════════');
+
       // Handle server errors (5xx) dan Cloudflare errors
       if (response.statusCode >= 500) {
-        print("❌ Server Error ${response.statusCode}: ${response.body}");
+        print("❌ Server Error ${response.statusCode}");
+        print("Response Body: ${response.body.substring(0, min(500, response.body.length))}");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -288,7 +424,7 @@ class AuthService extends GetxController {
       if (response.statusCode == 524 || response.statusCode == 520 || 
           response.statusCode == 521 || response.statusCode == 522 || 
           response.statusCode == 523) {
-        print("❌ Cloudflare Error ${response.statusCode}: ${response.body}");
+        print("❌ Cloudflare Error ${response.statusCode}");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -297,18 +433,70 @@ class AuthService extends GetxController {
         };
       }
 
+      // Cek apakah response adalah HTML (error page) bukan JSON
+      if (response.body.trimLeft().startsWith('<') || response.body.contains('<br')) {
+        print("❌ Server returned HTML instead of JSON (possibly error page)");
+        print("Response Body: ${response.body.substring(0, min(500, response.body.length))}");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Server returned an error page. Please check your internet connection or try again later.',
+          'response': {},
+        };
+      }
+
+      // Handle empty response
+      if (response.body.isEmpty) {
+        print("❌ Server returned empty response body");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Server returned empty response',
+          'response': {},
+        };
+      }
+
       if (response.statusCode == 300) {
         if(maxReload > 3) {
-          throw Exception("Telah mencapai max reload, silahkan login kembali");
+          return {
+            'status': false,
+            'statusCode': 300,
+            'message': 'Max reload attempts exceeded, please login again',
+            'response': {},
+          };
         }
         
         Map<String, dynamic> refreshTokenResponse = await refreshingToken(body: {
           'refresh_token': refreshToken ?? "",
         });
 
-        // Initialize new access & refresh token from response
-        accessToken = refreshTokenResponse['response']['access_token'];
-        refreshToken = refreshTokenResponse['response']['refresh_token'];
+        // Check if token refresh failed
+        if (refreshTokenResponse['status'] != true) {
+          print("❌ Token refresh failed in GET: ${refreshTokenResponse['message']}");
+          SharedPreferences preferences = await SharedPreferences.getInstance();
+          await preferences.remove('accessToken');
+          await preferences.remove('refreshToken');
+          return {
+            'status': false,
+            'statusCode': 401,
+            'message': 'Session expired, please login again',
+            'response': {},
+          };
+        }
+
+        // Safely access response data
+        try {
+          accessToken = refreshTokenResponse['response']['access_token'];
+          refreshToken = refreshTokenResponse['response']['refresh_token'];
+        } catch (e) {
+          print("❌ Error extracting tokens from refresh response in GET: $e");
+          return {
+            'status': false,
+            'statusCode': 500,
+            'message': 'Failed to extract tokens from refresh response',
+            'response': {},
+          };
+        }
 
         // Set new access & refresh token to SharedPreferences
         SharedPreferences preferences = await SharedPreferences.getInstance();
@@ -324,11 +512,12 @@ class AuthService extends GetxController {
         respBody = jsonDecode(response.body);
       } catch (e) {
         print("❌ JSON Decode Error: ${e.toString()}");
-        print("Response Body: ${response.body}");
+        print("Response Body: ${response.body.substring(0, min(500, response.body.length))}");
+        print("Response Status Code: ${response.statusCode}");
         return {
           'status': false,
           'statusCode': response.statusCode,
-          'message': 'Invalid server response format',
+          'message': 'Invalid server response format. Server might be down.',
           'response': {},
         };
       }
@@ -339,9 +528,10 @@ class AuthService extends GetxController {
         'message': respBody['message'],
         'response': respBody['response'],
       };
-    } catch (e) {
+    } catch (e, stackTrace) {
       final message = e.toString();
-      print("❌ Exception di AuthService.get(): $message");
+      print("❌ Exception di AuthService.get(): URL=$url, Error=$message");
+      print("Stack trace: $stackTrace");
       if (message.contains("Session Expired") || message.contains("invalid_token")) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('accessToken');
@@ -372,71 +562,244 @@ class AuthService extends GetxController {
       await init();
       headers['Authorization'] = 'Bearer $accessToken';
 
+      Get.log('═══════════════════════════════════════════');
+      Get.log('🚀 GET CUSTOM URL REQUEST');
+      Get.log('═══════════════════════════════════════════');
+      Get.log('URL: $url');
+      Get.log('Headers: $headers');
+      Get.log('───────────────────────────────────────────');
+
       http.Response response = await http.get(
         Uri.parse(url),
         headers: headers,
       );
 
+      Get.log('📥 GET CUSTOM URL RESPONSE');
+      Get.log('Status Code: ${response.statusCode}');
+      Get.log('Body Preview: ${response.body.length > 200 ? response.body.substring(0, 200) + '...' : response.body}');
+      Get.log('═══════════════════════════════════════════');
+
+      // Check if response is HTML (error page)
+      if (response.body.trimLeft().startsWith('<') || response.body.contains('<br')) {
+        print("❌ Server returned HTML instead of JSON");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Server returned an error page.',
+          'response': {},
+        };
+      }
+
+      // Handle empty response
+      if (response.body.isEmpty) {
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Server returned empty response',
+          'response': {},
+        };
+      }
+
       if (response.statusCode == 300) {
         if(maxReload > 3) {
-          throw Exception("Telah mencapai max reload, silahkan login kembali");
+          return {
+            'status': false,
+            'statusCode': 300,
+            'message': 'Max reload attempts exceeded, please login again',
+            'response': {},
+          };
         }
 
         Map<String, dynamic> refreshTokenResponse = await refreshingToken(body: {
           'refresh_token': refreshToken ?? "",
         });
 
-        // Initialize new access & refresh token from response
-        accessToken = refreshTokenResponse['response']['access_token'];
-        refreshToken = refreshTokenResponse['response']['refresh_token'];
+        // Check if token refresh failed
+        if (refreshTokenResponse['status'] != true) {
+          print("❌ Token refresh failed in getCustomURL: ${refreshTokenResponse['message']}");
+          SharedPreferences preferences = await SharedPreferences.getInstance();
+          await preferences.remove('accessToken');
+          await preferences.remove('refreshToken');
+          return {
+            'status': false,
+            'statusCode': 401,
+            'message': 'Session expired, please login again',
+            'response': {},
+          };
+        }
+
+        // Safely access response data
+        try {
+          accessToken = refreshTokenResponse['response']['access_token'];
+          refreshToken = refreshTokenResponse['response']['refresh_token'];
+        } catch (e) {
+          print("❌ Error extracting tokens from refresh response in getCustomURL: $e");
+          return {
+            'status': false,
+            'statusCode': 500,
+            'message': 'Failed to extract tokens from refresh response',
+            'response': {},
+          };
+        }
 
         // Set new access & refresh token to SharedPreferences
         SharedPreferences preferences = await SharedPreferences.getInstance();
         preferences.setString('accessToken', accessToken!);
         preferences.setString('refreshToken', refreshToken!);
 
-        return await get(url, maxReload: maxReload + 1);
+        return await getCustomURL(url, maxReload: maxReload + 1);
       }
 
-      Map<String, dynamic> respBody = jsonDecode(response.body);
+      // Safe JSON decode
+      Map<String, dynamic> respBody;
+      try {
+        respBody = jsonDecode(response.body);
+      } catch (e) {
+        print("❌ JSON Decode Error in getCustomURL: ${e.toString()}");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Invalid server response format.',
+          'response': {},
+        };
+      }
+
       return {
         'status': respBody['status'],
         'statusCode': response.statusCode,
         'message': respBody['message'],
         'response': respBody['response'],
       };
-
-    } catch (e) {
-      throw Exception(e);
+    } catch (e, stackTrace) {
+      print("❌ Exception di AuthService.getCustomURL(): URL=$url, Error=${e.toString()}");
+      print("Stack trace: $stackTrace");
+      return {
+        'status': false,
+        'statusCode': 500,
+        'message': 'Network error: ${e.toString()}',
+        'response': {},
+      };
     }
   }
 
   Future<Map<String, dynamic>> refreshingToken({required Map<String, dynamic> body}) async {
     try {
-      // print("Token expired, refreshing token with: $refreshToken ");
+      Get.log('═══════════════════════════════════════════');
+      Get.log('🔄 REFRESHING TOKEN REQUEST');
+      Get.log('═══════════════════════════════════════════');
+      Get.log('URL: ${GlobalVariable.mainURL}/auth/refresh');
+      Get.log('Body: $body');
+      Get.log('───────────────────────────────────────────');
+
       http.Response response = await http.post(
         Uri.parse("${GlobalVariable.mainURL}/auth/refresh"),
         headers: headers,
         body: body, // Tidak perlu jsonEncode untuk form-urlencoded
       );
 
-      Map<String, dynamic> refreshTokenResponse = jsonDecode(response.body);
-      if(refreshTokenResponse['status'] != true) {
-        throw Exception("Session Expired, please re-login");
+      Get.log('📥 REFRESH TOKEN RESPONSE');
+      Get.log('Status Code: ${response.statusCode}');
+      Get.log('Body Preview: ${response.body.length > 200 ? response.body.substring(0, 200) + '...' : response.body}');
+      Get.log('═══════════════════════════════════════════');
+
+      // Handle server errors (5xx)
+      if (response.statusCode >= 500) {
+        print("❌ Server Error ${response.statusCode} when refreshing token");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Server error while refreshing token',
+          'response': {},
+        };
       }
 
-      if(!refreshTokenResponse.containsKey("response")) {
-        throw Exception("Invalid Response");
+      // Check if response is HTML (error page)
+      if (response.body.trimLeft().startsWith('<') || response.body.contains('<br')) {
+        print("❌ Server returned HTML instead of JSON when refreshing token");
+        print("Response preview: ${response.body.substring(0, min(500, response.body.length))}");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Server error page, token refresh failed',
+          'response': {},
+        };
       }
 
-      if(!refreshTokenResponse['response'].containsKey("access_token") || !refreshTokenResponse['response'].containsKey("refresh_token")) {
-        throw Exception("Failed to refresh token, please re-login");
+      // Handle empty response
+      if (response.body.isEmpty) {
+        print("❌ Empty response when refreshing token");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Empty response from server',
+          'response': {},
+        };
       }
+
+      // Safe JSON decode
+      Map<String, dynamic> refreshTokenResponse;
+      try {
+        refreshTokenResponse = jsonDecode(response.body);
+      } catch (e) {
+        print("❌ JSON Decode Error in refreshingToken: ${e.toString()}");
+        print("Response: ${response.body.substring(0, min(500, response.body.length))}");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Invalid token response format',
+          'response': {},
+        };
+      }
+
+      // Validate response structure
+      if (refreshTokenResponse['status'] != true) {
+        print("❌ Token refresh failed: status is not true");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': refreshTokenResponse['message'] ?? 'Session Expired, please re-login',
+          'response': {},
+        };
+      }
+
+      if (!refreshTokenResponse.containsKey("response")) {
+        print("❌ Token refresh response missing 'response' key");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Invalid Response structure',
+          'response': {},
+        };
+      }
+
+      if (!refreshTokenResponse['response'].containsKey("access_token") || 
+          !refreshTokenResponse['response'].containsKey("refresh_token")) {
+        print("❌ Token refresh response missing access_token or refresh_token");
+        return {
+          'status': false,
+          'statusCode': response.statusCode,
+          'message': 'Failed to refresh token - missing token fields',
+          'response': {},
+        };
+      }
+
+      Get.log('✅ TOKEN REFRESH SUCCESS');
+      Get.log('New access token received: ${refreshTokenResponse['response']['access_token']?.substring(0, 20)}...');
+      Get.log('═══════════════════════════════════════════');
 
       return refreshTokenResponse;
 
-    } catch (e) {
-      throw Exception(e);
+    } catch (e, stackTrace) {
+      print("❌ Exception in refreshingToken(): ${e.toString()}");
+      print("Stack trace: $stackTrace");
+      
+      // Return graceful error response instead of throwing
+      return {
+        'status': false,
+        'statusCode': 0,
+        'message': 'Token refresh failed: ${e.toString()}',
+        'response': {},
+      };
     }
   }
 
@@ -488,15 +851,45 @@ class AuthService extends GetxController {
       // Handle token refresh
       if (response.statusCode == 300) {
         if (maxReload > 3) {
-          throw Exception("Telah mencapai max reload, silahkan login kembali");
+          return {
+            'status': false,
+            'statusCode': 300,
+            'message': 'Max reload attempts exceeded, please login again',
+            'response': [],
+          };
         }
 
         Map<String, dynamic> refreshTokenResponse = await refreshingToken(body: {
           'refresh_token': refreshToken ?? "",
         });
 
-        accessToken = refreshTokenResponse['response']['access_token'];
-        refreshToken = refreshTokenResponse['response']['refresh_token'];
+        // Check if token refresh failed
+        if (refreshTokenResponse['status'] != true) {
+          print("❌ Token refresh failed in withdrawalMultipart: ${refreshTokenResponse['message']}");
+          SharedPreferences preferences = await SharedPreferences.getInstance();
+          await preferences.remove('accessToken');
+          await preferences.remove('refreshToken');
+          return {
+            'status': false,
+            'statusCode': 401,
+            'message': 'Session expired, please login again',
+            'response': [],
+          };
+        }
+
+        // Safely access response data
+        try {
+          accessToken = refreshTokenResponse['response']['access_token'];
+          refreshToken = refreshTokenResponse['response']['refresh_token'];
+        } catch (e) {
+          print("❌ Error extracting tokens from refresh response in withdrawalMultipart: $e");
+          return {
+            'status': false,
+            'statusCode': 500,
+            'message': 'Failed to extract tokens from refresh response',
+            'response': [],
+          };
+        }
 
         SharedPreferences preferences = await SharedPreferences.getInstance();
         preferences.setString('accessToken', accessToken!);
@@ -512,9 +905,15 @@ class AuthService extends GetxController {
         'message': respBody['message'] ?? 'Unknown error',
         'response': respBody['response'] ?? [],
       };
-    } catch (e) {
-      print("Withdrawal Multipart Exception: $e");
-      throw Exception("authService withdrawalMultipart error: $e");
+    } catch (e, stackTrace) {
+      print("❌ Withdrawal Multipart Exception: $e");
+      print("Stack trace: $stackTrace");
+      return {
+        'status': false,
+        'statusCode': 0,
+        'message': 'Withdrawal request failed: ${e.toString()}',
+        'response': [],
+      };
     }
   }
 }

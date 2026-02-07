@@ -12,6 +12,7 @@ import 'package:rrfx/src/controllers/account_balance_ws_controller.dart';
 import 'package:rrfx/src/controllers/trading.dart';
 import 'package:rrfx/src/controllers/websocket_controller.dart';
 import 'package:rrfx/src/helpers/error_handler.dart';
+import 'package:rrfx/src/helpers/handlers/holiday.dart';
 import 'package:rrfx/src/views/transactions/views/popup_close_order.dart';
 import 'package:rrfx/src/views/transactions/views/edit_position_page.dart';
 
@@ -526,6 +527,9 @@ class _PositionTile extends StatelessWidget {
     final Color buySellColor =
         direction?.toLowerCase() == "buy" ? Colors.blue : Colors.red;
 
+    // Check if market is closed (holiday/weekend)
+    final bool isMarketClosed = isForexHoliday();
+
     return Slidable(
       key: ValueKey(positionId),
 
@@ -535,15 +539,19 @@ class _PositionTile extends StatelessWidget {
         extentRatio: 0.32,
         children: [
           SlidableAction(
-            onPressed: (_) => _onEditPosition(context),
-            backgroundColor: Colors.grey,
+            onPressed: isMarketClosed
+                ? (_) => _showMarketHolidayDialog(context)
+                : (_) => _onEditPosition(context),
+            backgroundColor: isMarketClosed ? Colors.grey.withOpacity(0.5) : Colors.grey,
             foregroundColor: Colors.white,
             icon: Icons.edit,
             label: "Edit",
           ),
           SlidableAction(
-            onPressed: (_) => _onClosePosition(context),
-            backgroundColor: Colors.red,
+            onPressed: isMarketClosed
+                ? (_) => _showMarketHolidayDialog(context)
+                : (_) => _onClosePosition(context),
+            backgroundColor: isMarketClosed ? Colors.red.withOpacity(0.5) : Colors.red,
             foregroundColor: Colors.white,
             icon: Icons.close,
             label: "Close",
@@ -557,54 +565,73 @@ class _PositionTile extends StatelessWidget {
 
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-          childrenPadding: EdgeInsets.zero,
-          dense: true,
-          title: RichText(
-            text: TextSpan(
-              children: [
-                TextSpan(
-                  text: symbol ?? "-",
-                  style: GoogleFonts.oswald(
-                    fontSize: 14.0,
-                    fontWeight: FontWeight.w800,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+        child: Stack(
+          children: [
+            ExpansionTile(
+              tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+              childrenPadding: EdgeInsets.zero,
+              dense: true,
+              title: RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: symbol ?? "-",
+                      style: GoogleFonts.oswald(
+                        fontSize: 14.0,
+                        fontWeight: FontWeight.w800,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const TextSpan(text: ", "),
+                    TextSpan(
+                      text:
+                          direction != null
+                              ? "${direction!.toLowerCase()} ${volume ?? "0.0"}"
+                              : "-",
+                      style: GoogleFonts.oswald(
+                        color: buySellColor,
+                        fontSize: 12.0,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-                const TextSpan(text: ", "),
-                TextSpan(
-                  text:
-                      direction != null
-                          ? "${direction!.toLowerCase()} ${volume ?? "0.0"}"
-                          : "-",
-                  style: GoogleFonts.oswald(
-                    color: buySellColor,
-                    fontSize: 12.0,
-                    fontWeight: FontWeight.w600,
-                  ),
+              ),
+
+              subtitle: Text(
+                "${openPrice ?? '0.00000'} → ${currentPrice ?? '-'}",
+                style: GoogleFonts.oswald(
+                  fontSize: 13.0,
+                  fontWeight: FontWeight.w700,
+                  color: Get.theme.textTheme.bodySmall?.color,
                 ),
-              ],
-            ),
-          ),
+              ),
 
-          subtitle: Text(
-            "${openPrice ?? '0.00000'} → ${currentPrice ?? '-'}",
-            style: GoogleFonts.oswald(
-              fontSize: 13.0,
-              fontWeight: FontWeight.w700,
-              color: Get.theme.textTheme.bodySmall?.color,
-            ),
-          ),
-
-          trailing: Text(
-            profitText,
-            style: GoogleFonts.oswald(
-              color: profitColor,
-              fontWeight: FontWeight.w800,
-              fontSize: 16.0,
-            ),
-          ),
+              trailing: SizedBox(
+                width: 100,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      profitText,
+                      style: GoogleFonts.oswald(
+                        color: profitColor,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16.0,
+                      ),
+                    ),
+                    if (isMarketClosed)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: Icon(
+                          Iconsax.lock_outline,
+                          size: 16,
+                          color: Colors.orange,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
 
           children: [
             Container(
@@ -750,6 +777,10 @@ class _PositionTile extends StatelessWidget {
                 ],
               ),
             ),
+          ],
+        ),
+            // 🎯 Market Closed Badge Overlay
+           
           ],
         ),
       ),
@@ -934,6 +965,187 @@ class _PositionTile extends StatelessWidget {
 
     // Dispose worker after page closes
     worker.dispose();
+  }
+
+  /// 🎭 Show beautiful market holiday dialog
+  void _showMarketHolidayDialog(BuildContext context) {
+    final now = DateTime.now().toUtc();
+    final dayName = DateFormat('EEEE').format(now);
+    
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey.shade900
+                : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 🎯 Icon dengan animasi background gradient
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.orange.withOpacity(0.3),
+                      Colors.red.withOpacity(0.2),
+                    ],
+                  ),
+                ),
+                child: const Center(
+                  child: Icon(
+                    Iconsax.close_circle_outline,
+                    size: 48,
+                    color: Colors.orange,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // 📋 Title
+              Text(
+                "Market Closed",
+                style: GoogleFonts.inter(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // 📝 Description
+              Text(
+                "The Forex market is currently closed.",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  height: 1.6,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // 🗓️ Holiday info
+              Text(
+                "$dayName is a market holiday",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.orange,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // 📍 Info Container
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade800
+                      : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.orange.withOpacity(0.3),
+                    width: 1.5,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Iconsax.info_circle_outline,
+                          size: 18,
+                          color: Colors.orange,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            "You cannot edit or close positions during market holidays.",
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              height: 1.5,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Icon(
+                          Iconsax.clock_outline,
+                          size: 18,
+                          color: Colors.orange,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            "Please try again when the market reopens.",
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              height: 1.5,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // ✅ Action Button
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    "Got it",
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   int _getDigitsForSymbol(String symbol) {
