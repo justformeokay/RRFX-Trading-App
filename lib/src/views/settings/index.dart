@@ -23,7 +23,6 @@ import 'package:rrfx/src/views/settings/request_ib_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rrfx/src/components/alerts/default.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
-import 'package:rrfx/src/components/appbars/default.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
 import 'package:rrfx/src/controllers/home.dart';
@@ -39,7 +38,6 @@ import 'package:rrfx/src/views/trade/deposit.dart';
 import 'package:rrfx/src/views/trade/internal_transfer.dart';
 import 'package:rrfx/src/views/trade/withdrawal.dart';
 import 'about_app.dart';
-import 'components/settings_components.dart';
 
 class Settings extends StatefulWidget {
   const Settings({super.key});
@@ -59,7 +57,6 @@ class _SettingsState extends State<Settings> {
   RxBool haveRealAccount = false.obs;
   RxBool isLoading = false.obs;
 
-  // Contoh fungsi baru (atau modifikasi yang sudah ada)
   String buildCacheBustedImageUrl(String? url, int version) {
     if (url == null) return '';
     String fullUrl = buildFullImageUrl(url);
@@ -103,87 +100,11 @@ class _SettingsState extends State<Settings> {
   @override
   Widget build(BuildContext context) {
     final ThemeController themeController = Get.find();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      appBar: CustomAppBar.defaultAppBar(
-        title: "Settings",
-        actions: [
-          CupertinoButton(
-            onPressed: () async {
-              userController.getProfile();
-              CustomAlert.alertDialogCustomInfo(
-                message: "Apakah anda yakin keluar dari aplikasi?",
-                moreThanOneButton: true,
-                onTap: () async {
-                  Get.log("🔴 [LOGOUT] User confirmed logout");
-
-                  // Clear SharedPreferences
-                  Get.log("🗑️ [LOGOUT] Clearing SharedPreferences...");
-                  SharedPreferences prefs =
-                      await SharedPreferences.getInstance();
-                  prefs.remove('accessToken');
-                  prefs.remove('refreshToken');
-                  prefs.remove('loggedIn');
-                  prefs.remove('accountAccountIndex');
-                  prefs.remove('selectedLogin');
-                  prefs.remove('selectedType');
-                  prefs.remove('selectedCurrency');
-                  prefs.remove('selectedLeverage');
-                  Get.log("✅ [LOGOUT] SharedPreferences cleared");
-
-                  // Clear GetStorage (includes favorite symbols) - but preserve passcode
-                  Get.log("🗑️ [LOGOUT] Clearing GetStorage...");
-                  final storage = GetStorage();
-
-                  // Save passcode before erasing storage
-                  final savedPasscodeData = storage.read('app_passcode');
-                  Get.log(
-                    "💾 [LOGOUT] Saving passcode data before erase: $savedPasscodeData",
-                  );
-
-                  await storage.erase();
-
-                  // Restore passcode after erasing storage
-                  if (savedPasscodeData != null) {
-                    await storage.write('app_passcode', savedPasscodeData);
-                    Get.log("✅ [LOGOUT] Passcode restored after erase");
-                  }
-                  Get.log("✅ [LOGOUT] GetStorage cleared (passcode preserved)");
-
-                  // Clear controllers
-                  Get.log("🗑️ [LOGOUT] Disposing controllers...");
-                  Get.log("   - Clearing AccountController default account");
-                  _accountController.clearDefaultAccount();
-                  Get.log("   - Resetting AccountController state");
-                  _accountController.resetAccountsState();
-                  Get.log("   - Deleting AccountController");
-                  Get.delete<AccountController>();
-                  Get.log("   - Deleting TradingAccountController");
-                  Get.delete<TradingAccountController>();
-                  Get.log("   - Deleting TradingController");
-                  Get.delete<TradingController>();
-                  Get.log("   - Deleting UserController");
-                  Get.delete<UserController>();
-                  Get.log(
-                    "   - Deleting HomeController (force: true for permanent)",
-                  );
-                  Get.delete<HomeController>(force: true);
-                  Get.log("✅ [LOGOUT] All controllers deleted");
-
-                  // Navigate to login
-                  Get.log("🚀 [LOGOUT] Navigating to MainpageWithoutLogin");
-                  Get.offAll(() => const MainpageWithoutLogin());
-                },
-                title: "Keluar",
-                textButton: "Ya",
-              );
-            },
-            child: Icon(
-              Iconsax.logout_1_outline,
-              color: CustomColor.secondaryColor,
-            ),
-          ),
-        ],
-      ),
+      backgroundColor: isDark ? Colors.black : const Color(0xFFF5F5F7),
       body: Obx(
         () => RefreshIndicator(
           color: CustomColor.secondaryColor,
@@ -203,16 +124,243 @@ class _SettingsState extends State<Settings> {
                     });
                     await homeController.profile();
                   },
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          child: CustomScrollView(
             physics: const BouncingScrollPhysics(),
-            child: Column(
-              children: [
-                Obx(() {
-                  final String? photoUrl =
-                      homeController.profileModel.value?.urlPhoto;
-                  return Row(
+            slivers: [
+              // ─── PROFILE HEADER ───
+              SliverToBoxAdapter(child: _buildProfileHeader(context, isDark, colorScheme)),
+
+              // ─── QUICK ACTIONS ───
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                  child: _buildQuickActions(context, isDark, colorScheme),
+                ),
+              ),
+
+              // ─── SECURITY SECTION ───
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                  child: _buildSectionCard(
+                    context, isDark, colorScheme,
+                    title: "Security",
+                    icon: Iconsax.shield_tick_outline,
+                    items: [
+                      _MenuItemData(
+                        icon: Iconsax.lock_outline,
+                        iconColor: Colors.blue,
+                        title: "Manage Passcode",
+                        subtitle: "Change passcode or set biometric",
+                        onTap: () => Get.to(() => const ManagePasscodePage()),
+                      ),
+                      _MenuItemData(
+                        icon: Iconsax.moon_outline,
+                        iconColor: Colors.deepPurple,
+                        title: "Dark Mode",
+                        subtitle: "Switch to dark theme",
+                        trailing: Obx(() => CupertinoSwitch(
+                          activeTrackColor: CustomColor.secondaryColor,
+                          value: themeController.isDark.value,
+                          onChanged: (value) => themeController.toggleTheme(value),
+                        )),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // ─── ACCOUNT & FINANCE ───
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: _buildSectionCard(
+                    context, isDark, colorScheme,
+                    title: "Account & Finance",
+                    icon: Iconsax.wallet_outline,
+                    items: [
+                      _MenuItemData(
+                        icon: Iconsax.wallet_outline,
+                        iconColor: CustomColor.secondaryColor,
+                        title: "Trading Accounts",
+                        subtitle: "View all trading accounts",
+                        onTap: () => Get.to(() => const Accounts()),
+                      ),
+                      _MenuItemData(
+                        icon: Iconsax.money_2_outline,
+                        iconColor: Colors.green,
+                        title: "My Banks",
+                        subtitle: "Manage your bank accounts",
+                        onTap: () => Get.to(() => const DaftarBankSaya()),
+                      ),
+                      _MenuItemData(
+                        icon: Iconsax.note_outline,
+                        iconColor: Colors.teal,
+                        title: "Deposit & Withdrawal History",
+                        subtitle: "All transaction history",
+                        enabled: !isLoading.value && haveRealAccount.value,
+                        onTap: haveRealAccount.value
+                            ? () => Get.to(() => const DepositWithdrawalHistory())
+                            : () => showNoRealAccountPopup(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // ─── SUPPORT & RESOURCES ───
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: _buildSectionCard(
+                    context, isDark, colorScheme,
+                    title: "Support & Resources",
+                    icon: Iconsax.message_question_outline,
+                    items: [
+                      _MenuItemData(
+                        icon: Iconsax.book_outline,
+                        iconColor: Colors.indigo,
+                        title: "Resource Center",
+                        subtitle: "Trading info, products, education",
+                        onTap: () => Get.to(() => const ResourcesCenter()),
+                      ),
+                      _MenuItemData(
+                        icon: Iconsax.headphone_outline,
+                        iconColor: Colors.orange,
+                        title: "Support Tickets",
+                        subtitle: "Get help with your issues",
+                        onTap: () => Get.to(() => const TicketRooms()),
+                      ),
+                      _MenuItemData(
+                        icon: Iconsax.quote_down_square_outline,
+                        iconColor: Colors.cyan,
+                        title: "FAQ",
+                        subtitle: "Frequently asked questions",
+                        onTap: () => Get.to(() => const Faq()),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // ─── MORE ───
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: _buildSectionCard(
+                    context, isDark, colorScheme,
+                    title: "More",
+                    icon: Iconsax.more_circle_outline,
+                    items: [
+                      _MenuItemData(
+                        icon: Iconsax.link_circle_outline,
+                        iconColor: Colors.purple,
+                        title: "Invite Friends",
+                        subtitle: "Share your referral link",
+                        onTap: () => Get.to(() => const InviteLink()),
+                      ),
+                      _MenuItemData(
+                        icon: Iconsax.user_add_outline,
+                        iconColor: Colors.blueGrey,
+                        title: "Request IB",
+                        subtitle: "Become an Introducing Broker",
+                        enabled: false,
+                        onTap: () => Get.to(() => const RequestIBPage()),
+                      ),
+                      _MenuItemData(
+                        icon: Iconsax.info_circle_outline,
+                        iconColor: Colors.grey,
+                        title: "About",
+                        subtitle: "App information & version",
+                        onTap: () => Get.to(() => const AboutApp()),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // ─── DANGER ZONE ───
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: _buildDangerSection(context, isDark, colorScheme),
+                ),
+              ),
+
+              // ─── LOGOUT BUTTON ───
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                  child: _buildLogoutButton(context, isDark),
+                ),
+              ),
+
+              // ─── BOTTOM SPACING ───
+              const SliverToBoxAdapter(child: SizedBox(height: 40)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // PROFILE HEADER
+  // ════════════════════════════════════════════════════════════════════════════
+  Widget _buildProfileHeader(BuildContext context, bool isDark, ColorScheme colorScheme) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [const Color(0xFF1A1A2E), const Color(0xFF16213E)]
+              : [CustomColor.secondaryColor, const Color(0xFFD4A020)],
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+          child: Column(
+            children: [
+              // Top row with title
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Settings",
+                    style: GoogleFonts.inter(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  // Notifications icon (optional, for visual balance)
+                  const SizedBox(width: 40),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Profile card
+              Obx(() {
+                final String? photoUrl =
+                    homeController.profileModel.value?.urlPhoto;
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.08)
+                        : Colors.white.withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
                     children: [
+                      // Avatar
                       Stack(
                         children: [
                           GestureDetector(
@@ -220,47 +368,55 @@ class _SettingsState extends State<Settings> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder:
-                                      (context) => ImageViewerPage(
-                                        imageUrl: buildFullImageUrl(
-                                          photoUrl,
-                                          userController.photoVersion.value,
-                                        ),
-                                        title:
-                                            '${homeController.profileModel.value?.name}\'s Profile Picture',
-                                      ),
+                                  builder: (context) => ImageViewerPage(
+                                    imageUrl: buildFullImageUrl(
+                                      photoUrl,
+                                      userController.photoVersion.value,
+                                    ),
+                                    title:
+                                        '${homeController.profileModel.value?.name}\'s Profile Picture',
+                                  ),
                                 ),
                               );
                             },
-                            child: CachedNetworkImage(
-                              key: ValueKey(userController.photoVersion.value),
-                              imageUrl: buildFullImageUrl(
-                                photoUrl,
-                                userController.photoVersion.value,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.6),
+                                  width: 2.5,
+                                ),
                               ),
-                              imageBuilder:
-                                  (context, imageProvider) => CircleAvatar(
-                                    radius: 40,
-                                    backgroundImage: imageProvider,
-                                  ),
-                              placeholder:
-                                  (context, url) => const CircleAvatar(
-                                    radius: 40,
-                                    backgroundColor: Colors.grey,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: CustomColor.secondaryColor,
+                              child: CachedNetworkImage(
+                                key: ValueKey(userController.photoVersion.value),
+                                imageUrl: buildFullImageUrl(
+                                  photoUrl,
+                                  userController.photoVersion.value,
+                                ),
+                                imageBuilder: (context, imageProvider) =>
+                                    CircleAvatar(
+                                      radius: 32,
+                                      backgroundImage: imageProvider,
                                     ),
+                                placeholder: (context, url) => const CircleAvatar(
+                                  radius: 32,
+                                  backgroundColor: Colors.white24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
                                   ),
-                              errorWidget:
-                                  (context, url, error) => const CircleAvatar(
-                                    radius: 40,
-                                    backgroundColor: Colors.grey,
-                                    child: Icon(
-                                      Icons.person,
-                                      color: Colors.white,
+                                ),
+                                errorWidget: (context, url, error) =>
+                                    CircleAvatar(
+                                      radius: 32,
+                                      backgroundColor: Colors.white24,
+                                      child: Icon(
+                                        Icons.person,
+                                        color: Colors.white,
+                                        size: 28,
+                                      ),
                                     ),
-                                  ),
+                              ),
                             ),
                           ),
                           Positioned(
@@ -270,10 +426,9 @@ class _SettingsState extends State<Settings> {
                               onTap: () async {
                                 final pickedImage =
                                     await CustomImagePicker.pickImageFromCameraAndReturnUrl();
-
                                 if (pickedImage.isNotEmpty) {
-                                  final result = await userController
-                                      .updateAvatar(urlImage: pickedImage);
+                                  final result = await userController.updateAvatar(
+                                      urlImage: pickedImage);
                                   if (result) {
                                     userController.photoVersion.value++;
                                     await homeController.profile();
@@ -281,364 +436,469 @@ class _SettingsState extends State<Settings> {
                                 }
                               },
                               child: Container(
-                                padding: const EdgeInsets.all(5),
+                                padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
-                                  color: CustomColor.secondaryColor,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Iconsax.camera_outline,
                                   color: Colors.white,
-                                  size: 18,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.15),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Iconsax.camera_outline,
+                                  color: CustomColor.secondaryColor,
+                                  size: 14,
                                 ),
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(width: 10.0),
+                      const SizedBox(width: 14),
+
+                      // Name & email
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              homeController.profileModel.value?.name ??
-                                  'Unknown Name',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
+                              homeController.profileModel.value?.name ?? 'Unknown Name',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 17,
+                                color: Colors.white,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
+                            const SizedBox(height: 3),
                             Text(
                               maskEmail(
                                 homeController.profileModel.value?.email ?? '',
                               ),
-                              style: const TextStyle(fontSize: 13),
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: Colors.white.withOpacity(0.75),
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ),
-                      IconButton(
-                        onPressed: () => Get.to(() => const EditProfile()),
-                        icon: const Icon(Iconsax.edit_outline),
+
+                      // Edit button
+                      GestureDetector(
+                        onTap: () => Get.to(() => const EditProfile()),
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Iconsax.edit_outline,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
                       ),
                     ],
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // QUICK ACTIONS
+  // ════════════════════════════════════════════════════════════════════════════
+  Widget _buildQuickActions(BuildContext context, bool isDark, ColorScheme colorScheme) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Quick Actions",
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: colorScheme.onSurface.withOpacity(0.5),
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Obx(() => Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildQuickActionItem(
+                context, isDark,
+                icon: Iconsax.arrow_down_1_outline,
+                label: "Deposit",
+                color: Colors.green,
+                enabled: !isLoading.value && haveRealAccount.value,
+                onTap: () {
+                  if (isLoading.value) return;
+                  if (!haveRealAccount.value) {
+                    showNoRealAccountPopup();
+                    return;
+                  }
+                  Get.to(() => const Deposit());
+                },
+              ),
+              _buildQuickActionItem(
+                context, isDark,
+                icon: Iconsax.arrow_up_2_outline,
+                label: "Withdraw",
+                color: Colors.red,
+                enabled: !isLoading.value && haveRealAccount.value,
+                onTap: () {
+                  if (isLoading.value) return;
+                  if (!haveRealAccount.value) {
+                    showNoRealAccountPopup();
+                    return;
+                  }
+                  Get.to(() => const Withdrawal());
+                },
+              ),
+              _buildQuickActionItem(
+                context, isDark,
+                icon: Iconsax.transaction_minus_outline,
+                label: "Transfer",
+                color: Colors.blue,
+                enabled: !isLoading.value && haveRealAccount.value,
+                onTap: () {
+                  if (isLoading.value) return;
+                  if (!haveRealAccount.value) {
+                    showNoRealAccountPopup();
+                    return;
+                  }
+                  if (_accountController.allAccounts
+                          .where((account) => account.type == 'real')
+                          .length < 2) {
+                    AppSnackbar.error(
+                      "Menu Internal Transfer hanya bisa dilakukan jika anda memiliki minimal 2 akun Real",
+                    );
+                    return;
+                  }
+                  Get.to(() => const InternalTransfer());
+                },
+              ),
+              _buildQuickActionItem(
+                context, isDark,
+                icon: Iconsax.document_outline,
+                label: "Documents",
+                color: Colors.orange,
+                enabled: !isLoading.value && haveRealAccount.value,
+                onTap: () {
+                  if (isLoading.value) return;
+                  if (!haveRealAccount.value) {
+                    showNoRealAccountPopup();
+                    return;
+                  }
+                  if (_accountController.selectedAccount.value == null) {
+                    AppSnackbar.error(
+                      "Silakan pilih akun trading terlebih dahulu.",
+                    );
+                    return;
+                  }
+                  if (_accountController.selectedAccount.value!.type == "demo") {
+                    showRealAccountOnlyPopup(context);
+                    return;
+                  }
+                  Get.to(
+                    () => DocumentListPage(
+                      loginID: _accountController.selectedAccount.value?.login ?? '',
+                    ),
                   );
-                }),
-                SizedBox(height: 20),
-                // Frequently Opened
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Frequently Opened",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                },
+              ),
+            ],
+          )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionItem(
+    BuildContext context, bool isDark, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    bool enabled = true,
+  }) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 200),
+        opacity: enabled ? 1.0 : 0.4,
+        child: Column(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: color.withOpacity(isDark ? 0.15 : 0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, color: color, size: 26),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // SECTION CARD (Grouped menu items)
+  // ════════════════════════════════════════════════════════════════════════════
+  Widget _buildSectionCard(
+    BuildContext context, bool isDark, ColorScheme colorScheme, {
+    required String title,
+    required IconData icon,
+    required List<_MenuItemData> items,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: CustomColor.secondaryColor),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onSurface.withOpacity(0.5),
+                    letterSpacing: 0.5,
+                  ),
                 ),
-                SizedBox(height: 12),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
+              ],
+            ),
+          ),
+
+          // Menu items
+          ...items.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            final isLast = index == items.length - 1;
+
+            return _buildMenuTile(
+              context, isDark, colorScheme,
+              item: item,
+              showDivider: !isLast,
+            );
+          }),
+          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuTile(
+    BuildContext context, bool isDark, ColorScheme colorScheme, {
+    required _MenuItemData item,
+    bool showDivider = true,
+  }) {
+    final isEnabled = item.enabled;
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 200),
+      opacity: isEnabled ? 1.0 : 0.45,
+      child: Column(
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: isEnabled ? item.onTap : null,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
                   children: [
-                    Obx(
-                      () => SettingComponents.storageCard(
-                        context,
-                        "Withdrawal",
-                        enabled:
-                            isLoading.value || !haveRealAccount.value
-                                ? false
-                                : true,
-                        Iconsax.arrow_up_2_outline,
-                        onTap: () {
-                          if (isLoading.value) {
-                            return;
-                          }
-                          if (!haveRealAccount.value) {
-                            showNoRealAccountPopup();
-                            return;
-                          }
-                          Get.to(() => const Withdrawal());
-                        },
+                    // Icon container
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: item.iconColor.withOpacity(isDark ? 0.15 : 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        item.icon,
+                        size: 20,
+                        color: isEnabled
+                            ? item.iconColor
+                            : colorScheme.onSurface.withOpacity(0.3),
                       ),
                     ),
-                    Obx(
-                      () => SettingComponents.storageCard(
-                        context,
-                        enabled:
-                            isLoading.value || !haveRealAccount.value
-                                ? false
-                                : true,
-                        "Deposit",
-                        Iconsax.arrow_down_1_outline,
-                        onTap: () {
-                          if (isLoading.value) {
-                            return;
-                          }
-                          if (!haveRealAccount.value) {
-                            showNoRealAccountPopup();
-                            return;
-                          }
-                          Get.to(() => const Deposit());
-                        },
-                      ),
-                    ),
-                    Obx(
-                      () => SettingComponents.storageCard(
-                        context,
-                        "Transfer",
-                        enabled:
-                            isLoading.value || !haveRealAccount.value
-                                ? false
-                                : true,
-                        Iconsax.transaction_minus_outline,
-                        onTap: () {
-                          if (isLoading.value) {
-                            return;
-                          }
-                          if (!haveRealAccount.value) {
-                            showNoRealAccountPopup();
-                            return;
-                          }
-                          if (_accountController.allAccounts
-                                  .where((account) => account.type == 'real')
-                                  .length <
-                              2) {
-                            AppSnackbar.error(
-                              "Menu Internal Transfer hanya bisa dilakukan jika anda memiliki minimal 2 akun Real",
-                            );
-                            return;
-                          } else {
-                            Get.to(() => const InternalTransfer());
-                          }
-                        },
-                      ),
-                    ),
-                    Obx(
-                      () => SettingComponents.storageCard(
-                        context,
-                        enabled:
-                            isLoading.value || !haveRealAccount.value
-                                ? false
-                                : true,
-                        "Documents",
-                        Iconsax.document_outline,
-                        onTap: () {
-                          if (isLoading.value) {
-                            return;
-                          }
-                          if (!haveRealAccount.value) {
-                            showNoRealAccountPopup();
-                            return;
-                          }
-                          if (_accountController.selectedAccount.value ==
-                              null) {
-                            AppSnackbar.error(
-                              "Silakan pilih akun trading terlebih dahulu.",
-                            );
-                            return;
-                          }
-                          if (_accountController.selectedAccount.value!.type ==
-                              "demo") {
-                            showRealAccountOnlyPopup(context);
-                            return;
-                          }
-                          Get.to(
-                            () => DocumentListPage(
-                              loginID:
-                                  _accountController
-                                      .selectedAccount
-                                      .value
-                                      ?.login ??
-                                  '',
+                    const SizedBox(width: 14),
+
+                    // Text
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.title,
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                              color: colorScheme.onSurface,
                             ),
-                          );
-                        },
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            item.subtitle,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: colorScheme.onSurface.withOpacity(0.5),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-                SizedBox(height: 30),
 
-                // Security Section
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Keamanan",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    // Trailing
+                    if (item.trailing != null)
+                      item.trailing!
+                    else
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 22,
+                        color: colorScheme.onSurface.withOpacity(0.3),
                       ),
-                    ),
                   ],
                 ),
-                SizedBox(height: 12),
-                SettingComponents.listTileItem(
-                  context,
-                  "Kelola Passcode",
-                  "Ubah passcode atau atur biometric",
-                  Iconsax.lock_outline,
-                  onTap: () async {
-                    Get.to(() => const ManagePasscodePage());
-                  },
-                ),
-                SizedBox(height: 30),
+              ),
+            ),
+          ),
+          if (showDivider)
+            Padding(
+              padding: const EdgeInsets.only(left: 70, right: 16),
+              child: Divider(
+                height: 1,
+                color: colorScheme.onSurface.withOpacity(0.06),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 
-                // All Items
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Others",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 12),
-                SettingComponents.listTileItem(
-                  context,
-                  "Pusat Sumber Daya",
-                  "Akses informasi trading, produk, edukasi",
-                  Iconsax.book_outline,
-                  onTap: () async {
-                    Get.to(() => const ResourcesCenter());
-                  },
-                ),
-                SettingComponents.listTileItem(
-                  context,
-                  "Daftar Akun Trading Saya",
-                  "Informasi mengenai Daftar Akun Trading saya",
-                  Iconsax.wallet_outline,
-                  onTap: () async {
-                    Get.to(() => const Accounts());
-                  },
-                ),
-                SettingComponents.listTileItem(
-                  context,
-                  "Bank Saya",
-                  "Informasi mengenai bank saya",
-                  Iconsax.money_2_outline,
-                  onTap: () async {
-                    Get.to(() => const DaftarBankSaya());
-                  },
-                ),
-                Obx(
-                  () => ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      Iconsax.moon_outline,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                    subtitle: Text(
-                      "Ubah tema ke Mode Gelap",
-                      style: GoogleFonts.inter(
-                        color: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.color?.withOpacity(0.7),
-                      ),
-                    ),
-                    title: Text(
-                      "Mode Gelap",
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                    trailing: Switch(
-                      activeColor: CustomColor.secondaryColor,
-                      value: themeController.isDark.value,
-                      onChanged: (value) {
-                        themeController.toggleTheme(value);
-                      },
-                    ),
+  // ════════════════════════════════════════════════════════════════════════════
+  // DANGER SECTION
+  // ════════════════════════════════════════════════════════════════════════════
+  Widget _buildDangerSection(BuildContext context, bool isDark, ColorScheme colorScheme) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.red.withOpacity(0.15),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Get.to(() => const DeleteAccountPage()),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(isDark ? 0.15 : 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Iconsax.trash_outline,
+                    size: 20,
+                    color: Colors.red,
                   ),
                 ),
-                Obx(
-                  () => SettingComponents.listTileItem(
-                    context,
-                    enabled:
-                        isLoading.value || !haveRealAccount.value
-                            ? false
-                            : true,
-                    "Riwayat Deposit Withdrawal",
-                    "Semua riwayat deposit akun trading anda",
-                    Iconsax.note_outline,
-                    onTap:
-                        haveRealAccount.value
-                            ? () =>
-                                Get.to(() => const DepositWithdrawalHistory())
-                            : () {
-                              showNoRealAccountPopup();
-                            },
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Delete Account",
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: Colors.red,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        "Permanently delete your account",
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.red.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                SettingComponents.listTileItem(
-                  context,
-                  "Tickets",
-                  "Help your problem",
-                  Iconsax.headphone_outline,
-                  onTap: () async {
-                    Get.to(() => const TicketRooms());
-                  },
-                ),
-                SettingComponents.listTileItem(
-                  context,
-                  "FAQ",
-                  "All Frequently Asking Question",
-                  Iconsax.quote_down_square_outline,
-                  onTap: () {
-                    Get.to(() => const Faq());
-                  },
-                ),
-                SettingComponents.listTileItem(
-                  context,
-                  "About",
-                  "Information about this App",
-                  Iconsax.info_circle_outline,
-                  onTap: () {
-                    Get.to(() => const AboutApp());
-                  },
-                ),
-                SettingComponents.listTileItem(
-                  context,
-                  "Invite Link",
-                  "Ajak rekan anda bergabung dengan RRFX",
-                  Iconsax.link_circle_outline,
-                  onTap: () {
-                    Get.to(() => const InviteLink());
-                  },
-                ),
-                SettingComponents.listTileItem(
-                  context,
-                  "Request IB",
-                  "Mari bergabung sebagai Introducing Broker",
-                  enabled: false,
-                  Iconsax.user_add_outline,
-                  onTap: () {
-                    Get.to(() => const RequestIBPage());
-                  },
-                ),
-                SettingComponents.listTileItem(
-                  context,
-                  "Hapus Akun",
-                  "Hapus Akun Saya ",
-                  enabled: true,
-                  Iconsax.trash_outline,
-                  onTap: () {
-                    Get.to(() => const DeleteAccountPage());
-                    // Get.to(() => const SIDRegistrationPage());
-                  },
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 22,
+                  color: Colors.red.withOpacity(0.5),
                 ),
               ],
             ),
@@ -648,9 +908,91 @@ class _SettingsState extends State<Settings> {
     );
   }
 
+  // ════════════════════════════════════════════════════════════════════════════
+  // LOGOUT BUTTON
+  // ════════════════════════════════════════════════════════════════════════════
+  Widget _buildLogoutButton(BuildContext context, bool isDark) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton.icon(
+        icon: Icon(
+          Iconsax.logout_1_outline,
+          size: 20,
+          color: Colors.red.shade400,
+        ),
+        label: Text(
+          "Log Out",
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            color: Colors.red.shade400,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(color: Colors.red.withOpacity(0.3), width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        onPressed: () {
+          CustomAlert.alertDialogCustomInfo(
+            message: "Apakah anda yakin keluar dari aplikasi?",
+            moreThanOneButton: true,
+            onTap: () async {
+              Get.log("🔴 [LOGOUT] User confirmed logout");
+
+              Get.log("🗑️ [LOGOUT] Clearing SharedPreferences...");
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+              prefs.remove('accessToken');
+              prefs.remove('refreshToken');
+              prefs.remove('loggedIn');
+              prefs.remove('accountAccountIndex');
+              prefs.remove('selectedLogin');
+              prefs.remove('selectedType');
+              prefs.remove('selectedCurrency');
+              prefs.remove('selectedLeverage');
+              Get.log("✅ [LOGOUT] SharedPreferences cleared");
+
+              Get.log("🗑️ [LOGOUT] Clearing GetStorage...");
+              final storage = GetStorage();
+
+              final savedPasscodeData = storage.read('app_passcode');
+              Get.log(
+                "💾 [LOGOUT] Saving passcode data before erase: $savedPasscodeData",
+              );
+
+              await storage.erase();
+
+              if (savedPasscodeData != null) {
+                await storage.write('app_passcode', savedPasscodeData);
+                Get.log("✅ [LOGOUT] Passcode restored after erase");
+              }
+              Get.log("✅ [LOGOUT] GetStorage cleared (passcode preserved)");
+
+              Get.log("🗑️ [LOGOUT] Disposing controllers...");
+              _accountController.clearDefaultAccount();
+              _accountController.resetAccountsState();
+              Get.delete<AccountController>();
+              Get.delete<TradingAccountController>();
+              Get.delete<TradingController>();
+              Get.delete<UserController>();
+              Get.delete<HomeController>(force: true);
+              Get.log("✅ [LOGOUT] All controllers deleted");
+
+              Get.log("🚀 [LOGOUT] Navigating to MainpageWithoutLogin");
+              Get.offAll(() => const MainpageWithoutLogin());
+            },
+            title: "Keluar",
+            textButton: "Ya",
+          );
+        },
+      ),
+    );
+  }
+
   String buildFullImageUrl(String? url, [int? version]) {
     if (url == null || url.isEmpty) return "";
-    // pastikan tidak tambah ts setiap rebuild
     if (url.startsWith("http")) {
       return version != null ? "$url?v=$version" : url;
     }
@@ -658,4 +1000,27 @@ class _SettingsState extends State<Settings> {
         ? "${GlobalVariable.mainURL}$url?v=$version"
         : "${GlobalVariable.mainURL}$url";
   }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// DATA CLASS
+// ════════════════════════════════════════════════════════════════════════════
+class _MenuItemData {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final VoidCallback? onTap;
+  final bool enabled;
+  final Widget? trailing;
+
+  _MenuItemData({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    this.onTap,
+    this.enabled = true,
+    this.trailing,
+  });
 }
