@@ -121,16 +121,19 @@ class PendingOrdersPage extends StatefulWidget {
 }
 
 class _PendingOrdersPageState extends State<PendingOrdersPage>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   late final AccountController _accountController;
 
   WebSocketChannel? _channel;
   Timer? _reconnectTimer;
   bool _isManuallyDisconnected = false;
   int _reconnectAttempts = 0;
-  static const int _maxReconnectAttempts = 5;
+  static const int _maxReconnectAttempts = 10;
   static const Duration _reconnectDelay = Duration(seconds: 3);
   static const String _wsUrl = 'wss://ws-rrfx.techcrm.dev/openposition';
+
+  /// Generation counter to invalidate stale WebSocket callbacks
+  int _subscriptionGen = 0;
 
   final Rx<PendingWSStatus> status = PendingWSStatus.disconnected.obs;
   final RxList<PendingOrderItem> pendingOrders = <PendingOrderItem>[].obs;
@@ -146,6 +149,7 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     _accountController = Get.isRegistered<AccountController>()
         ? Get.find<AccountController>()
@@ -172,7 +176,23 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // App kembali aktif — auto-reconnect jika WS tidak connected
+      if (status.value != PendingWSStatus.connected &&
+          _currentLogin != null &&
+          _currentServerType != null) {
+        debugPrint('📱 [PendingWS] App resumed, auto-reconnecting...');
+        _reconnectAttempts = 0;
+        _subscribe(login: _currentLogin!, serverType: _currentServerType!);
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _accountListener?.dispose();
     _disconnect();
     super.dispose();
@@ -186,6 +206,15 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
         status.value == PendingWSStatus.connected) {
       return;
     }
+
+    // Increment generation to invalidate stale callbacks from old channel
+    _subscriptionGen++;
+
+    // Cancel pending reconnect from old connection
+    _reconnectTimer?.cancel();
+
+    // Temporarily mark as manual disconnect so old onDone doesn't interfere
+    _isManuallyDisconnected = true;
 
     // Close existing connection
     if (_channel != null) {
@@ -209,8 +238,12 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
 
       _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
 
+      // Capture current generation so stale callbacks are ignored
+      final gen = _subscriptionGen;
+
       _channel!.stream.listen(
         (message) {
+          if (gen != _subscriptionGen) return;
           try {
             _reconnectAttempts = 0;
             status.value = PendingWSStatus.connected;
@@ -225,11 +258,13 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
           }
         },
         onError: (err) {
+          if (gen != _subscriptionGen) return;
           debugPrint('❌ [PendingWS] Error: $err');
           status.value = PendingWSStatus.failed;
           if (!_isManuallyDisconnected) _scheduleReconnect();
         },
         onDone: () {
+          if (gen != _subscriptionGen) return;
           status.value = PendingWSStatus.disconnected;
           if (!_isManuallyDisconnected) _scheduleReconnect();
         },
@@ -238,7 +273,10 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
 
       // Send subscribe message after brief delay for connection establishment
       if (_currentLogin != null && _currentServerType != null) {
-        Future.delayed(const Duration(milliseconds: 500), _sendSubscribeMessage);
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (gen != _subscriptionGen) return;
+          _sendSubscribeMessage();
+        });
       }
     } catch (e) {
       debugPrint('❌ [PendingWS] Connection error: $e');
@@ -286,17 +324,34 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
 
   void _scheduleReconnect() {
     if (_reconnectTimer?.isActive == true) return;
-    if (_reconnectAttempts >= _maxReconnectAttempts) return;
+    if (_reconnectAttempts >= _maxReconnectAttempts) {
+      debugPrint('⚠️ [PendingWS] Max reconnect attempts reached, waiting for manual retry or app resume');
+      status.value = PendingWSStatus.failed;
+      return;
+    }
 
     _reconnectAttempts++;
-    _reconnectTimer = Timer(_reconnectDelay, () {
+    // Exponential backoff: 3s, 6s, 9s, ... capped at 15s
+    final delay = Duration(seconds: (_reconnectDelay.inSeconds * _reconnectAttempts).clamp(3, 15));
+    debugPrint('🔄 [PendingWS] Reconnect attempt $_reconnectAttempts/$_maxReconnectAttempts in ${delay.inSeconds}s');
+
+    _reconnectTimer = Timer(delay, () {
       if (!_isManuallyDisconnected) {
+        _subscriptionGen++;
         try {
           _channel?.sink.close();
         } catch (_) {}
         _connectWebSocket();
       }
     });
+  }
+
+  /// Manual reconnect — reset semua state dan coba ulang dari awal
+  void _manualReconnect() {
+    if (_currentLogin == null || _currentServerType == null) return;
+    debugPrint('🔄 [PendingWS] Manual reconnect triggered');
+    _reconnectAttempts = 0;
+    _subscribe(login: _currentLogin!, serverType: _currentServerType!);
   }
 
   void _disconnect() {
@@ -354,16 +409,22 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
     Color bgColor;
     String text;
     IconData icon;
+    bool isRetrying = false;
 
     switch (wsStatus) {
       case PendingWSStatus.connecting:
         bgColor = Colors.orange.shade600;
-        text = 'Menghubungkan ke server...';
+        text = _reconnectAttempts > 0
+            ? 'Reconnecting ($_reconnectAttempts/$_maxReconnectAttempts)...'
+            : 'Menghubungkan ke server...';
         icon = Icons.sync;
+        isRetrying = true;
         break;
       case PendingWSStatus.failed:
         bgColor = Colors.red.shade600;
-        text = 'Koneksi gagal. Mencoba ulang...';
+        text = _reconnectAttempts >= _maxReconnectAttempts
+            ? 'Koneksi gagal. Tap Reconnect untuk coba lagi.'
+            : 'Koneksi gagal. Mencoba ulang...';
         icon = Icons.error_outline;
         break;
       case PendingWSStatus.disconnected:
@@ -382,42 +443,53 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
       color: bgColor,
       child: Row(
         children: [
-          Icon(icon, color: Colors.white, size: 16),
+          isRetrying
+              ? SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Icon(icon, color: Colors.white, size: 16),
           const SizedBox(width: 8),
-          Text(
-            text,
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+          Expanded(
+            child: Text(
+              text,
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          const Spacer(),
+          const SizedBox(width: 8),
           if (wsStatus == PendingWSStatus.failed ||
               wsStatus == PendingWSStatus.disconnected)
             GestureDetector(
-              onTap: () {
-                if (_currentLogin != null && _currentServerType != null) {
-                  _reconnectAttempts = 0;
-                  _subscribe(
-                    login: _currentLogin!,
-                    serverType: _currentServerType!,
-                  );
-                }
-              },
+              onTap: _manualReconnect,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withOpacity(0.25),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
-                  'Retry',
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.refresh, color: Colors.white, size: 13),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Reconnect',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

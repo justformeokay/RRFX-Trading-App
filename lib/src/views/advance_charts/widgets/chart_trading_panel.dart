@@ -48,6 +48,11 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   // Execution type tracking
   late RxString _executionType = 'Execution Market'.obs;
 
+  // Track apakah pending order dialog sedang terbuka (cegah numpuk)
+  bool _isPendingDialogOpen = false;
+  // Track execution type terakhir yang sudah auto-show dialog
+  String? _lastAutoShownType;
+
   // Pending order fields
   final TextEditingController _entryPriceController = TextEditingController();
   final TextEditingController _stopLossController = TextEditingController();
@@ -625,6 +630,10 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                       return GestureDetector(
                         onTap: () {
                           _executionType.value = type;
+                          // Reset auto-show tracker saat ganti type
+                          if (type == 'Execution Market') {
+                            _lastAutoShownType = null;
+                          }
                           Get.back();
                         },
                         child: Container(
@@ -730,6 +739,10 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
   void _showFloatingPendingOrderCard(bool isDark) {
     if (_executionType.value == 'Execution Market') return;
+    // Cegah numpuk: jangan buka dialog jika sudah ada yang terbuka
+    if (_isPendingDialogOpen) return;
+
+    _isPendingDialogOpen = true;
 
     showDialog(
       context: context,
@@ -1177,16 +1190,24 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
               ),
             ),
           ),
-    );
+    ).then((_) {
+      // Reset flag saat dialog ditutup (baik via back, tap outside, dll)
+      _isPendingDialogOpen = false;
+    });
   }
 
   Widget _buildPendingOrderFields(bool isDark) {
     if (_executionType.value != 'Execution Market') {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted) {
-          _showFloatingPendingOrderCard(isDark);
-        }
-      });
+      // Hanya auto-show dialog saat execution type BARU berubah,
+      // bukan setiap kali widget rebuild
+      if (_lastAutoShownType != _executionType.value) {
+        _lastAutoShownType = _executionType.value;
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) {
+            _showFloatingPendingOrderCard(isDark);
+          }
+        });
+      }
 
       // Return a hint card to reopen settings
       return Container(
