@@ -18,6 +18,10 @@ class AccountBalanceWSController extends GetxController
   static const int _maxReconnectAttempts = 5;
   static const Duration _reconnectDelay = Duration(seconds: 3);
 
+  /// Generation counter to invalidate stale WebSocket callbacks
+  /// (prevents old channel's onDone from triggering reconnect after subscribe)
+  int _subscriptionGen = 0;
+
   final Rx<AccountWSStatus> status = AccountWSStatus.connecting.obs;
   String? _currentLogin;
   String? _currentServerType;
@@ -63,6 +67,15 @@ class AccountBalanceWSController extends GetxController
       return;
     }
 
+    // Increment generation to invalidate any pending callbacks from old channel
+    _subscriptionGen++;
+
+    // Cancel any pending reconnect from old connection
+    _reconnectTimer?.cancel();
+
+    // Temporarily mark as manual disconnect so old onDone doesn't interfere
+    _isManuallyDisconnected = true;
+
     // Close old connection before creating new one
     if (channel != null) {
       // print('🔄 [AccountWS] Closing old connection for $_currentLogin');
@@ -91,8 +104,13 @@ class AccountBalanceWSController extends GetxController
 
       channel = WebSocketChannel.connect(Uri.parse('ws://207.148.119.106:9006'));
 
+      // Capture current generation so stale callbacks are ignored
+      final gen = _subscriptionGen;
+
       channel!.stream.listen(
         (message) {
+          // Ignore if this listener belongs to an old subscription
+          if (gen != _subscriptionGen) return;
           try {
             _reconnectAttempts = 0;
             status.value = AccountWSStatus.connected;
@@ -107,6 +125,7 @@ class AccountBalanceWSController extends GetxController
           }
         },
         onError: (err) {
+          if (gen != _subscriptionGen) return;
           // print('❌ [AccountWS] Error: $err');
           status.value = AccountWSStatus.failed;
           if (!_isManuallyDisconnected) {
@@ -114,6 +133,7 @@ class AccountBalanceWSController extends GetxController
           }
         },
         onDone: () {
+          if (gen != _subscriptionGen) return;
           // print('⚠️ [AccountWS] Connection closed');
           status.value = AccountWSStatus.disconnected;
           if (!_isManuallyDisconnected) {
@@ -194,10 +214,12 @@ class AccountBalanceWSController extends GetxController
           hasChanges = true;
         }
         
-        final newMargin = data['margin']?.toString() ?? "0";
-        if (newMargin != currentAccount.margin) {
-          currentAccount.margin = newMargin;
-          hasChanges = true;
+        if (data.containsKey('margin') && data['margin'] != null) {
+          final newMargin = data['margin'].toString();
+          if (newMargin != currentAccount.margin) {
+            currentAccount.margin = newMargin;
+            hasChanges = true;
+          }
         }
         
         final newMarginFree = data['free_margin']?.toString();
@@ -212,17 +234,21 @@ class AccountBalanceWSController extends GetxController
           hasChanges = true;
         }
 
-        // Update profit dan floating
-        final newProfit = (data['profit'] as num?)?.toDouble() ?? 0.0;
-        if ((newProfit - profit.value).abs() > 0.001) { // Only update if difference > 0.001
-          profit.value = newProfit;
-          hasChanges = true;
+        // Update profit dan floating — only if server actually sends these fields
+        if (data.containsKey('profit') && data['profit'] != null) {
+          final newProfit = (data['profit'] as num).toDouble();
+          if ((newProfit - profit.value).abs() > 0.001) {
+            profit.value = newProfit;
+            hasChanges = true;
+          }
         }
-        
-        final newFloating = (data['floating'] as num?)?.toDouble() ?? 0.0;
-        if ((newFloating - floating.value).abs() > 0.001) {
-          floating.value = newFloating;
-          hasChanges = true;
+
+        if (data.containsKey('floating') && data['floating'] != null) {
+          final newFloating = (data['floating'] as num).toDouble();
+          if ((newFloating - floating.value).abs() > 0.001) {
+            floating.value = newFloating;
+            hasChanges = true;
+          }
         }
 
         // Trigger update only if there are actual changes
