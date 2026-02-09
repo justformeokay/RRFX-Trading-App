@@ -266,8 +266,8 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
             final fgColor = isDarkMode ? Colors.white : Colors.black;
             final secondaryTextColor = isDarkMode ? Colors.white70 : Colors.grey[700];
             
-            // Cek apakah market sedang tutup (weekend/holiday)
-            final now = DateTime.now();
+            // Cek apakah market sedang tutup (weekend/holiday) - gunakan UTC untuk konsistensi global
+            final now = DateTime.now().toUtc();
             final isMarketClosed = isForexHoliday(now);
             
             // Priority 1: Cek jika market tutup
