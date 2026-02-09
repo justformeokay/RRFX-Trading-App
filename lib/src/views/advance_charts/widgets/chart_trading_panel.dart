@@ -525,33 +525,12 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
       // Show error popup dengan ModernAlertDialog
       if (mounted) {
+        // Gunakan message langsung dari response API
         String errorMsg = e.toString().replaceAll('Exception: ', '');
-        String userFriendlyMsg =
-            'Order gagal dilakukan. Silakan periksa kembali data Anda dan coba lagi.';
-
-        // Map error codes ke pesan yang user-friendly
-        if (errorMsg.contains('524')) {
-          userFriendlyMsg =
-              'Koneksi ke server bermasalah. Silakan coba lagi dalam beberapa saat.';
-        } else if (errorMsg.contains('500') || errorMsg.contains('502')) {
-          userFriendlyMsg =
-              'Server sedang mengalami gangguan. Silakan coba lagi.';
-        } else if (errorMsg.toLowerCase().contains('invalid') ||
-            errorMsg.toLowerCase().contains('ticket')) {
-          userFriendlyMsg =
-              'Pesanan tidak dapat diproses karena data tidak valid. Silakan coba lagi.';
-        } else if (errorMsg.toLowerCase().contains('insufficient') ||
-            errorMsg.toLowerCase().contains('balance')) {
-          userFriendlyMsg =
-              'Saldo Anda tidak cukup untuk melakukan pesanan ini.';
-        } else if (errorMsg.toLowerCase().contains('market')) {
-          userFriendlyMsg =
-              'Pasar sedang ditutup atau tidak tersedia saat ini.';
-        }
 
         ModernAlertDialog.error(
           title: 'Order Gagal',
-          message: userFriendlyMsg,
+          message: errorMsg,
           onPressed: () {
             Get.back();
           },
@@ -1751,34 +1730,12 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
       // Show error popup dengan ModernAlertDialog
       if (mounted) {
+        // Gunakan message langsung dari response API
         String errorMsg = e.toString().replaceAll('Exception: ', '');
-        String userFriendlyMsg =
-            'Pending order gagal dibuat. Silakan periksa kembali data Anda dan coba lagi.';
-
-        // Map error codes ke pesan yang user-friendly
-        if (errorMsg.contains('524')) {
-          userFriendlyMsg =
-              'Koneksi ke server bermasalah. Silakan coba lagi dalam beberapa saat.';
-        } else if (errorMsg.contains('500') || errorMsg.contains('502')) {
-          userFriendlyMsg =
-              'Server sedang mengalami gangguan. Silakan coba lagi.';
-        } else if (errorMsg.toLowerCase().contains('invalid') ||
-            errorMsg.toLowerCase().contains('ticket') ||
-            errorMsg.toLowerCase().contains('price')) {
-          userFriendlyMsg =
-              'Data pending order tidak valid. Periksa entry price, SL, dan TP yang Anda masukkan.';
-        } else if (errorMsg.toLowerCase().contains('insufficient') ||
-            errorMsg.toLowerCase().contains('balance')) {
-          userFriendlyMsg =
-              'Saldo Anda tidak cukup untuk membuat pending order ini.';
-        } else if (errorMsg.toLowerCase().contains('market')) {
-          userFriendlyMsg =
-              'Pasar sedang ditutup atau tidak tersedia saat ini.';
-        }
 
         ModernAlertDialog.error(
           title: 'Pending Order Gagal',
-          message: userFriendlyMsg,
+          message: errorMsg,
           onPressed: () {
             Get.back();
           },

@@ -825,11 +825,8 @@ class _PositionTile extends StatelessWidget {
         // Dispose worker before closing
         worker.dispose();
 
-        // Show loading indicator
-        Get.dialog(
-          Center(child: CircularProgressIndicator()),
-          barrierDismissible: false,
-        );
+        // Show modern loading indicator
+        _showModernLoadingDialog(context, "Closing Position...");
 
         try {
           await tradingController.closingOrder(
@@ -912,15 +909,8 @@ class _PositionTile extends StatelessWidget {
         currentPriceObservable: currentPriceObs,
         onModify: (sl, tp) async {
           try {
-            // Show loading
-            Get.dialog(
-              Center(
-                child: CircularProgressIndicator(
-                  color: CustomColor.secondaryColor,
-                ),
-              ),
-              barrierDismissible: false,
-            );
+            // Show modern loading
+            _showModernLoadingDialog(context, "Updating Position...");
 
             // Call modify API
             final result = await tradingController.modifyPosition(
@@ -1153,5 +1143,86 @@ class _PositionTile extends StatelessWidget {
     if (symbolUpper.contains('JPY')) return 3;
     if (symbolUpper.contains('XAU') || symbolUpper.contains('GOLD')) return 2;
     return 5;
+  }
+
+  /// 🎯 Modern loading dialog untuk closing position
+  void _showModernLoadingDialog(BuildContext context, String title) {
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade900
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 🎯 Animated circular progress indicator
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        CustomColor.secondaryColor.withValues(alpha: 0.1),
+                        Colors.blue.withValues(alpha: 0.05),
+                      ],
+                    ),
+                  ),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: CustomColor.secondaryColor,
+                      strokeWidth: 3,
+                      backgroundColor: CustomColor.secondaryColor.withValues(alpha: 0.2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // 📝 Title text
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // 💬 Subtitle text
+                Text(
+                  "Please wait while we process your request",
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    height: 1.5,
+                    fontWeight: FontWeight.w400,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
   }
 }
