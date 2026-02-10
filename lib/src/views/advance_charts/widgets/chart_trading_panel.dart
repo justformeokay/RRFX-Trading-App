@@ -254,7 +254,9 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   }
 
   Widget _buildExecutionItem(Map<String, dynamic> item) {
-    final symbolClean = widget.symbol.replaceAll('.db', '');
+    // Gunakan symbol dari item, bukan widget.symbol (fix bug: symbol berubah saat pindah market)
+    final itemSymbol = item['symbol'] as String? ?? widget.symbol;
+    final symbolClean = itemSymbol.replaceAll('.db', '');
     final operation = item['operation'] as String;
     final lot = item['lot'] as double;
     final status = item['status'] as String; // 'loading', 'success', 'error'
@@ -371,6 +373,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     final newItem = {
       'operation': operation,
       'lot': lot,
+      'symbol': widget.symbol,  // Simpan symbol agar tidak berubah saat pindah market
       'status': 'loading',
       'id': DateTime.now().millisecondsSinceEpoch,
     };
@@ -459,21 +462,23 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     _isProcessingQueue = true;
     final item = _executionQueue.first;
     final operation = item['operation'] as String;
+    // Gunakan symbol dari item, bukan widget.symbol (fix bug: symbol berubah saat pindah market)
+    final itemSymbol = item['symbol'] as String? ?? widget.symbol;
 
     try {
-      print('🔄 Processing order: $operation for ${widget.symbol}');
+      print('🔄 Processing order: $operation for $itemSymbol');
       print('📊 Login: ${widget.login}, Lot: ${item['lot']}');
 
       Map<String, dynamic> response;
       if (operation == 'buy') {
         response = await executionController.executeBuy(
           login: widget.login,
-          symbol: widget.symbol,
+          symbol: itemSymbol,
         );
       } else {
         response = await executionController.executeSell(
           login: widget.login,
-          symbol: widget.symbol,
+          symbol: itemSymbol,
         );
       }
 
@@ -743,6 +748,12 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     if (_isPendingDialogOpen) return;
 
     _isPendingDialogOpen = true;
+    
+    // Auto-fill entry price dengan current price saat dialog dibuka
+    final currentPrice = widget.currentPrice?.value;
+    if (currentPrice != null && currentPrice > 0 && _entryPriceController.text.isEmpty) {
+      _entryPriceController.text = _formatPrice(currentPrice, widget.symbol);
+    }
 
     showDialog(
       context: context,
@@ -962,8 +973,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
                                     return GestureDetector(
                                       onTap: () {
-                                        _entryPriceController.text = price
-                                            .toStringAsFixed(2);
+                                        _entryPriceController.text = _formatPrice(price, widget.symbol);
                                         HapticFeedback.mediumImpact();
                                       },
                                       child: Container(
@@ -1001,7 +1011,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                               ),
                                             ),
                                             Text(
-                                              price.toStringAsFixed(2),
+                                              _formatPrice(price, widget.symbol),
                                               textAlign: TextAlign.center,
                                               style: GoogleFonts.inter(
                                                 fontSize: 12,
@@ -1566,6 +1576,9 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   Future<void> _executePendingOrder(String direction) async {
     HapticFeedback.lightImpact();
 
+    // Capture symbol di awal untuk menghindari race condition saat pindah market
+    final capturedSymbol = widget.symbol;
+
     // Validate entry price
     final entryPrice = double.tryParse(
       _entryPriceController.text.replaceAll(',', ''),
@@ -1588,7 +1601,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
     // Validate entry price based on order type with stop level requirement
     // Stop Level: minimal jarak dari current price (biasanya 50-100 points untuk Gold, 10-30 untuk Forex)
-    final stopLevel = _getStopLevel(widget.symbol);
+    final stopLevel = _getStopLevel(capturedSymbol);
+    final digits = _getDigitsForSymbol(capturedSymbol);
 
     if (currentPrice != null && currentPrice > 0) {
       final validationResult = _validateEntryPrice(
@@ -1596,6 +1610,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
         entryPrice: entryPrice,
         currentPrice: currentPrice,
         stopLevel: stopLevel,
+        digits: digits,
       );
 
       if (!validationResult['isValid']) {
@@ -1625,7 +1640,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     // For sell orders: SL = entryPrice + (slPoints * point), TP = entryPrice - (tpPoints * point)
     // point value = 0.0001 for most pairs (0.01 for JPY pairs)
     final pointValue =
-        widget.symbol.toUpperCase().contains('JPY') ? 0.01 : 0.0001;
+        capturedSymbol.toUpperCase().contains('JPY') ? 0.01 : 0.0001;
 
     double? sl;
     double? tp;
@@ -1679,6 +1694,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       'id': id,
       'operation': operation,
       'lot': lot,
+      'symbol': capturedSymbol,  // Gunakan captured symbol
       'price': entryPrice,
       'sl': sl,
       'tp': tp,
@@ -1701,7 +1717,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
       final response = await executionController.executePendingOrder(
         login: widget.login,
-        symbol: widget.symbol,
+        symbol: capturedSymbol,  // Gunakan captured symbol
         operation: operation,
         price: entryPrice,
         volume: lot,
@@ -1805,6 +1821,44 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     return 0.00030; // 30 points
   }
 
+  /// Get number of decimal places based on symbol type
+  int _getDigitsForSymbol(String symbol) {
+    final symbolUpper = symbol.toUpperCase();
+
+    // Gold (XAU) - 2 decimal places
+    if (symbolUpper.contains('XAU') || symbolUpper.contains('GOLD')) {
+      return 2;
+    }
+
+    // Silver (XAG) - 3 decimal places
+    if (symbolUpper.contains('XAG') || symbolUpper.contains('SILVER')) {
+      return 3;
+    }
+
+    // JPY pairs - 3 decimal places
+    if (symbolUpper.contains('JPY')) {
+      return 3;
+    }
+
+    // Indices - 2 decimal places
+    if (symbolUpper.contains('US30') ||
+        symbolUpper.contains('NAS') ||
+        symbolUpper.contains('SPX') ||
+        symbolUpper.contains('DAX') ||
+        symbolUpper.contains('UK100')) {
+      return 2;
+    }
+
+    // Default for Forex pairs - 5 decimal places
+    return 5;
+  }
+
+  /// Format price with correct number of digits based on symbol
+  String _formatPrice(double price, String symbol) {
+    final digits = _getDigitsForSymbol(symbol);
+    return price.toStringAsFixed(digits);
+  }
+
   /// Validate entry price based on order type
   /// Returns Map with 'isValid' (bool) and 'message' (String)
   Map<String, dynamic> _validateEntryPrice({
@@ -1812,7 +1866,10 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     required double entryPrice,
     required double currentPrice,
     required double stopLevel,
+    required int digits,
   }) {
+    String formatPrice(double price) => price.toStringAsFixed(digits);
+    
     switch (executionType) {
       case 'Buy Limit':
         // Entry price harus DI BAWAH current price dengan minimal stopLevel
@@ -1820,14 +1877,14 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
           return {
             'isValid': false,
             'message':
-                'Buy Limit: Entry Price harus di BAWAH harga saat ini (${currentPrice.toStringAsFixed(2)})',
+                'Buy Limit: Entry Price harus di BAWAH harga saat ini (${formatPrice(currentPrice)})',
           };
         }
         if ((currentPrice - entryPrice) < stopLevel) {
           return {
             'isValid': false,
             'message':
-                'Buy Limit: Entry Price minimal ${stopLevel.toString()} di bawah harga saat ini.\nMinimal: ${(currentPrice - stopLevel).toStringAsFixed(2)}',
+                'Buy Limit: Entry Price minimal ${stopLevel.toString()} di bawah harga saat ini.\nMinimal: ${formatPrice(currentPrice - stopLevel)}',
           };
         }
         break;
@@ -1838,14 +1895,14 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
           return {
             'isValid': false,
             'message':
-                'Sell Limit: Entry Price harus di ATAS harga saat ini (${currentPrice.toStringAsFixed(2)})',
+                'Sell Limit: Entry Price harus di ATAS harga saat ini (${formatPrice(currentPrice)})',
           };
         }
         if ((entryPrice - currentPrice) < stopLevel) {
           return {
             'isValid': false,
             'message':
-                'Sell Limit: Entry Price minimal ${stopLevel.toString()} di atas harga saat ini.\nMinimal: ${(currentPrice + stopLevel).toStringAsFixed(2)}',
+                'Sell Limit: Entry Price minimal ${stopLevel.toString()} di atas harga saat ini.\nMinimal: ${formatPrice(currentPrice + stopLevel)}',
           };
         }
         break;
@@ -1856,14 +1913,14 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
           return {
             'isValid': false,
             'message':
-                'Buy Stop: Entry Price harus di ATAS harga saat ini (${currentPrice.toStringAsFixed(2)})',
+                'Buy Stop: Entry Price harus di ATAS harga saat ini (${formatPrice(currentPrice)})',
           };
         }
         if ((entryPrice - currentPrice) < stopLevel) {
           return {
             'isValid': false,
             'message':
-                'Buy Stop: Entry Price minimal ${stopLevel.toString()} di atas harga saat ini.\nMinimal: ${(currentPrice + stopLevel).toStringAsFixed(2)}',
+                'Buy Stop: Entry Price minimal ${stopLevel.toString()} di atas harga saat ini.\nMinimal: ${formatPrice(currentPrice + stopLevel)}',
           };
         }
         break;
@@ -1874,14 +1931,14 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
           return {
             'isValid': false,
             'message':
-                'Sell Stop: Entry Price harus di BAWAH harga saat ini (${currentPrice.toStringAsFixed(2)})',
+                'Sell Stop: Entry Price harus di BAWAH harga saat ini (${formatPrice(currentPrice)})',
           };
         }
         if ((currentPrice - entryPrice) < stopLevel) {
           return {
             'isValid': false,
             'message':
-                'Sell Stop: Entry Price minimal ${stopLevel.toString()} di bawah harga saat ini.\nMinimal: ${(currentPrice - stopLevel).toStringAsFixed(2)}',
+                'Sell Stop: Entry Price minimal ${stopLevel.toString()} di bawah harga saat ini.\nMinimal: ${formatPrice(currentPrice - stopLevel)}',
           };
         }
         break;
