@@ -61,6 +61,16 @@
                 <data android:scheme="https" />
                 <data android:host="client.rrfx.co.id" />
             </intent-filter>
+
+            <!-- Deeplink untuk app.rrfx.co.id -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:host="app.rrfx.co.id" />
+            </intent-filter>
         </activity>
 
         <!-- Metadata Firebase & lainnya -->

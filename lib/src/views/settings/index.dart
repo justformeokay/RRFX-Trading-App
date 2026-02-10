@@ -133,7 +133,7 @@ class _SettingsState extends State<Settings> {
               // ─── QUICK ACTIONS ───
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
                   child: _buildQuickActions(context, isDark, colorScheme),
                 ),
               ),
@@ -141,7 +141,7 @@ class _SettingsState extends State<Settings> {
               // ─── SECURITY SECTION ───
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
                   child: _buildSectionCard(
                     context, isDark, colorScheme,
                     title: "Security",
@@ -173,7 +173,7 @@ class _SettingsState extends State<Settings> {
               // ─── ACCOUNT & FINANCE ───
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
                   child: _buildSectionCard(
                     context, isDark, colorScheme,
                     title: "Account & Finance",
