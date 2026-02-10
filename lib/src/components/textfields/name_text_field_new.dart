@@ -109,7 +109,7 @@ class _NameTextFieldNewVersionState extends State<NameTextFieldNewVersion> {
                       widget.iconData ?? Iconsax.d_cube_scan_outline,
                       color: isReadOnly
                           ? colorScheme.onSurfaceVariant.withOpacity(0.3)
-                          : colorScheme.onSurfaceVariant,
+                          : colorScheme.onSurfaceVariant.withOpacity(0.5),
                     ),
                   ),
 

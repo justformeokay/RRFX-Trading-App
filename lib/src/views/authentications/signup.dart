@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:icons_plus/icons_plus.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
 import 'package:rrfx/src/components/bottomsheets/material_bottom_sheets.dart';
@@ -42,7 +43,7 @@ class _SignupState extends State<Signup> {
   String? referalCode;
 
   bool _validateEmail(String email) {
-    final regex = RegExp(r'^[\w\.\-]+@([\w\-]+\.)+[a-zA-Z]{2,}$');
+    final regex = RegExp(r'^[A-Za-z0-9._+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$');
     return regex.hasMatch(email.trim());
   }
 
@@ -165,6 +166,7 @@ class _SignupState extends State<Signup> {
                           required: true,
                           child: NameTextFieldNewVersion(
                             useValidator: true,
+                            iconData: Iconsax.user_tick_outline,
                             requiredField: true,
                             labelText: "Nama Lengkap",
                             fieldName: LanguageGlobalVar.FULL_NAME.tr,
