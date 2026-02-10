@@ -75,9 +75,15 @@ class _SignupState extends State<Signup> {
 
     // ⬇️ Ambil referral code dari arguments (deeplink)
     final args = Get.arguments;
+    print('📋 [Signup] Arguments received: $args');
+    
     if (args != null && args['code'] != null) {
-      // referalController.text = args['code'];
       referalCode = args['code'];
+      print('✅ [Signup] Referral code set: $referalCode');
+      // Optional: auto-fill ke textfield jika mau
+      // referalController.text = referalCode ?? '';
+    } else {
+      print('⚠️ [Signup] No referral code in arguments');
     }
   }
 
@@ -380,6 +386,15 @@ class _SignupState extends State<Signup> {
                                             type: SnackBarType.error,
                                           );
                                         }
+                                        
+                                        // Debug: print semua data sebelum register
+                                        final finalReferralCode = referalCode ?? referalController.text;
+                                        print('📤 [Signup] Submitting registration:');
+                                        print('   Name: ${fullNameController.text}');
+                                        print('   Email: ${emailController.text.toLowerCase()}');
+                                        print('   Phone: ${phoneCode.value}${phoneNumber.value}');
+                                        print('   Referral Code: $finalReferralCode');
+                                        
                                         authController
                                             .register(
                                               phoneCode: phoneCode.value,
@@ -390,9 +405,7 @@ class _SignupState extends State<Signup> {
                                                   emailController.text
                                                       .toLowerCase(),
                                               name: fullNameController.text,
-                                              ibCode:
-                                                  referalCode ??
-                                                  referalController.text,
+                                              ibCode: finalReferralCode,
                                             )
                                             .then((result) {
                                               if (result) {

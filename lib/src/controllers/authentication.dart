@@ -30,6 +30,9 @@ class AuthController extends GetxController {
   RxString statusAccount = "".obs;
   Rxn<CountryCodeModel> countryCodeModel = Rxn<CountryCodeModel>();
   Rxn<PersonalModels> personalModel = Rxn<PersonalModels>();
+
+  // UTM Parameters storage
+  final Rxn<Map<String, String>> _utmParameters = Rxn<Map<String, String>>();
   // HomeController getter - ensures controller exists before use
   HomeController get homeController {
     try {
@@ -49,6 +52,27 @@ class AuthController extends GetxController {
     DeviceUtilitiesController.getDeviceInfo().then((value) {
       deviceInfo = value;
     });
+
+    // Load saved UTM parameters from storage if exists
+    final savedUtm = box.read('utm_parameters');
+    if (savedUtm != null && savedUtm is Map) {
+      _utmParameters.value = Map<String, String>.from(savedUtm);
+      Get.log("📊 [AUTH] Loaded saved UTM: $_utmParameters");
+    }
+  }
+
+  /// Set UTM parameters from deep link
+  void setUtmParameters(Map<String, String> utmParams) {
+    _utmParameters.value = utmParams;
+    box.write('utm_parameters', utmParams);
+    Get.log("📊 [AUTH] UTM parameters saved: $utmParams");
+  }
+
+  /// Clear UTM parameters after successful registration
+  void clearUtmParameters() {
+    _utmParameters.value = null;
+    box.remove('utm_parameters');
+    Get.log("📊 [AUTH] UTM parameters cleared");
   }
 
   @override
@@ -72,31 +96,34 @@ class AuthController extends GetxController {
       Get.log("📱 [AUTH] Device ID (FCM Token): $deviceId");
 
       Get.log("📡 [AUTH] Sending login request...");
-      final response = await http.post(
-        Uri.tryParse("${GlobalVariable.mainURL}/auth/login")!,
-        headers: {
-          'x-api-key': GlobalVariable.x_api_key,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: {
-          'email': email,
-          'password': password,
-          'device': jsonEncode(deviceInfo),
-          'device_id': deviceId ?? '', // ✅ Send FCM Token to API
-        },
-      ).timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          isLoading(false);
-          Get.log("❌ [AUTH] Request timeout");
-          ModernAlertDialog.warning(
-            title: "Koneksi Lambat",
-            message: "Server tidak merespons. Silakan periksa koneksi internet Anda dan coba lagi.",
-            buttonText: "OK",
+      final response = await http
+          .post(
+            Uri.tryParse("${GlobalVariable.mainURL}/auth/login")!,
+            headers: {
+              'x-api-key': GlobalVariable.x_api_key,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: {
+              'email': email,
+              'password': password,
+              'device': jsonEncode(deviceInfo),
+              'device_id': deviceId ?? '', // ✅ Send FCM Token to API
+            },
+          )
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              isLoading(false);
+              Get.log("❌ [AUTH] Request timeout");
+              ModernAlertDialog.warning(
+                title: "Koneksi Lambat",
+                message:
+                    "Server tidak merespons. Silakan periksa koneksi internet Anda dan coba lagi.",
+                buttonText: "OK",
+              );
+              throw TimeoutException("Request timeout");
+            },
           );
-          throw TimeoutException("Request timeout");
-        },
-      );
       Get.log("Device Information Sent: ${jsonEncode(deviceInfo)}");
       Get.log("Device ID Sent: ${deviceId ?? 'NULL'}");
       Get.log("📥 [AUTH] Login response status: ${response.statusCode}");
@@ -120,14 +147,17 @@ class AuthController extends GetxController {
         // Tentukan title dan type berdasarkan pesan error
         String title = "Login Gagal";
         AlertType alertType = AlertType.error;
-        
+
         if (message.contains("tidak ditemukan") || message.contains("salah")) {
           title = "Email atau Password Salah";
         }
 
         ModernAlertDialog.show(
           type: alertType,
-          message: message.isNotEmpty ? message : "Login gagal, mohon cek ulang Email atau Password Anda apakah sudah benar",
+          message:
+              message.isNotEmpty
+                  ? message
+                  : "Login gagal, mohon cek ulang Email atau Password Anda apakah sudah benar",
           title: title,
           buttonText: "OK",
         );
@@ -141,7 +171,9 @@ class AuthController extends GetxController {
         responseMessage(result['message'] ?? "Login gagal");
         ModernAlertDialog.error(
           title: "Masalah Server",
-          message: result['message'] ?? "Terjadi kesalahan saat login. Silakan coba lagi.",
+          message:
+              result['message'] ??
+              "Terjadi kesalahan saat login. Silakan coba lagi.",
           buttonText: "OK",
         );
         return;
@@ -230,11 +262,11 @@ class AuthController extends GetxController {
     } catch (e) {
       isLoading(false);
       Get.log("❌ [AUTH] Exception in login(): $e");
-      
+
       // Gunakan helper method untuk mendapatkan pesan error yang sesuai
       String errorMessage = _getErrorMessage(e);
       responseMessage.value = errorMessage;
-      
+
       // Tentukan title berdasarkan jenis error
       String title = "Kesalahan";
       if (errorMessage.contains("Koneksi internet")) {
@@ -242,7 +274,7 @@ class AuthController extends GetxController {
       } else if (errorMessage.contains("lambat")) {
         title = "Koneksi Lambat";
       }
-      
+
       // Tampilkan popup error
       ModernAlertDialog.show(
         type: AlertType.error,
@@ -270,11 +302,13 @@ class AuthController extends GetxController {
       return "Terjadi kesalahan jaringan. Silakan periksa koneksi Anda.";
     } else {
       final errorString = error.toString();
-      
+
       // Deteksi berbagai pesan error jaringan
-      if (errorString.contains("SocketException") || errorString.contains("Failed host lookup")) {
+      if (errorString.contains("SocketException") ||
+          errorString.contains("Failed host lookup")) {
         return "Koneksi internet terputus. Silakan periksa koneksi Anda dan coba lagi.";
-      } else if (errorString.contains("TimeoutException") || errorString.contains("Timeout")) {
+      } else if (errorString.contains("TimeoutException") ||
+          errorString.contains("Timeout")) {
         return "Koneksi lambat atau server tidak merespons. Silakan coba lagi.";
       } else if (errorString.contains("Connection refused")) {
         return "Tidak dapat terhubung ke server. Silakan coba lagi nanti.";
@@ -283,7 +317,7 @@ class AuthController extends GetxController {
       } else if (errorString.contains("No address associated with hostname")) {
         return "Server tidak dapat diakses. Periksa koneksi internet Anda.";
       }
-      
+
       return error.toString();
     }
   }
@@ -303,34 +337,47 @@ class AuthController extends GetxController {
     try {
       isLoading(true);
       Get.log("📡 [AUTH] Sending registration request...");
-      
-      // Tambahkan timeout untuk request
-      http.Response response = await http.post(
-        Uri.tryParse("${GlobalVariable.mainURL}/auth/register")!,
-        headers: {
-          'x-api-key': GlobalVariable.x_api_key,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: {
-          'fullname': name,
-          'email': email,
-          'password': password,
-          'refferal': ibCode ?? '',
-          'phone': phone,
-          'phone_code': phoneCode ?? '62',
-          'terms': agree == true ? '1' : '0',
-          'device': jsonEncode(deviceInfo),
-        },
-      ).timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          isLoading(false);
-          responseMessage.value = "Koneksi lambat atau server tidak merespons. Silakan coba lagi.";
-          Get.log("❌ [AUTH] Request timeout");
-          throw TimeoutException("Request timeout");
-        },
-      );
-      
+
+      // Build request body
+      final Map<String, String> requestBody = {
+        'fullname': name!,
+        'email': email!,
+        'password': password!,
+        'referral': ibCode ?? '',
+        'phone': phone!,
+        'phone_code': phoneCode ?? '62',
+        'terms': agree == true ? '1' : '0',
+        'device': jsonEncode(deviceInfo),
+      };
+
+      // Tambahkan UTM hanya jika ada dari deep link/iklan
+      if (_utmParameters.value != null && _utmParameters.value!.isNotEmpty) {
+        requestBody['utm'] = jsonEncode(_utmParameters.value);
+        Get.log("📊 [AUTH] Sending UTM to API: ${_utmParameters.value}");
+      } else {
+        Get.log("📊 [AUTH] No UTM parameters - user daftar langsung");
+      }
+
+      http.Response response = await http
+          .post(
+            Uri.tryParse("${GlobalVariable.mainURL}/auth/register")!,
+            headers: {
+              'x-api-key': GlobalVariable.x_api_key,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: requestBody,
+          )
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              isLoading(false);
+              responseMessage.value =
+                  "Koneksi lambat atau server tidak merespons. Silakan coba lagi.";
+              Get.log("❌ [AUTH] Request timeout");
+              throw TimeoutException("Request timeout");
+            },
+          );
+
       var result = jsonDecode(response.body);
       isLoading(false);
       Get.log("📥 [AUTH] Register response status: ${response.statusCode}");
@@ -344,15 +391,20 @@ class AuthController extends GetxController {
         }
         Get.log("✅ [AUTH] Registration successful");
         responseMessage.value = result['message'];
+
+        // Clear UTM parameters after successful registration
+        clearUtmParameters();
+
         return true;
       }
       Get.log("❌ [AUTH] Registration failed - status code not 200");
-      responseMessage.value = result['message'] ?? "Terjadi kesalahan saat registrasi";
+      responseMessage.value =
+          result['message'] ?? "Terjadi kesalahan saat registrasi";
       return false;
     } catch (e) {
       Get.log("❌ [AUTH] Exception in register(): $e");
       isLoading(false);
-      
+
       // Gunakan helper method untuk mendapatkan pesan error yang sesuai
       responseMessage.value = _getErrorMessage(e);
       return false;
@@ -597,7 +649,11 @@ class AuthController extends GetxController {
   }
 
   // Create Demo Trading API
-  Future<bool> verificationAccount({String? gender, String? address, String? country}) async {
+  Future<bool> verificationAccount({
+    String? gender,
+    String? address,
+    String? country,
+  }) async {
     try {
       isLoading(true);
       Map<String, dynamic> result = await authService.post("verif/step-1", {

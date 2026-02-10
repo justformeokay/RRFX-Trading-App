@@ -45,7 +45,7 @@ class _OtpPageState extends State<OtpPage> {
 
   @override
   Widget build(BuildContext context) {
-    otpTimerController.startTimer(duration: 60);
+    otpTimerController.startTimer(duration: 300);
     return GestureDetector(
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       child: Scaffold(

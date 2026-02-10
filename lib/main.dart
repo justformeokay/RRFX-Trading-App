@@ -12,6 +12,7 @@ import 'package:rrfx/src/service/notification_service.dart';
 import 'package:rrfx/src/views/no_network_page.dart';
 import 'src/components/languages/languages.dart';
 import 'src/components/themes/default.dart';
+import 'src/controllers/authentication.dart';
 import 'src/helpers/get_utilities/routes.dart';
 import 'src/views/authentications/splashscreen.dart';
 import 'src/helpers/http/http_overrides_stub.dart'
@@ -66,6 +67,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   final networkController = Get.put(NetworkController());
   final authService = Get.put(AuthService());
+  final authController = Get.put(AuthController());
 
   @override
   void initState() {
