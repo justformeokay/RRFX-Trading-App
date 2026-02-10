@@ -160,6 +160,7 @@ class ChartExecutionController extends GetxController {
   /// - [price]: Entry price (required)
   /// - [sl]: Stop Loss (optional)
   /// - [tp]: Take Profit (optional)
+  /// - [maxRetries]: Maximum retry attempts for "No prices" error (default: 3)
   /// 
   /// Returns API response Map or throws exception on error
   Future<Map<String, dynamic>> executePendingOrder({
@@ -170,10 +171,13 @@ class ChartExecutionController extends GetxController {
     double? volume,
     double? sl,
     double? tp,
+    int maxRetries = 3,
   }) async {
     if (isExecuting.value) {
       throw Exception('Order sedang diproses');
     }
+
+    int retryCount = 0;
 
     try {
       isExecuting.value = true;
@@ -181,58 +185,73 @@ class ChartExecutionController extends GetxController {
 
       final lotVolume = volume ?? lot.value;
 
-      print('📤 ===== EXECUTING PENDING ORDER =====');
-      print('   Operation: ${operation.toUpperCase()}');
-      print('   Symbol: $symbol');
-      print('   Volume: $lotVolume lot');
-      print('   Price: $price');
-      print('   SL: ${sl ?? "Not set"}');
-      print('   TP: ${tp ?? "Not set"}');
-      print('   Login: $login');
-      print('======================================');
+      while (retryCount <= maxRetries) {
+        print('📤 ===== EXECUTING PENDING ORDER ${retryCount > 0 ? "(Retry $retryCount)" : ""} =====');
+        print('   Operation: ${operation.toUpperCase()}');
+        print('   Symbol: $symbol');
+        print('   Volume: $lotVolume lot');
+        print('   Price: $price');
+        print('   SL: ${sl ?? "Not set"}');
+        print('   TP: ${tp ?? "Not set"}');
+        print('   Login: $login');
+        print('======================================');
 
 
-      final Map<String, String> requestBody = {
-        'login': login,
-        'symbol': symbol,
-        'operation': operation.toLowerCase(),
-        'volume': lotVolume.toString(),
-        'price': price.toString(),
-      };
+        final Map<String, String> requestBody = {
+          'login': login,
+          'symbol': symbol,
+          'operation': operation.toLowerCase(),
+          'volume': lotVolume.toString(),
+          'price': price.toString(),
+        };
 
-      print("INI REQUEST BODY: $requestBody");
+        print("INI REQUEST BODY: $requestBody");
 
-      // Add optional SL/TP if provided
-      if (sl != null && sl > 0) {
-        requestBody['sl'] = sl.toString();
+        // Add optional SL/TP if provided
+        if (sl != null && sl > 0) {
+          requestBody['sl'] = sl.toString();
+        }
+        if (tp != null && tp > 0) {
+          requestBody['tp'] = tp.toString();
+        }
+
+        print('📦 Request Body: $requestBody');
+
+        final response = await _authService.post(
+          'market/execution/open',
+          requestBody,
+        );
+
+        print('📥 Response received:');
+        print('   Status: ${response['status']}');
+        print('   Status Code: ${response['statusCode']}');
+        print('   Message: ${response['message']}');
+        print('   Response Data: ${response['response']}');
+
+        if (response['status'] == true) {
+          executionMessage.value = 'Pending order berhasil dibuat!';
+          print('✅ Pending order created successfully!');
+          return response;
+        } else {
+          final errorMsg = response['message'] ?? 'Pending order gagal dibuat';
+          
+          // Check if "No prices" error and still have retries left
+          if (errorMsg.toString().toLowerCase().contains('no prices') && retryCount < maxRetries) {
+            retryCount++;
+            print('⏳ "No prices" error - waiting 1.5s before retry ($retryCount/$maxRetries)...');
+            executionMessage.value = 'Menunggu harga... (percobaan $retryCount)';
+            await Future.delayed(const Duration(milliseconds: 1500));
+            continue; // Retry the loop
+          }
+          
+          executionMessage.value = errorMsg;
+          print('❌ Pending order failed: $errorMsg');
+          throw Exception(errorMsg);
+        }
       }
-      if (tp != null && tp > 0) {
-        requestBody['tp'] = tp.toString();
-      }
-
-      print('📦 Request Body: $requestBody');
-
-      final response = await _authService.post(
-        'market/execution/open',
-        requestBody,
-      );
-
-      print('📥 Response received:');
-      print('   Status: ${response['status']}');
-      print('   Status Code: ${response['statusCode']}');
-      print('   Message: ${response['message']}');
-      print('   Response Data: ${response['response']}');
-
-      if (response['status'] == true) {
-        executionMessage.value = 'Pending order berhasil dibuat!';
-        print('✅ Pending order created successfully!');
-        return response;
-      } else {
-        final errorMsg = response['message'] ?? 'Pending order gagal dibuat';
-        executionMessage.value = errorMsg;
-        print('❌ Pending order failed: $errorMsg');
-        throw Exception(errorMsg);
-      }
+      
+      // If we exit the loop without returning, throw error
+      throw Exception('Pending order gagal setelah $maxRetries percobaan');
     } catch (e, stackTrace) {
       print('❌ ===== PENDING ORDER ERROR =====');
       print('   Error Type: ${e.runtimeType}');
