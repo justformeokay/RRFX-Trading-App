@@ -2,13 +2,16 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
+import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/containers/no_account.dart';
+import 'package:rrfx/src/service/auth_service.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 // ─────────────────────────────────────────────────────────
@@ -142,6 +145,9 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
   String? _currentLogin;
   String? _currentServerType;
   Worker? _accountListener;
+
+  final AuthService _authService = AuthService();
+  final RxBool _isCancelling = false.obs;
 
   @override
   bool get wantKeepAlive => true;
@@ -780,26 +786,45 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
           ),
         );
       },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isDark
-                ? Colors.grey.shade800.withOpacity(0.5)
-                : Colors.grey.shade200,
-          ),
-          boxShadow: [
-            if (!isDark)
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
+      child: Slidable(
+        key: ValueKey(order.ticket),
+        endActionPane: ActionPane(
+          motion: const BehindMotion(),
+          extentRatio: 0.25,
+          children: [
+            SlidableAction(
+              onPressed: (_) => _cancelPendingOrder(order),
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              icon: Iconsax.close_circle_bold,
+              label: 'Cancel',
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(14),
+                bottomRight: Radius.circular(14),
               ),
+            ),
           ],
         ),
-        child: Column(
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isDark
+                  ? Colors.grey.shade800.withOpacity(0.5)
+                  : Colors.grey.shade200,
+            ),
+            boxShadow: [
+              if (!isDark)
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+            ],
+          ),
+          child: Column(
           children: [
             // Header: Symbol + Type badge
             Padding(
@@ -999,6 +1024,7 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -1037,6 +1063,244 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
       return DateFormat('dd/MM/yy HH:mm').format(dt);
     } catch (_) {
       return '—';
+    }
+  }
+
+  /// Cancel pending order via API
+  Future<void> _cancelPendingOrder(PendingOrderItem order) async {
+    // Show confirmation dialog
+    final confirmed = await Get.dialog<bool>(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Iconsax.info_circle_bold,
+                size: 48,
+                color: Colors.orange,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Cancel Pending Order?',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Get.isDarkMode ? Colors.white : Colors.black,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Are you sure you want to cancel this pending order?',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: Get.isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Get.isDarkMode
+                      ? Colors.grey.shade800.withOpacity(0.3)
+                      : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Symbol:',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Get.isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                          ),
+                        ),
+                        Text(
+                          order.symbol,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Get.isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Ticket:',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Get.isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                          ),
+                        ),
+                        Text(
+                          '#${order.ticket}',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Get.isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Type:',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Get.isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                          ),
+                        ),
+                        Text(
+                          order.orderType,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: order.isBuyType ? Colors.green : Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(result: false),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Text(
+                        'No, Keep It',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Get.back(result: true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Text(
+                        'Yes, Cancel',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // Show loading dialog
+    Get.dialog(
+      Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Get.isDarkMode ? Colors.grey.shade900 : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(
+                color: CustomColor.secondaryColor,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Cancelling order...',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+
+    try {
+      _isCancelling.value = true;
+
+      final requestBody = {
+        'login': _currentLogin ?? '',
+        'ticket': order.ticket.toString(),
+        'is_pending': '1',  // Convert to string
+      };
+
+      debugPrint('📤 Cancelling pending order: $requestBody');
+
+      final response = await _authService.post(
+        'market/execution/close',
+        requestBody,
+      );
+
+      // Close loading dialog
+      if (Get.isDialogOpen ?? false) Get.back();
+
+      debugPrint('📥 Cancel response: $response');
+
+      if (response['status'] == true) {
+        AppSnackbar.success(
+          response['message'] ?? 'Pending order cancelled successfully',
+        );
+
+        // Remove from local list immediately for better UX
+        // WebSocket will sync the real state
+        pendingOrders.removeWhere((item) => item.ticket == order.ticket);
+      } else {
+        final errorMessage = response['message'] ?? 'Failed to cancel pending order';
+        AppSnackbar.error(errorMessage);
+      }
+    } catch (e) {
+      // Close loading dialog if still open
+      if (Get.isDialogOpen ?? false) Get.back();
+
+      debugPrint('❌ Cancel pending order error: $e');
+      AppSnackbar.error(
+        'Failed to cancel pending order. Please try again.',
+      );
+    } finally {
+      _isCancelling.value = false;
     }
   }
 }

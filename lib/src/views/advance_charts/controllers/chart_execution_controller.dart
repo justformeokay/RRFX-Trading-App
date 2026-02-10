@@ -35,6 +35,7 @@ class ChartExecutionController extends GetxController {
   /// - [symbol]: Market symbol (e.g., "AUDCAD.db")
   /// - [operation]: "buy" or "sell"
   /// - [volume]: Lot size (default uses current lot.value)
+  /// - [maxRetries]: Maximum retry attempts for "No prices" error (default: 3)
   /// 
   /// Returns API response Map or throws exception on error
   Future<Map<String, dynamic>> executeOrder({
@@ -42,54 +43,72 @@ class ChartExecutionController extends GetxController {
     required String symbol,
     required String operation, // "buy" or "sell"
     double? volume,
+    int maxRetries = 3,
   }) async {
     if (isExecuting.value) {
       throw Exception('Order sedang diproses');
     }
 
+    int retryCount = 0;
+    
     try {
       isExecuting.value = true;
       executionMessage.value = 'Memproses order...';
 
       final lotVolume = volume ?? lot.value;
 
-      print('📤 ===== EXECUTING ORDER =====');
-      print('   Operation: ${operation.toUpperCase()}');
-      print('   Symbol: $symbol');
-      print('   Volume: $lotVolume lot');
-      print('   Login: $login');
-      print('==============================');
+      while (retryCount <= maxRetries) {
+        print('📤 ===== EXECUTING ORDER ${retryCount > 0 ? "(Retry $retryCount)" : ""} =====');
+        print('   Operation: ${operation.toUpperCase()}');
+        print('   Symbol: $symbol');
+        print('   Volume: $lotVolume lot');
+        print('   Login: $login');
+        print('==============================');
 
-      final requestBody = {
-        'login': login,
-        'symbol': symbol,
-        'operation': operation.toLowerCase(),
-        'volume': lotVolume.toString(),
-      };
+        final requestBody = {
+          'login': login,
+          'symbol': symbol,
+          'operation': operation.toLowerCase(),
+          'volume': lotVolume.toString(),
+        };
 
-      print('📦 Request Body: $requestBody');
+        print('📦 Request Body: $requestBody');
 
-      final response = await _authService.post(
-        'market/execution/open',
-        requestBody,
-      );
+        final response = await _authService.post(
+          'market/execution/open',
+          requestBody,
+        );
 
-      print('📥 Response received:');
-      print('   Status: ${response['status']}');
-      print('   Status Code: ${response['statusCode']}');
-      print('   Message: ${response['message']}');
-      print('   Response Data: ${response['response']}');
+        print('📥 Response received:');
+        print('   Status: ${response['status']}');
+        print('   Status Code: ${response['statusCode']}');
+        print('   Message: ${response['message']}');
+        print('   Response Data: ${response['response']}');
 
-      if (response['status'] == true) {
-        executionMessage.value = 'Order berhasil dieksekusi!';
-        print('✅ Order executed successfully!');
-        return response;
-      } else {
-        final errorMsg = response['message'] ?? 'Order gagal dieksekusi';
-        executionMessage.value = errorMsg;
-        print('❌ Order failed: $errorMsg');
-        throw Exception(errorMsg);
+        if (response['status'] == true) {
+          executionMessage.value = 'Order berhasil dieksekusi!';
+          print('✅ Order executed successfully!');
+          return response;
+        } else {
+          final errorMsg = response['message'] ?? 'Order gagal dieksekusi';
+          
+          // Check if "No prices" error and still have retries left
+          if (errorMsg.toString().toLowerCase().contains('no prices') && retryCount < maxRetries) {
+            retryCount++;
+            print('⏳ "No prices" error - waiting 1.5s before retry ($retryCount/$maxRetries)...');
+            executionMessage.value = 'Menunggu harga... (percobaan $retryCount)';
+            await Future.delayed(const Duration(milliseconds: 1500));
+            continue; // Retry the loop
+          }
+          
+          executionMessage.value = errorMsg;
+          print('❌ Order failed: $errorMsg');
+          throw Exception(errorMsg);
+        }
       }
+      
+      // If we exit the loop without returning, throw error
+      throw Exception('Order gagal setelah $maxRetries percobaan');
     } catch (e, stackTrace) {
       print('❌ ===== ORDER EXECUTION ERROR =====');
       print('   Error Type: ${e.runtimeType}');

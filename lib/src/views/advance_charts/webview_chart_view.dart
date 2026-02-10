@@ -106,18 +106,12 @@ class _WebViewChartViewState extends State<WebViewChartView> {
   }
 
   String _buildChartUrl() {
-    final symbol =
-        _currentSymbol ?? widget.symbol ?? chartController.selectedMarket.value;
-    final server =
-        widget.serverType ??
-        accountController.selectedAccount.value?.type ??
-        'demo';
-    final login =
-        widget.login ?? accountController.selectedAccount.value?.login ?? '';
+    final symbol = _currentSymbol ?? widget.symbol ?? chartController.selectedMarket.value;
+    final server = widget.serverType ?? accountController.selectedAccount.value?.type ?? 'demo';
+    final login = widget.login ?? accountController.selectedAccount.value?.login ?? '';
     final theme = Get.isDarkMode ? 'dark' : 'light';
 
-    final baseUrl =
-        'https://chart-rrfx.techcrm.dev/chart.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
+    final baseUrl = 'https://chart-rrfx.techcrm.dev/chart.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
 
     // Untuk iOS, tambahkan parameter khusus (skip untuk web)
     if (!kIsWeb && Platform.isIOS) {
@@ -262,13 +256,10 @@ class _WebViewChartViewState extends State<WebViewChartView> {
               ),
               onWebViewCreated: (controller) {
                 webViewController = controller;
-                print('🌐 WebView created');
-                
                 // Untuk Web, langsung set loading false setelah delay karena onLoadStop tidak reliable
                 if (kIsWeb) {
                   Future.delayed(const Duration(seconds: 2), () {
                     if (mounted && isLoading) {
-                      print('🌐 [Web] Auto-hiding loading overlay');
                       setState(() {
                         isLoading = false;
                         loadingProgress = 1.0;
@@ -287,10 +278,9 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                           final price = double.tryParse(args[0].toString());
                           if (price != null) {
                             currentPrice.value = price;
-                            print('📊 Current price updated: $price');
                           }
                         } catch (e) {
-                          print('⚠️ Error parsing price: $e');
+                          Get.log('⚠️ Error parsing price: $e');
                         }
                       }
                     },
@@ -301,14 +291,12 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                 if (!kIsWeb && Platform.isIOS) {
                   Future.delayed(Duration(seconds: 10), () {
                     if (mounted && isLoading) {
-                      print('⏰ WebView timeout pada iOS, mencoba reload...');
                       _reloadChart();
                     }
                   });
                 }
               },
               onLoadStart: (controller, url) {
-                print('📥 Loading started...');
                 _startTimeoutTimer();
                 if (mounted) {
                   setState(() {
@@ -320,7 +308,6 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                 }
               },
               onLoadStop: (controller, url) async {
-                print('✅ Loading finished: $url');
                 _cancelTimeoutTimer();
         
                 // Inject JavaScript untuk ambil price dari chart (skip untuk web)
@@ -329,14 +316,21 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                     await controller.evaluateJavascript(
                       source: """
                     (function() {
-                      console.log('🚀 Initializing price tracker...');
+                      
+                      // Suppress console logs untuk "Creating stop loss line"
+                      const originalLog = console.log;
+                      console.log = function(...args) {
+                        const message = args.join(' ');
+                        if (!message.includes('Creating stop loss line')) {
+                          originalLog.apply(console, args);
+                        }
+                      };
                       
                       // Function untuk kirim price ke Flutter
                       function sendPriceToFlutter(price) {
                         try {
                           if (window.flutter_inappwebview) {
                             window.flutter_inappwebview.callHandler('priceUpdate', price.toString());
-                            console.log('📊 Price sent to Flutter:', price);
                           }
                         } catch (e) {
                           console.error('❌ Error sending price:', e);
@@ -408,7 +402,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                   """,
                     );
                   } catch (e) {
-                    print('⚠️ JavaScript injection error: $e');
+                    Get.log('⚠️ JavaScript injection error: $e');
                   }
                 }
         
@@ -427,7 +421,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                 }
               },
               onLoadError: (controller, url, code, message) {
-                print('❌ Load error: $code - $message');
+                Get.log('❌ Load error: $code - $message');
                 if (mounted) {
                   setState(() {
                     isLoading = false;
@@ -437,7 +431,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                 }
               },
               onLoadHttpError: (controller, url, statusCode, description) {
-                print('❌ HTTP error: $statusCode - $description');
+                Get.log('❌ HTTP error: $statusCode - $description');
                 if (mounted) {
                   setState(() {
                     isLoading = false;
@@ -446,9 +440,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                   });
                 }
               },
-              onConsoleMessage: (controller, consoleMessage) {
-                print('💬 Console: ${consoleMessage.message}');
-              },
+              onConsoleMessage: (controller, consoleMessage) {},
             ),
 
             Positioned(
