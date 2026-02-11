@@ -45,6 +45,12 @@ class _ManagePasscodePageState extends State<ManagePasscodePage>
       final enabled = await PasscodeService.isBiometricEnabled();
       final type = await PasscodeService.getBiometricType();
 
+      // Sinkronisasi dengan controller state
+      passcodeController.isBiometricEnabled.value = enabled;
+      if (type != null) {
+        passcodeController.biometricType.value = type;
+      }
+
       setState(() {
         isBiometricEnabled = enabled;
         biometricType = type;

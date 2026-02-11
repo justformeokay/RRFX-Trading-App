@@ -51,7 +51,7 @@ class _VoidTextFieldState extends State<VoidTextField> {
           text: TextSpan(
             text: widget.labelText,
             style: TextStyle(
-              color: isReadOnly ? colorScheme.onSurface.withOpacity(isDark ? 0.7 : 0.3) : Theme.of(context).textTheme.bodyMedium?.color,
+              color: isReadOnly ? colorScheme.onSurface.withOpacity(0.3) : Theme.of(context).textTheme.bodyMedium?.color,
               fontSize: 14,
             ),
             children: [
@@ -92,7 +92,7 @@ class _VoidTextFieldState extends State<VoidTextField> {
               },
 
               style: GoogleFonts.inter(
-                color: isReadOnly ? colorScheme.onSurface.withOpacity(isDark ? 0.8 : 0.3) : colorScheme.onSurface,
+                color: isReadOnly ? colorScheme.onSurface.withOpacity(0.3) : colorScheme.onSurface,
               ),
 
               decoration: InputDecoration(

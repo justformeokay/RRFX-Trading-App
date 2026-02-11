@@ -168,7 +168,7 @@ class _Step7State extends State<Step7> {
       nama.text = progressController.progressData.value?.response?.namaLengkap ?? userController.profileModel.value?.name ?? '';
       negara.text = userController.profileModel.value?.country ?? '';
       if(negara.text.isEmpty || negara.text == ""){
-        negara.text = progressController.progressData.value?.response?.kewarganegaraan ?? '';
+        negara.text = progressController.progressData.value?.response?.kewarganegaraan ?? 'Indonesia';
       }
       
       tipeIdentitas.text = progressController.progressData.value?.response?.idType ?? '-';
@@ -416,27 +416,6 @@ class _Step7State extends State<Step7> {
                       hintText: "Input Alamat Rumah",
                     ),
                     const SizedBox(height: 10.0),
-
-                    VoidTextField(requiredField: true, controller: pendidikanTerakhir, fieldName: "Pendidikan Terakhir", hintText: "Pendidikan Terakhir", labelText: "Pendidikan Terakhir", readOnly: false, iconData: Iconsax.clipboard_outline, onPressed: (){
-                      final listPendidikanTerakhir = progressController.progressData.value?.data?.listPendidikan ?? [];
-                      CustomMaterialBottomSheets.defaultBottomSheet(context, title: "Pilih Pendidikan Terakhir", size: size, children: List.generate(listPendidikanTerakhir.length, (i){
-                        return ListTile(
-                          leading: Icon(Icons.check_circle, 
-                            color: (pendidikanTerakhir.text == listPendidikanTerakhir[i])
-                              ? CustomColor.secondaryColor
-                              : Colors.grey,
-                              size: 22),
-                          title: Text(listPendidikanTerakhir[i]),
-                          onTap: () {
-                            setState(() {
-                              pendidikanTerakhir.text = listPendidikanTerakhir[i];
-                            });
-                            Get.back();
-                          },
-                        );
-                      }));
-                    }),
-                    const SizedBox(height: 10.0),
                     // Negara
                     VoidTextField(requiredField: true, controller: negara, fieldName: "Negara", hintText: "Negara", labelText: "Negara", iconData: Clarity.map_line, onPressed: (){}, readOnly: true),
 
@@ -520,6 +499,26 @@ class _Step7State extends State<Step7> {
                       hintText: "Nomor Identitas",
                       maxLength: 16,
                     ),
+
+                    VoidTextField(requiredField: true, controller: pendidikanTerakhir, fieldName: "Pendidikan Terakhir", hintText: "Pendidikan Terakhir", labelText: "Pendidikan Terakhir", readOnly: false, iconData: Iconsax.clipboard_outline, onPressed: (){
+                      final listPendidikanTerakhir = progressController.progressData.value?.data?.listPendidikan ?? [];
+                      CustomMaterialBottomSheets.defaultBottomSheet(context, title: "Pilih Pendidikan Terakhir", size: size, children: List.generate(listPendidikanTerakhir.length, (i){
+                        return ListTile(
+                          leading: Icon(Icons.check_circle, 
+                            color: (pendidikanTerakhir.text == listPendidikanTerakhir[i])
+                              ? CustomColor.secondaryColor
+                              : Colors.grey,
+                              size: 22),
+                          title: Text(listPendidikanTerakhir[i]),
+                          onTap: () {
+                            setState(() {
+                              pendidikanTerakhir.text = listPendidikanTerakhir[i];
+                            });
+                            Get.back();
+                          },
+                        );
+                      }));
+                    }),
                     NumberTextField(
                       requiredField: true,
                       useValidator: false,
@@ -536,6 +535,7 @@ class _Step7State extends State<Step7> {
                       requiredField: true,
                       controller: namaIbuKandung,
                       readOnly: false,
+                      iconData: Iconsax.user_outline,
                       labelText: "Nama Ibu Kandung",
                       fieldName: "Nama Ibu Kandung",
                       hintText: "Nama Ibu Kandung",

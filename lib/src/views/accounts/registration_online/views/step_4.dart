@@ -399,7 +399,7 @@ void initState() {
                           useValidator: false,
                           iconData: Clarity.number_list_line,
                           controller: rt,
-                          requiredField: false,
+                          requiredField: true,
                           readOnly: false,
                           labelText: "RT",
                           fieldName: "RT",
@@ -411,7 +411,7 @@ void initState() {
                       Expanded(
                         child: NumberTextField(
                           useValidator: false,
-                          requiredField: false,
+                          requiredField: true,
                           iconData: Clarity.number_list_line,
                           controller: rw,
                           readOnly: false,
@@ -616,18 +616,29 @@ void initState() {
         ),
         bottomNavigationBar: ButtonNextPrevious(
           onPressed: () async {
-            if(nama.text.isEmpty) return AppSnackbar.error("Nama Lengkap wajib diisi.");
-            if(tempatLahir.text.isEmpty) return AppSnackbar.error("Tempat Lahir wajib diisi.");
-            if(tanggalLahir.text.isEmpty) return AppSnackbar.error("Tanggal Lahir wajib diisi.");
-            if(alamatRumah.text.isEmpty) return AppSnackbar.error("Alamat Rumah wajib diisi.");
-            if(provinsi.text.isEmpty) return AppSnackbar.error("Provinsi wajib diisi.");
-            if(kabupatenKota.text.isEmpty) return AppSnackbar.error("Kabupaten/Kota wajib diisi.");
-            if(kecamatan.text.isEmpty) return AppSnackbar.error("Kecamatan wajib diisi.");
-            if(desa.text.isEmpty) return AppSnackbar.error("Desa wajib diisi.");
-            if(kodePos.text.isEmpty) return AppSnackbar.error("Kode Pos wajib diisi.");
-            // RT dan RW tidak wajib, sudah dihapus validasinya
-            if(tipeIdentitas.text.isEmpty || tipeIdentitas.text == "-") return AppSnackbar.error("Tipe Identitas wajib diisi.");
-            if(noIdentitas.text.isEmpty) return AppSnackbar.error("Nomor Identitas wajib diisi.");
+            // Validasi semua field yang wajib diisi
+            final List<Map<String, String>> emptyFields = [];
+
+            if (nama.text.isEmpty) emptyFields.add({'field': 'Nama Lengkap', 'icon': '👤'});
+            if (tempatLahir.text.isEmpty) emptyFields.add({'field': 'Tempat Lahir', 'icon': '📍'});
+            if (tanggalLahir.text.isEmpty) emptyFields.add({'field': 'Tanggal Lahir', 'icon': '📅'});
+            if (alamatRumah.text.isEmpty) emptyFields.add({'field': 'Alamat Rumah', 'icon': '🏠'});
+            if (provinsi.text.isEmpty) emptyFields.add({'field': 'Provinsi', 'icon': '🗺️'});
+            if (kabupatenKota.text.isEmpty) emptyFields.add({'field': 'Kabupaten/Kota', 'icon': '🏙️'});
+            if (kecamatan.text.isEmpty) emptyFields.add({'field': 'Kecamatan', 'icon': '🏘️'});
+            if (desa.text.isEmpty) emptyFields.add({'field': 'Desa', 'icon': '🌾'});
+            if (kodePos.text.isEmpty) emptyFields.add({'field': 'Kode Pos', 'icon': '📬'});
+            if (rt.text.isEmpty) emptyFields.add({'field': 'RT', 'icon': '🔢'});
+            if (rw.text.isEmpty) emptyFields.add({'field': 'RW', 'icon': '🔢'});
+            if (tipeIdentitas.text.isEmpty || tipeIdentitas.text == "-") emptyFields.add({'field': 'Tipe Identitas', 'icon': '🆔'});
+            if (noIdentitas.text.isEmpty) emptyFields.add({'field': 'Nomor Identitas', 'icon': '📋'});
+
+            // Jika ada field yang kosong, tampilkan dialog modern
+            if (emptyFields.isNotEmpty) {
+              _showValidationDialog(context, emptyFields);
+              return;
+            }
+
             if (_formKey.currentState!.validate()) {
               try {
                 final inputDate = tanggalLahir.text.trim();
@@ -657,7 +668,7 @@ void initState() {
                   rt: rt.text,
                   rw: rw.text,
                   tempatLahir: tempatLahir.text,
-                  tanggalLahir: formattedDate, // gunakan yang sudah diformat
+                  tanggalLahir: formattedDate,
                   tipeIdentitas: tipeIdentitas.text,
                 );
 
@@ -689,6 +700,163 @@ void initState() {
           },
         ),
       )
+    );
+  }
+
+  /// Modern validation dialog yang informatif
+  void _showValidationDialog(
+    BuildContext context,
+    List<Map<String, String>> emptyFields,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final colorScheme = Theme.of(context).colorScheme;
+
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: isDark ? colorScheme.surface : Colors.white,
+            ),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header dengan icon
+                    Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.red.withOpacity(0.15),
+                      ),
+                      child: const Icon(
+                        Icons.info_outline_rounded,
+                        size: 40,
+                        color: Colors.red,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Title
+                    Text(
+                      'Field Wajib Diisi',
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: isDark
+                            ? colorScheme.onSurface
+                            : Colors.black87,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Description
+                    Text(
+                      'Mohon lengkapi ${emptyFields.length} field berikut sebelum melanjutkan',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: isDark
+                            ? colorScheme.onSurfaceVariant
+                            : Colors.grey.shade600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // List of empty fields
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: isDark
+                            ? colorScheme.surfaceVariant.withOpacity(0.5)
+                            : Colors.grey.shade100,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
+                      child: Column(
+                        children: List.generate(
+                          emptyFields.length,
+                          (index) {
+                            final field = emptyFields[index];
+                            return Padding(
+                              padding: EdgeInsets.symmetric(vertical: 10),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    field['icon'] ?? '•',
+                                    style: const TextStyle(fontSize: 18),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      field['field'] ?? 'Unknown field',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: isDark
+                                            ? colorScheme.onSurface
+                                            : Colors.black87,
+                                      ),
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.priority_high_rounded,
+                                    size: 18,
+                                    color: Colors.red.shade400,
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+
+                    // Close button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: () => Get.back(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: CustomColor.secondaryColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Kembali dan Lengkapi',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

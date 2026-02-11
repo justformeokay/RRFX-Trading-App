@@ -265,7 +265,7 @@ class _Step5State extends State<Step5> {
                     ),
                     const SizedBox(width: 8.0),
                     Expanded(
-                      child: VoidTextField(requiredField: true, controller: tipeIdentitas, fieldName: "Tipe Identitas", iconData: EvaIcons.credit_card, hintText: "Tipe Identitas", labelText: "Tipe Identitas", onPressed: (){}),
+                      child: VoidTextField(requiredField: true, readOnly: true, controller: tipeIdentitas, fieldName: "Tipe Identitas", iconData: EvaIcons.credit_card, hintText: "Tipe Identitas", labelText: "Tipe Identitas", onPressed: (){}),
                     ),
                   ],
                 ),

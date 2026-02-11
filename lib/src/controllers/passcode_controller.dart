@@ -127,6 +127,9 @@ class PasscodeController extends GetxController {
     if (enteredPasscode.value == confirmPasscode.value) {
       isLoading.value = true;
       
+      bool biometricSuccess = false;
+      String? biometricTypeName;
+      
       if (enableBiometric && biometricAvailable.value) {
         try {
           // Authenticate with biometric first
@@ -136,8 +139,9 @@ class PasscodeController extends GetxController {
           );
           
           if (isAuthenticated) {
-            await _biometricService.getBiometricTypeName();
+            biometricTypeName = await _biometricService.getBiometricTypeName();
             useBiometric.value = true;
+            biometricSuccess = true;
           }
         } catch (e) {
           Get.log('Error during biometric setup: $e');
@@ -149,6 +153,16 @@ class PasscodeController extends GetxController {
         enteredPasscode.value,
         confirmPasscode.value,
       );
+      
+      // Save biometric status to local storage if enabled and authenticated
+      if (serverSuccess && biometricSuccess) {
+        await PasscodeService.updateBiometricStatus(
+          true,
+          biometricType: biometricTypeName ?? biometricType.value,
+        );
+        isBiometricEnabled.value = true;
+        Get.log('[PasscodeController] Biometric status saved to local storage');
+      }
       
       isLoading.value = false;
       return serverSuccess;
