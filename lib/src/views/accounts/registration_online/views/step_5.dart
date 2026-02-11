@@ -68,7 +68,7 @@ class _Step5State extends State<Step5> {
     super.initState();
     Future.delayed(Duration.zero, () async {
       await progressController.fetchProgressAccount();
-      nama.text = userController.profileModel.value?.name ?? '';
+      nama.text = progressController.progressData.value?.response?.namaLengkap ?? userController.profileModel.value?.name ?? '';
       tipeIdentitas.text = progressController.progressData.value?.response?.idType ?? '-';
       noIdentitas.text = progressController.progressData.value?.response?.idNumber ?? '-';
       tempatLahir.text = progressController.progressData.value?.response?.placeOfBirth ?? '-';

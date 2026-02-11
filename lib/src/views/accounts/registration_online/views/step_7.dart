@@ -165,7 +165,7 @@ class _Step7State extends State<Step7> {
     super.initState();
     Future.delayed(Duration.zero, () async {
       await progressController.fetchProgressAccount();
-      nama.text = userController.profileModel.value?.name ?? '';
+      nama.text = progressController.progressData.value?.response?.namaLengkap ?? userController.profileModel.value?.name ?? '';
       negara.text = userController.profileModel.value?.country ?? '';
       if(negara.text.isEmpty || negara.text == ""){
         negara.text = progressController.progressData.value?.response?.kewarganegaraan ?? '';
@@ -240,7 +240,7 @@ class _Step7State extends State<Step7> {
       });
       namaPemilikRekening1.text = (settingController.userBankModel.value?.response?.isNotEmpty ?? false)
                 ? settingController.userBankModel.value!.response![0].name ?? ''
-                : userController.profileModel.value?.name ?? '';
+                : nama.text = progressController.progressData.value?.response?.namaLengkap ?? '';
       settingController.getUserBank().then((responseGetBankUser){
         if(settingController.userBankModel.value?.response != null){
           namaBank1.text = (settingController.userBankModel.value?.response?.isNotEmpty ?? false) ? settingController.userBankModel.value!.response![0].name ?? '' : userController.profileModel.value?.name ?? '';

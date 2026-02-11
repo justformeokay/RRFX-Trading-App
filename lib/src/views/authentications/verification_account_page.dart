@@ -100,11 +100,24 @@ class _VerificationAccountPageState extends State<VerificationAccountPage> {
         countries.value = countryModel.response ?? [];
         Get.log("✅ [VERIFICATION_PAGE] Countries loaded: ${countries.length}");
         if (countries.isNotEmpty) {
-          selectedCountry.value = countries[0].name ?? '';
-          selectedCountryCode.value = countries[0].code ?? '';
-          Get.log(
-            "🌍 [VERIFICATION_PAGE] Default country set to: ${selectedCountry.value}",
+          // Find Indonesia in the list, otherwise use first country
+          final indonesiaIndex = countries.indexWhere(
+            (country) => country.name?.toLowerCase().contains('indonesia') ?? false,
           );
+          if (indonesiaIndex >= 0) {
+            selectedCountry.value = countries[indonesiaIndex].name ?? '';
+            selectedCountryCode.value = countries[indonesiaIndex].code ?? '';
+            Get.log(
+              "🌍 [VERIFICATION_PAGE] Default country set to: ${selectedCountry.value}",
+            );
+          } else {
+            // Fallback to first country if Indonesia not found
+            selectedCountry.value = countries[0].name ?? '';
+            selectedCountryCode.value = countries[0].code ?? '';
+            Get.log(
+              "🌍 [VERIFICATION_PAGE] Indonesia not found, using default: ${selectedCountry.value}",
+            );
+          }
         }
       } else {
         Get.log(
@@ -422,6 +435,7 @@ class _VerificationAccountPageState extends State<VerificationAccountPage> {
                             readOnly: true,
                             requiredField: true,
                             useValidator: false,
+                            iconData: Iconsax.profile_circle_outline,
                             fieldName: "Nama Lengkap",
                             controller: fullNameController,
                             hintText: "Nama Lengkap",

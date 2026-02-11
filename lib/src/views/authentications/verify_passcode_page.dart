@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:icons_plus/icons_plus.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/dialogs/passcode_error_dialog.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
@@ -25,6 +26,7 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
   final AuthController authController = Get.put(AuthController());
   late List<AnimationController> _dotAnimationControllers;
   late AnimationController _shakeController;
+  late AnimationController _lockAnimationController;
 
   @override
   void initState() {
@@ -50,6 +52,11 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
 
     _shakeController = AnimationController(
       duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _lockAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
   }
@@ -91,6 +98,9 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
       );
 
       if (success) {
+        // Trigger lock open animation before navigating
+        await _lockAnimationController.forward();
+        await Future.delayed(const Duration(milliseconds: 600));
         Get.offAll(() => Mainpage());
       } else {
         _shakeAnimation();
@@ -173,6 +183,7 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
       controller.dispose();
     }
     _shakeController.dispose();
+    _lockAnimationController.dispose();
     super.dispose();
   }
 
@@ -190,7 +201,8 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
                 children: [
-                  SizedBox(height: size.height * 0.08),
+                  AnimatedLockIcon(animationController: _lockAnimationController),
+                  SizedBox(height: size.height * 0.03),
                   // Title
                   Text(
                     "Masukkan Passcode",
@@ -200,7 +212,7 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
                       color: Theme.of(context).textTheme.titleLarge?.color,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: 5),
                   // Subtitle
                   Text(
                     "Akses akun Anda dengan passcode",
@@ -209,7 +221,6 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
                       color: CustomColor.textThemeLightSoftColor,
                     ),
                   ),
-                  SizedBox(height: 16),
                   // Biometric Button
                   // Obx(() {
                   //   if (controller.isBiometricEnabled.value && controller.biometricAvailable.value) {
@@ -1077,6 +1088,100 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
         ),
       ),
       barrierDismissible: true,
+    );
+  }
+}
+
+// ===== ANIMATED LOCK ICON WIDGET =====
+class AnimatedLockIcon extends StatefulWidget {
+  final AnimationController animationController;
+
+  const AnimatedLockIcon({super.key, required this.animationController});
+
+  @override
+  State<AnimatedLockIcon> createState() => _AnimatedLockIconState();
+}
+
+class _AnimatedLockIconState extends State<AnimatedLockIcon> {
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: widget.animationController,
+      builder: (context, child) {
+        // Lock: Scale down + Fade + Rotate
+        final scaleDown = Tween<double>(begin: 1.0, end: 0.1).evaluate(
+          CurvedAnimation(
+            parent: widget.animationController,
+            curve: Interval(0.0, 0.6, curve: Curves.easeInCubic),
+          ),
+        );
+
+        final fadeOut = Tween<double>(begin: 1.0, end: 0.0).evaluate(
+          CurvedAnimation(
+            parent: widget.animationController,
+            curve: Interval(0.0, 0.6, curve: Curves.easeInCubic),
+          ),
+        );
+
+        final rotationOut = Tween<double>(begin: 0.0, end: -0.5).evaluate(
+          CurvedAnimation(
+            parent: widget.animationController,
+            curve: Interval(0.0, 0.6, curve: Curves.easeInCubic),
+          ),
+        );
+
+        // Chevron: Scale in + Bounce
+        final chevronScale = Tween<double>(begin: 0.0, end: 1.0).evaluate(
+          CurvedAnimation(
+            parent: widget.animationController,
+            curve: Interval(0.5, 1.0, curve: Curves.elasticOut),
+          ),
+        );
+
+        return Container(
+          width: 55,
+          height: 55,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: CustomColor.secondaryColor.withOpacity(0.1),
+            border: Border.all(
+              color: CustomColor.secondaryColor.withOpacity(0.3),
+              width: 2,
+            ),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Lock Icon - disappears with animation
+              Transform.scale(
+                scale: scaleDown,
+                child: Transform.rotate(
+                  angle: rotationOut,
+                  child: Opacity(
+                    opacity: fadeOut,
+                    child: Icon(
+                      Iconsax.lock_outline,
+                      size: 28,
+                      color: CustomColor.secondaryColor,
+                    ),
+                  ),
+                ),
+              ),
+
+              // Chevron/Arrow - appears with bounce
+              if (widget.animationController.value > 0.45)
+                Transform.scale(
+                  scale: chevronScale,
+                  child: Icon(
+                    Iconsax.arrow_right_1_outline,
+                    size: 28,
+                    color: CustomColor.secondaryColor,
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -66,7 +66,7 @@ class _Step14State extends State<Step14> {
   void initState() {
     super.initState();
     Future.delayed(Duration.zero, () async {
-      nama.text = userController.profileModel.value?.name ?? '-';
+      nama.text = progressController.progressData.value?.response?.namaLengkap ?? userController.profileModel.value?.name ?? '';
       tipeIdentitas.text = progressController.progressData.value?.response?.idType ?? '-';
       noIdentitas.text = progressController.progressData.value?.response?.idNumber ?? '-';
       tempatLahir.text = progressController.progressData.value?.response?.placeOfBirth ?? '-';

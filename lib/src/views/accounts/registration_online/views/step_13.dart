@@ -67,7 +67,7 @@ class _Step13State extends State<Step13> {
     Future.delayed(Duration.zero, () async {
       await progressController.fetchProgressAccount();
       
-      nama.text = userController.profileModel.value?.name ?? '-';
+      nama.text = progressController.progressData.value?.response?.namaLengkap ?? userController.profileModel.value?.name ?? '';
       tipeIdentitas.text = progressController.progressData.value?.response?.idType ?? '-';
       noIdentitas.text = progressController.progressData.value?.response?.idNumber ?? '-';
       tempatLahir.text = progressController.progressData.value?.response?.placeOfBirth ?? '-';

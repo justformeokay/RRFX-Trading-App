@@ -30,6 +30,7 @@ class AccountResponse {
   final String type;
   final String typeAcc;
   final String? idType;
+  final String? namaLengkap;
   final String? idNumber;
   final String? appFotoIdentitas;
   final String? appFotoSimulasi;
@@ -97,6 +98,7 @@ class AccountResponse {
     this.urlTradingRules,
     this.idType,
     this.idNumber,
+    this.namaLengkap,
     this.kerjaFax,
     this.appFotoIdentitas,
     this.keluargaBursa,
@@ -162,6 +164,7 @@ class AccountResponse {
       type: json['type'] ?? '',
       typeAcc: json['type_acc'] ?? '',
       idType: json['id_type'],
+      namaLengkap: json['nama_lengkap'],
       idNumber: json['id_number'],
       kerjaFax: json['kerja_fax'],
       kerjaTelepon: json['kerja_telepon'],

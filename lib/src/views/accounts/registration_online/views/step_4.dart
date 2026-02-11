@@ -85,9 +85,6 @@ void initState() {
   super.initState();
   Future.delayed(Duration.zero, () async {
     await progressController.fetchProgressAccount();
-    await userController.profile().then((result){
-      nama.text = userController.profileModel.value?.name ?? '';
-    });
     final tipeList = progressController.tipeIdentitasList;
     if (tipeList.isNotEmpty) {
       tipeIdentitas.text = tipeList.first;
@@ -102,6 +99,7 @@ void initState() {
     } else {
       lengthID(100);
     }
+    nama.text = progressController.progressData.value?.response?.namaLengkap ?? userController.profileModel.value?.name ?? '';
     noIdentitas.text = progressController.progressData.value?.response?.idNumber ?? '';
     tempatLahir.text = progressController.progressData.value?.response?.placeOfBirth ?? '';
     if(progressController.progressData.value?.response?.dateOfBirth != null){
@@ -189,7 +187,7 @@ void initState() {
                   NameTextFieldNewVersion(
                     controller: nama,
                     requiredField: true,
-                    readOnly: true,
+                    readOnly: false,
                     labelText: "Nama Lengkap",
                     fieldName: "Nama Lengkap",
                     hintText: "Mohon isi Nama Lengkap",
@@ -645,6 +643,7 @@ void initState() {
                   );
                   return;
                 }
+                print("Nama Lengkap: ${nama.text}");
 
                 bool result = await _regolRepository.step4(
                   alamatRumah: alamatRumah.text,

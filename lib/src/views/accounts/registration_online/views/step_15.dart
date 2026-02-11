@@ -47,7 +47,7 @@ class _Step15State extends State<Step15> {
             CustomText.normal(context, text: "SURAT PERNYATAAN"),
             Obx(
               () => Pernyataan(
-                name1: userController.profileModel.value?.name ?? "-",
+                name1: progressController.progressData.value?.response?.namaLengkap ?? userController.profileModel.value?.name ?? '',
                 jenisIdentitas: progressController.progressData.value?.response?.idType ?? "-",
                 alamat: progressController.progressData.value?.response?.address ?? "-",
                 nomorIdentitas: progressController.progressData.value?.response?.idNumber ?? '0',
