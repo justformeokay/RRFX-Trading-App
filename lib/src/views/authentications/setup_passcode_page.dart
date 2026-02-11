@@ -200,63 +200,54 @@ class _SetupPasscodePageState extends State<SetupPasscodePage> with TickerProvid
                       ],
                     );
                   }),
-                ),                SizedBox(height: size.height * 0.04),
-                // Biometric Option (hanya tampil saat confirmation step)
+                ),
+                SizedBox(height: 16),
+                // Biometric Option (hanya tampil saat confirmation step) - Simple toggle
                 Obx(() {
                   if (!controller.isConfirming.value || !controller.biometricAvailable.value) {
                     return SizedBox.shrink();
                   }
                   
-                  return Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: CustomColor.secondaryColor.withOpacity(0.3),
-                        width: 1,
-                      ),
-                      color: CustomColor.secondaryColor.withOpacity(0.05),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Aktifkan ${controller.biometricType.value}?',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).textTheme.titleLarge?.color,
-                                ),
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Aktifkan ${controller.biometricType.value}?',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).textTheme.titleLarge?.color,
                               ),
-                              SizedBox(height: 4),
-                              Text(
-                                'Akses lebih cepat tanpa perlu memasukkan passcode',
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w400,
-                                  color: CustomColor.textThemeLightSoftColor,
-                                ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Akses lebih cepat tanpa passcode',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w400,
+                                color: CustomColor.textThemeLightSoftColor,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        SizedBox(width: 12),
-                        Obx(() => Switch(
-                          value: controller.useBiometric.value,
-                          onChanged: (value) {
-                            controller.useBiometric.value = value;
-                          },
-                          activeColor: CustomColor.secondaryColor,
-                        )),
-                      ],
-                    ),
+                      ),
+                      SizedBox(width: 12),
+                      Obx(() => Switch(
+                        value: controller.useBiometric.value,
+                        onChanged: (value) {
+                          controller.useBiometric.value = value;
+                        },
+                        activeColor: CustomColor.secondaryColor,
+                      )),
+                    ],
                   );
                 }),
-                SizedBox(height: 16),                // Submit button
+                SizedBox(height: 16),
+                // Submit button
                 Obx(() {
                   final passcode = controller.isConfirming.value
                       ? controller.confirmPasscode.value

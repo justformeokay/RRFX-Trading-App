@@ -137,7 +137,7 @@ class _SignupState extends State<Signup> {
                         Text(
                           "Hello",
                           style: GoogleFonts.inter(
-                            fontSize: 50,
+                            fontSize: 35,
                             fontWeight: FontWeight.w700,
                             color: CustomColor.secondaryColor,
                             height: 1.0,
@@ -146,7 +146,7 @@ class _SignupState extends State<Signup> {
                         Text(
                           "there!",
                           style: GoogleFonts.inter(
-                            fontSize: 50,
+                            fontSize: 35,
                             fontWeight: FontWeight.w700,
                             color:
                                 Theme.of(context).textTheme.titleLarge?.color,
@@ -157,7 +157,7 @@ class _SignupState extends State<Signup> {
                           "Lihat pergerakan harga pasar global secara langsung, dengan chart interaktif dan analisis teknikal lengkap.",
                           style: TextStyle(
                             color: CustomColor.textThemeLightSoftColor,
-                            fontSize: 15,
+                            fontSize: 13,
                           ),
                         ),
                         const SizedBox(height: 30.0),

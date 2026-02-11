@@ -41,16 +41,17 @@ class _VoidTextFieldState extends State<VoidTextField> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final bool isReadOnly = widget.readOnly ?? true;
-    final disabledBorderColor = colorScheme.onSurface.withOpacity(0.12);
+    final disabledBorderColor = isDark ? colorScheme.onSurface.withOpacity(0.25) : colorScheme.onSurface.withOpacity(0.12);
     final borderColor = isReadOnly ? disabledBorderColor : CustomColor.textThemeDarkSoftColor;
-    final fillColor = isReadOnly ? colorScheme.surfaceVariant.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.25 : 0.5) : Colors.transparent;
+    final fillColor = isReadOnly ? colorScheme.surfaceVariant.withOpacity(isDark ? 0.25 : 0.5) : Colors.transparent;
     final Widget? labelWidget = widget.labelText != null
       ? RichText(
           text: TextSpan(
             text: widget.labelText,
             style: TextStyle(
-              color: isReadOnly ? colorScheme.onSurface.withOpacity(0.3) : Theme.of(context).textTheme.bodyMedium?.color,
+              color: isReadOnly ? colorScheme.onSurface.withOpacity(isDark ? 0.7 : 0.3) : Theme.of(context).textTheme.bodyMedium?.color,
               fontSize: 14,
             ),
             children: [
@@ -91,7 +92,7 @@ class _VoidTextFieldState extends State<VoidTextField> {
               },
 
               style: GoogleFonts.inter(
-                color: isReadOnly ? colorScheme.onSurface.withOpacity(0.3) : colorScheme.onSurface,
+                color: isReadOnly ? colorScheme.onSurface.withOpacity(isDark ? 0.8 : 0.3) : colorScheme.onSurface,
               ),
 
               decoration: InputDecoration(

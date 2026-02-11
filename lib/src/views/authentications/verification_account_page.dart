@@ -748,11 +748,10 @@ class _VerificationAccountPageState extends State<VerificationAccountPage> {
                     authController.isLoading.value
                         ? null
                         : () async {
-                          SharedPreferences prefs =
-                              await SharedPreferences.getInstance();
+                          SharedPreferences prefs = await SharedPreferences.getInstance();
                           if (_formKey.currentState!.validate()) {
-                            await authController
-                                .verificationAccount(
+                            print("Country: ${selectedCountry.value}, Code: ${selectedCountryCode.value}");
+                            await authController.verificationAccount(
                                   gender: genderController.text,
                                   address: alamatLengkapController.text,
                                   country: selectedCountryCode.value,
