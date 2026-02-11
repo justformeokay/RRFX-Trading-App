@@ -799,7 +799,7 @@ class MarketAnalysisDetailPage extends StatelessWidget {
                     context,
                     icon: 'twitter',
                     label: 'X',
-                    color: const Color(0xFF000000),
+                    color: isDark ? Colors.white : Colors.black,
                     onTap: () {
                       _shareToTwitter(title);
                       Navigator.pop(context);
@@ -966,6 +966,17 @@ class MarketAnalysisDetailPage extends StatelessWidget {
         'https://www.facebook.com/sharer/sharer.php?u=https://app.rrfx.co.id/market-analysis';
     if (await canLaunchUrl(Uri.parse(facebookUrl))) {
       await launchUrl(Uri.parse(facebookUrl));
+      Get.snackbar(
+        'Dibagikan ke Facebook',
+        'Artikel berhasil dibagikan',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF1877F2),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+        icon: const Icon(Icons.check_circle, color: Colors.white),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
     } else {
       Get.snackbar('Error', 'Tidak dapat membuka Facebook');
     }
@@ -976,6 +987,17 @@ class MarketAnalysisDetailPage extends StatelessWidget {
         'https://twitter.com/intent/tweet?text=$title&url=https://app.rrfx.co.id/market-analysis';
     if (await canLaunchUrl(Uri.parse(twitterUrl))) {
       await launchUrl(Uri.parse(twitterUrl));
+      Get.snackbar(
+        'Dibagikan ke X (Twitter)',
+        'Artikel berhasil dibagikan',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.black,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+        icon: const Icon(Icons.check_circle, color: Colors.white),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
     } else {
       Get.snackbar('Error', 'Tidak dapat membuka Twitter/X');
     }
@@ -986,6 +1008,17 @@ class MarketAnalysisDetailPage extends StatelessWidget {
         'https://wa.me/?text=$title - https://app.rrfx.co.id/market-analysis';
     if (await canLaunchUrl(Uri.parse(whatsappUrl))) {
       await launchUrl(Uri.parse(whatsappUrl));
+      Get.snackbar(
+        'Dibagikan ke WhatsApp',
+        'Artikel berhasil dibagikan',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF25D366),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+        icon: const Icon(Icons.check_circle, color: Colors.white),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
     } else {
       Get.snackbar('Error', 'Tidak dapat membuka WhatsApp');
     }
@@ -995,17 +1028,31 @@ class MarketAnalysisDetailPage extends StatelessWidget {
     const link = 'https://app.rrfx.co.id/market-analysis';
     await Clipboard.setData(ClipboardData(text: link));
     Get.snackbar(
-      'Success',
-      'Link berhasil disalin ke clipboard',
+      'Link Copied!',
+      'URL berhasil disalin ke clipboard',
       snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green,
+      backgroundColor: CustomColor.secondaryColor,
       colorText: Colors.white,
       duration: const Duration(seconds: 2),
+      icon: const Icon(Icons.check_circle, color: Colors.white),
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
     );
   }
 
   Future<void> _shareMore(String title) async {
     const link = 'https://app.rrfx.co.id/market-analysis';
     await Share.share('$title\n\n$link', subject: title);
+    Get.snackbar(
+      'Dibagikan',
+      'Artikel berhasil dibagikan',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: CustomColor.secondaryColor,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 2),
+      icon: const Icon(Icons.check_circle, color: Colors.white),
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
+    );
   }
 }

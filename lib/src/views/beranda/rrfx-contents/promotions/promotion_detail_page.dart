@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
+import 'package:icons_plus/icons_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'promotion_detail_controller.dart';
@@ -526,24 +527,28 @@ class PromotionDetailPage extends StatelessWidget {
                     icon: Icons.facebook,
                     label: 'Facebook',
                     color: const Color(0xFF1877F2),
+                    slug: slug,
                   ),
                   _buildShareOption(
                     context,
-                    icon: Icons.share,
+                    icon: FontAwesome.x_twitter_brand,
                     label: 'X',
-                    color: const Color(0xFF000000),
+                    color: isDark ? Colors.white : Colors.black,
+                    slug: slug,
                   ),
                   _buildShareOption(
                     context,
-                    icon: Icons.message,
+                    icon: Iconsax.whatsapp_bold,
                     label: 'WhatsApp',
                     color: const Color(0xFF25D366),
+                    slug: slug,
                   ),
                   _buildShareOption(
                     context,
                     icon: Icons.link,
                     label: 'Copy Link',
                     color: CustomColor.secondaryColor,
+                    slug: slug,
                   ),
                 ],
               ),
@@ -559,28 +564,99 @@ class PromotionDetailPage extends StatelessWidget {
     required IconData icon,
     required String label,
     required Color color,
+    required String slug,
   }) {
-    return Column(
-      children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+    return GestureDetector(
+      onTap: () async {
+        if (label == 'Copy Link') {
+          // Construct the promotion URL
+          final url = 'https://rrfx.com/promo/$slug';
+          await Clipboard.setData(ClipboardData(text: url));
+          
+          if (context.mounted) {
+            Get.back();
+            
+            // Show modern success notification
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Icon(
+                        Icons.check_circle,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Link Copied!',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'URL berhasil disalin ke clipboard',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: CustomColor.secondaryColor,
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+                margin: const EdgeInsets.all(16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 8,
+              ),
+            );
+          }
+        } else {
+          Get.back();
+        }
+      },
+      child: Column(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+            ),
+            child: Icon(icon, color: color, size: 28),
           ),
-          child: Icon(icon, color: color, size: 28),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: Theme.of(
-            context,
-          ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w500),
-          textAlign: TextAlign.center,
-        ),
-      ],
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w500),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 

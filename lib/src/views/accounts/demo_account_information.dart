@@ -57,10 +57,10 @@ class _DemoAccountInformationState extends State<DemoAccountInformation> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Account", style: GoogleFonts.inter(fontSize: 50, fontWeight: FontWeight.w700, color: CustomColor.secondaryColor, height: 1.0,)),
-            Text("Information", style: GoogleFonts.inter(fontSize: 50, fontWeight: FontWeight.w700, color: Theme.of(context).textTheme.titleLarge?.color)),
+            Text("Account", style: GoogleFonts.inter(fontSize: 35, fontWeight: FontWeight.w700, color: CustomColor.secondaryColor, height: 1.0,)),
+            Text("Information", style: GoogleFonts.inter(fontSize: 35, fontWeight: FontWeight.w700, color: Theme.of(context).textTheme.titleLarge?.color)),
             const SizedBox(height: 5.0),
-            Text("Informasi lengkap mengenai akun trading demo ${widget.loginID}.", style: TextStyle(color: CustomColor.textThemeLightSoftColor, fontSize: 15)),
+            Text("Informasi lengkap mengenai akun trading demo ${widget.loginID}.", style: TextStyle(color: CustomColor.textThemeLightSoftColor, fontSize: 13)),
             const SizedBox(height: 10.0),
             // Header card
             _buildAccountCard(),
@@ -136,7 +136,7 @@ class _DemoAccountInformationState extends State<DemoAccountInformation> {
                 child: Text("RATE ${selectedAccount?.rate != null ? NumberFormatter.formatCurrency(selectedAccount!.rate, currency: selectedAccount!.currency!) : ""}", style: TextStyle(color: CustomColor.secondaryColor, fontWeight: FontWeight.bold)),
               ),
               SizedBox(height: 8),
-              Text("\$${selectedAccount?.balance ?? 0}", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              Text("\$${selectedAccount?.balance ?? 0}", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             ],
           )
         ],

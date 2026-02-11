@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:get/get.dart';
@@ -148,6 +149,7 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
 
   final AuthService _authService = AuthService();
   final RxBool _isCancelling = false.obs;
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   bool get wantKeepAlive => true;
@@ -200,6 +202,7 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _accountListener?.dispose();
+    _audioPlayer.dispose();
     _disconnect();
     super.dispose();
   }
@@ -1302,6 +1305,9 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
       debugPrint('📥 Cancel response: $response');
 
       if (response['status'] == true) {
+        // Play success sound
+        _audioPlayer.play(AssetSource('sounds/applepay.mp3'));
+        
         AppSnackbar.success(
           response['message'] ?? 'Pending order cancelled successfully',
         );
@@ -1357,6 +1363,17 @@ class _EditPositionDialogState extends State<_EditPositionDialog> {
   final slError = RxString('');
   final volumeError = RxString('');
   final priceError = RxString('');
+
+  // Static audio player for success sound
+  static final AudioPlayer _staticAudioPlayer = AudioPlayer();
+
+  static Future<void> _playSuccessSound() async {
+    try {
+      await _staticAudioPlayer.play(AssetSource('sounds/applepay.mp3'));
+    } catch (e) {
+      debugPrint('❌ Audio play error: $e');
+    }
+  }
 
   @override
   void initState() {
@@ -2060,6 +2077,8 @@ class _EditPositionDialogState extends State<_EditPositionDialog> {
 
       if (isSuccess) {
         Navigator.pop(context); // Close bottom sheet
+        // Play success sound
+        _EditPositionDialogState._playSuccessSound();
         AppSnackbar.success(message);
       } else {
         AppSnackbar.error(message);
