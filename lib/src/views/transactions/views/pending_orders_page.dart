@@ -790,8 +790,15 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
         key: ValueKey(order.ticket),
         endActionPane: ActionPane(
           motion: const BehindMotion(),
-          extentRatio: 0.25,
+          extentRatio: 0.5,
           children: [
+            SlidableAction(
+              onPressed: (_) => _showEditPositionDialog(order),
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+              icon: Iconsax.edit_bold,
+              label: 'Edit',
+            ),
             SlidableAction(
               onPressed: (_) => _cancelPendingOrder(order),
               backgroundColor: Colors.red,
@@ -1066,6 +1073,21 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
     }
   }
 
+  /// Edit position - show bottom sheet dialog
+  Future<void> _showEditPositionDialog(PendingOrderItem order) async {    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return _EditPositionDialog(
+          order: order,
+          authService: _authService,
+          currentLogin: _currentLogin,
+        );
+      },
+    );
+  }
+
   /// Cancel pending order via API
   Future<void> _cancelPendingOrder(PendingOrderItem order) async {
     // Show confirmation dialog
@@ -1301,6 +1323,754 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
       );
     } finally {
       _isCancelling.value = false;
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// Edit Position Dialog Widget
+// ─────────────────────────────────────────────────────────
+
+class _EditPositionDialog extends StatefulWidget {
+  final PendingOrderItem order;
+  final AuthService authService;
+  final String? currentLogin;
+
+  const _EditPositionDialog({
+    required this.order,
+    required this.authService,
+    required this.currentLogin,
+  });
+
+  @override
+  State<_EditPositionDialog> createState() => _EditPositionDialogState();
+}
+
+class _EditPositionDialogState extends State<_EditPositionDialog> {
+  late TextEditingController tpController;
+  late TextEditingController slController;
+  late TextEditingController volumeController;
+  late TextEditingController priceController;
+
+  final isSaving = RxBool(false);
+  final tpError = RxString('');
+  final slError = RxString('');
+  final volumeError = RxString('');
+  final priceError = RxString('');
+
+  @override
+  void initState() {
+    super.initState();
+    tpController = TextEditingController(text: '');
+    slController = TextEditingController(text: '');
+    volumeController = TextEditingController(text: widget.order.volume.toString());
+    priceController = TextEditingController(text: widget.order.priceOrder.toString());
+  }
+
+  @override
+  void dispose() {
+    tpController.dispose();
+    slController.dispose();
+    volumeController.dispose();
+    priceController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final order = widget.order;
+
+    return SingleChildScrollView(
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            24 + MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: CustomColor.secondaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Iconsax.edit_bold,
+                      color: CustomColor.secondaryColor,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Edit Position',
+                          style: GoogleFonts.inter(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${order.symbol} • Ticket #${order.ticket}',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: isDark
+                                ? Colors.grey.shade500
+                                : Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Icon(
+                      Iconsax.close_square_bold,
+                      color: isDark
+                          ? Colors.grey.shade600
+                          : Colors.grey.shade400,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Order Info Card
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.grey.shade900.withOpacity(0.5)
+                      : Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.grey.shade800
+                        : Colors.grey.shade200,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildInfoBadge(
+                      label: 'Order Price',
+                      value: NumberFormat('#,##0.${'0' * order.digits}', 'en_US')
+                          .format(order.priceOrder),
+                      isDark: isDark,
+                    ),
+                    Container(
+                      width: 1,
+                      height: 40,
+                      color: isDark
+                          ? Colors.grey.shade700
+                          : Colors.grey.shade300,
+                    ),
+                    _buildInfoBadge(
+                      label: 'Volume',
+                      value: '${order.volume} lot',
+                      isDark: isDark,
+                    ),
+                    Container(
+                      width: 1,
+                      height: 40,
+                      color: isDark
+                          ? Colors.grey.shade700
+                          : Colors.grey.shade300,
+                    ),
+                    _buildInfoBadge(
+                      label: 'Current Price',
+                      value: NumberFormat('#,##0.${'0' * order.digits}', 'en_US')
+                          .format(order.priceCurrent),
+                      isDark: isDark,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Modify Position Title
+              Text(
+                'Modify Position',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // Volume Field
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Volume (Lot)',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Obx(
+                    () => TextField(
+                      controller: volumeController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      enabled: false,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Enter volume',
+                        hintStyle: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: isDark
+                              ? Colors.grey.shade600
+                              : Colors.grey.shade400,
+                        ),
+                        errorText:
+                            volumeError.value.isEmpty ? null : volumeError.value,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? Colors.grey.shade700
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: CustomColor.secondaryColor,
+                            width: 2,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? Colors.grey.shade700
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        disabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? Colors.grey.shade800
+                                : Colors.grey.shade200,
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: isDark
+                            ? Colors.grey.shade800.withOpacity(0.3)
+                            : Colors.grey.shade50,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // TP Field
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Take Profit (TP) - Points',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isDark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade700,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        order.takeProfit > 0
+                            ? 'Current: ${order.takeProfit.toStringAsFixed(0)} pts'
+                            : 'Current: Not set',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: order.takeProfit > 0
+                              ? Colors.green
+                              : isDark
+                                  ? Colors.grey.shade600
+                                  : Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Obx(
+                    () => TextField(
+                      controller: tpController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: false),
+                      enabled: !isSaving.value,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'e.g., 6000 (integer points)',
+                        helperText: 'Leave empty to remove TP',
+                        counterText: '',
+                        helperStyle: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: isDark
+                              ? Colors.grey.shade600
+                              : Colors.grey.shade500,
+                        ),
+                        hintStyle: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: isDark
+                              ? Colors.grey.shade600
+                              : Colors.grey.shade400,
+                        ),
+                        errorText: tpError.value.isEmpty ? null : tpError.value,
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.only(left: 12, right: 8),
+                          child: Icon(
+                            Iconsax.arrow_up_bold,
+                            size: 18,
+                            color: Colors.green,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? Colors.grey.shade700
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: CustomColor.secondaryColor,
+                            width: 2,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? Colors.grey.shade700
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        disabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? Colors.grey.shade800
+                                : Colors.grey.shade200,
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: isDark
+                            ? Colors.grey.shade800.withOpacity(0.3)
+                            : Colors.grey.shade50,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // SL Field
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Stop Loss (SL) - Points',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isDark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade700,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        order.stopLoss > 0
+                            ? 'Current: ${order.stopLoss.toStringAsFixed(0)} pts'
+                            : 'Current: Not set',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: order.stopLoss > 0
+                              ? Colors.red
+                              : isDark
+                                  ? Colors.grey.shade600
+                                  : Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Obx(
+                    () => TextField(
+                      controller: slController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: false),
+                      enabled: !isSaving.value,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'e.g., 100 (integer points)',
+                        helperText: 'Leave empty to remove SL',
+                        counterText: '',
+                        helperStyle: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: isDark
+                              ? Colors.grey.shade600
+                              : Colors.grey.shade500,
+                        ),
+                        hintStyle: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: isDark
+                              ? Colors.grey.shade600
+                              : Colors.grey.shade400,
+                        ),
+                        errorText: slError.value.isEmpty ? null : slError.value,
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.only(left: 12, right: 8),
+                          child: Icon(
+                            Iconsax.arrow_down_bold,
+                            size: 18,
+                            color: Colors.red,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? Colors.grey.shade700
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: CustomColor.secondaryColor,
+                            width: 2,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? Colors.grey.shade700
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        disabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? Colors.grey.shade800
+                                : Colors.grey.shade200,
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: isDark
+                            ? Colors.grey.shade800.withOpacity(0.3)
+                            : Colors.grey.shade50,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: Obx(
+                      () => OutlinedButton(
+                        onPressed: isSaving.value
+                            ? null
+                            : () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          side: BorderSide(
+                            color: isDark
+                                ? Colors.grey.shade700
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Obx(
+                      () => ElevatedButton(
+                        onPressed: isSaving.value
+                            ? null
+                            : () => _submitEditPosition(
+                                  order,
+                                  tpController,
+                                  slController,
+                                  volumeController,
+                                  isSaving,
+                                  tpError,
+                                  slError,
+                                  volumeError,
+                                  priceError,
+                                ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: CustomColor.secondaryColor,
+                          disabledBackgroundColor: CustomColor.secondaryColor
+                              .withOpacity(0.5),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: isSaving.value
+                            ? SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(
+                                'Update Position',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoBadge({
+    required String label,
+    required String value,
+    required bool isDark,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submitEditPosition(
+    PendingOrderItem order,
+    TextEditingController tpController,
+    TextEditingController slController,
+    TextEditingController volumeController,
+    RxBool isSaving,
+    RxString tpError,
+    RxString slError,
+    RxString volumeError,
+    RxString priceError,
+  ) async {
+    // Reset errors
+    tpError.value = '';
+    slError.value = '';
+    volumeError.value = '';
+    priceError.value = '';
+
+    // Validate fields
+    final tpStr = tpController.text.trim();
+    final slStr = slController.text.trim();
+    final volumeStr = volumeController.text.trim();
+
+    bool hasError = false;
+
+    // Validate volume
+    if (volumeStr.isEmpty) {
+      volumeError.value = 'Volume is required';
+      hasError = true;
+    } else {
+      final volume = double.tryParse(volumeStr);
+      if (volume == null || volume <= 0) {
+        volumeError.value = 'Enter a valid volume';
+        hasError = true;
+      }
+    }
+
+    // Validate TP (must be integer)
+    if (tpStr.isNotEmpty) {
+      final tp = int.tryParse(tpStr);
+      if (tp == null || tp <= 0) {
+        tpError.value = 'Enter a valid integer points or leave empty';
+        hasError = true;
+      }
+    }
+
+    // Validate SL (must be integer)
+    if (slStr.isNotEmpty) {
+      final sl = int.tryParse(slStr);
+      if (sl == null || sl <= 0) {
+        slError.value = 'Enter a valid integer points or leave empty';
+        hasError = true;
+      }
+    }
+
+    if (hasError) return;
+
+    isSaving.value = true;
+
+    try {
+      final requestBody = {
+        'login': widget.currentLogin ?? '',
+        'ticket': order.ticket.toString(),
+        'is_pending': '1',  // Convert to string
+        'tp': tpStr.isEmpty ? '0' : tpStr,
+        'sl': slStr.isEmpty ? '0' : slStr,
+        'volume': volumeStr,
+      };
+
+      debugPrint('📤 Modifying position: $requestBody');
+
+      final response = await widget.authService.post(
+        'market/execution/modify',
+        requestBody,
+      );
+
+      debugPrint('📥 Modify response: $response (type: ${response.runtimeType})');
+
+      // Handle response from API
+      bool isSuccess = false;
+      String message = 'Position updated successfully';
+
+      try {
+        // Response is a Map from authService.post()
+        // Check for status field
+        if (response.containsKey('status')) {
+          isSuccess = response['status'] == true || response['status'] == 1;
+          message = response['message']?.toString() ?? 'Position updated successfully';
+          debugPrint('✅ Map response - isSuccess: $isSuccess, message: $message');
+        } else if (response.containsKey('0') && response.containsKey('1')) {
+          // Weird case where response has numeric keys like a list
+          isSuccess = response['0'] == 1 || response['0'] == true;
+          message = response['1']?.toString() ?? 'Position updated successfully';
+          debugPrint('✅ Numeric keys response - isSuccess: $isSuccess, message: $message');
+        } else {
+          debugPrint('⚠️ Unknown response format. Keys: ${response.keys}');
+          // Treat as success by default if response exists
+          isSuccess = true;
+          message = 'Position updated successfully';
+        }
+      } catch (parseErr) {
+        debugPrint('❌ Response parse error: $parseErr');
+        message = 'Error: ${parseErr.toString()}';
+        isSuccess = false;
+      }
+
+      if (isSuccess) {
+        Navigator.pop(context); // Close bottom sheet
+        AppSnackbar.success(message);
+      } else {
+        AppSnackbar.error(message);
+      }
+    } catch (e) {
+      debugPrint('❌ Modify position error: $e');
+      AppSnackbar.error(
+        'Failed to update position. Please try again.',
+      );
+    } finally {
+      isSaving.value = false;
     }
   }
 }
