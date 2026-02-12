@@ -19,9 +19,6 @@ class _AgreementDisputeSectionState extends State<AgreementDisputeSection> {
   final progressController = Get.put(ProgressAccountController());
   final agreementController = Get.find<AgreementSectionController>();
 
-  String? selectedPenyelesaian;
-  String? selectedKota;
-
   @override
   void initState() {
     super.initState();
@@ -34,8 +31,8 @@ class _AgreementDisputeSectionState extends State<AgreementDisputeSection> {
   void _notifyParent() {
     if (widget.onChanged != null) {
       widget.onChanged!({
-        "penyelesaian_perselisihan": selectedPenyelesaian ?? "",
-        "daftar_kantor": selectedKota ?? "",
+        "penyelesaian_perselisihan": agreementController.selectedPenyelesaian.value ?? "",
+        "daftar_kantor": agreementController.selectedKota.value ?? "",
       });
     }
   }
@@ -50,6 +47,10 @@ class _AgreementDisputeSectionState extends State<AgreementDisputeSection> {
 
       final listKantor = data?.listKantorPenyelesaian ?? {};
       final listKota = data?.listKotaPenyelesaian ?? [];
+      
+      // Get current values from controller
+      final selectedPenyelesaian = agreementController.selectedPenyelesaian.value;
+      final selectedKota = agreementController.selectedKota.value;
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,7 +104,7 @@ class _AgreementDisputeSectionState extends State<AgreementDisputeSection> {
                         groupValue: selectedPenyelesaian,
                         activeColor: primary,
                         onChanged: (val) {
-                          setState(() => selectedPenyelesaian = val);
+                          agreementController.setSelectedPenyelesaian(val);
                           _notifyParent();
                         },
                         title: Text(
@@ -138,7 +139,7 @@ class _AgreementDisputeSectionState extends State<AgreementDisputeSection> {
                       groupValue: selectedKota,
                       activeColor: primary,
                       onChanged: (val) {
-                        setState(() => selectedKota = val);
+                        agreementController.setSelectedKota(val);
                         _notifyParent();
                       },
                       title: Text(
@@ -153,41 +154,39 @@ class _AgreementDisputeSectionState extends State<AgreementDisputeSection> {
           const SizedBox(height: 8),
 
           // 🔹 Checkbox persetujuan
-          Obx(
-            () => Row(
-              children: [
-                Theme(
-                  data: Theme.of(context).copyWith(
-                    checkboxTheme: CheckboxThemeData(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      side: const BorderSide(width: 1.5, color: Colors.grey),
-                      fillColor: WidgetStateProperty.resolveWith<Color?>(
-                        (states) =>
-                            states.contains(WidgetState.selected)
-                                ? primary
-                                : null,
-                      ),
-                      checkColor: WidgetStateProperty.all(Colors.white),
+          Row(
+            children: [
+              Theme(
+                data: Theme.of(context).copyWith(
+                  checkboxTheme: CheckboxThemeData(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                  ),
-                  child: Checkbox(
-                    value: agreementController.disputeSectionChecked.value,
-                    onChanged: (val) {
-                      agreementController.toggleDisputeSection(val);
-                      _notifyParent();
-                    },
-                  ),
-                ),
-                const Expanded(
-                  child: Text(
-                    "Saya sudah membaca dan memahami *)",
-                    style: TextStyle(fontSize: 15),
+                    side: const BorderSide(width: 1.5, color: Colors.grey),
+                    fillColor: WidgetStateProperty.resolveWith<Color?>(
+                      (states) =>
+                          states.contains(WidgetState.selected)
+                              ? primary
+                              : null,
+                    ),
+                    checkColor: WidgetStateProperty.all(Colors.white),
                   ),
                 ),
-              ],
-            ),
+                child: Checkbox(
+                  value: agreementController.disputeSectionChecked.value,
+                  onChanged: (val) {
+                    agreementController.toggleDisputeSection(val);
+                    _notifyParent();
+                  },
+                ),
+              ),
+              const Expanded(
+                child: Text(
+                  "Saya sudah membaca dan memahami *)",
+                  style: TextStyle(fontSize: 15),
+                ),
+              ),
+            ],
           ),
         ],
       );

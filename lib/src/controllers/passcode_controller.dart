@@ -38,14 +38,21 @@ class PasscodeController extends GetxController {
   Future<void> _initBiometric() async {
     try {
       // Check if biometric is available on device
-      final canCheck = await _biometricService.canCheckBiometrics();
+      // For iOS, deviceSupportsBiometric uses isDeviceSupported() which is more reliable
       final isDeviceSupported = await _biometricService.deviceSupportsBiometric();
-      biometricAvailable.value = canCheck && isDeviceSupported;
+      biometricAvailable.value = isDeviceSupported;
+      
+      Get.log('[PasscodeController] Biometric available: $isDeviceSupported');
+      
+      // Get biometric type name
+      final typeName = await _biometricService.getBiometricTypeName();
+      Get.log('[PasscodeController] Biometric type: $typeName');
       
       // Check if user has biometric enabled
       isBiometricEnabled.value = await PasscodeService.isBiometricEnabled();
-      biometricType.value = await PasscodeService.getBiometricType() ?? 'Biometric';
+      biometricType.value = await PasscodeService.getBiometricType() ?? typeName;
     } catch (e) {
+      Get.log('[PasscodeController] Error initializing biometric: $e');
       biometricAvailable.value = false;
     }
   }
@@ -53,11 +60,19 @@ class PasscodeController extends GetxController {
   /// Refresh biometric status (digunakan ketika kembali dari halaman setup)
   Future<void> refreshBiometricStatus() async {
     try {
-      final canCheck = await _biometricService.canCheckBiometrics();
+      // Use deviceSupportsBiometric which handles iOS properly
       final isDeviceSupported = await _biometricService.deviceSupportsBiometric();
-      biometricAvailable.value = canCheck && isDeviceSupported;
+      biometricAvailable.value = isDeviceSupported;
+      
+      Get.log('[PasscodeController] Refresh - Biometric available: $isDeviceSupported');
+      
+      // Get biometric type name
+      final typeName = await _biometricService.getBiometricTypeName();
+      
       isBiometricEnabled.value = await PasscodeService.isBiometricEnabled();
-      biometricType.value = await PasscodeService.getBiometricType() ?? 'Biometric';
+      biometricType.value = await PasscodeService.getBiometricType() ?? typeName;
+      
+      Get.log('[PasscodeController] Refresh - Biometric type: ${biometricType.value}, enabled: ${isBiometricEnabled.value}');
     } catch (e) {
       Get.log('[PasscodeController] Error refreshing biometric status: $e');
     }
@@ -229,7 +244,7 @@ class PasscodeController extends GetxController {
         reason: forSetup 
             ? 'Verifikasi biometric untuk mengaktifkan fingerprint'
             : 'Verifikasi fingerprint untuk akses aplikasi',
-        useErrorDialogs: false,
+        useErrorDialogs: true, // Show system error dialogs
       );
       
       Get.log('[PasscodeController] authenticate() returned: $isAuthenticated');

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
+import 'package:rrfx/src/service/step7_cache_service.dart';
 import 'package:rrfx/src/components/appbars/default.dart';
 import 'package:rrfx/src/components/bottomsheets/material_bottom_sheets.dart';
 import 'package:rrfx/src/components/buttons/custom_buttons.dart';
@@ -147,6 +148,322 @@ class _Step7State extends State<Step7> {
   RxString coverBukuTabungan1Size = "".obs;
   RxString coverBukuTabungan2Size = "".obs;
 
+  // Flag to prevent saving during initial load
+  bool _isInitializing = true;
+
+  /// Save all form data to local cache
+  void _saveToCache() {
+    if (_isInitializing) return; // Don't save during initialization
+    
+    final data = {
+      // DATA PRIBADI
+      'pendidikanTerakhir': pendidikanTerakhir.text,
+      'nomorNPWP': nomorNPWP.text,
+      'namaIbuKandung': namaIbuKandung.text,
+      'statusPerkawinan': statusPerkawinan.text,
+      'namaPasangan': namaPasangan.text,
+      'statusKepemilikanRumah': statusKepemilikanRumahController.text,
+      'noTelpRumah': noTelpRumah.text,
+      'noFaksimiliRumah': noFaksimiliRumah.text,
+      'noHandphone': noHandphone.text,
+      'tujuanPembukaanRekening': tujuanPembukaanRekening.text,
+      'tujuanPembukaanRekeningIfLainnya': tujuanPembukaanRekeningIfLainnya.text,
+      'pengalamanInvestasi': pengalamanInvestasi.text,
+      'bidangInvestasi': bidangInvestasi.text,
+      
+      // PIHAK YANG DAPAT DIHUBUNGI DALAM KEADAAN DARURAT
+      'namaKontakDarurat': namaKontakDarurat.text,
+      'alamatRumahDarurat': alamatRumahDarurat.text,
+      'kodePosKontakDarurat': kodePosKontakDarurat.text,
+      'noTelpKontakDarurat': noTelpKontakDarurat.text,
+      'hubunganKontakDarurat': hubunganKontakDarurat.text,
+      
+      // PEKERJAAN
+      'pekerjaanSaya': pekerjaanSaya.text,
+      'namaPerusahaan': namaPerusahaan.text,
+      'bidangUsaha': bidangUsaha.text,
+      'jabatan': jabatan.text,
+      'lamaBekerja': lamaBekerja.text,
+      'lamaBekerjaKantorSebelumnya': lamaBekerjaKantorSebelumnya.text,
+      'alamatKantor': alamatKantor.text,
+      'kodePosKantor': kodePosKantor.text,
+      'noTelpKantor': noTelpKantor.text,
+      'noFaksimiliKantor': noFaksimiliKantor.text,
+      
+      // DAFTAR KEKAYAAN
+      'sumberPenghasilan': sumberPenghasilan.text,
+      'penghasilanPerTahun': penghasilanPerTahun.text,
+      'lokasiRumah': lokasiRumah.text,
+      'nilaiNJOP': nilaiNJOP.text,
+      'depositBank': depositBank.text,
+      'kekayaanLainnya': kekayaanLainnya.text,
+      'jumlahKekayaan': jumlahKekayaan.text,
+      
+      // REKENING BANK
+      'showBank2': showBank2.value,
+      'namaBank1': namaBank1.text,
+      'namaPemilikRekening1': namaPemilikRekening1.text,
+      'noRekening1': noRekening1.text,
+      'namaBank2': namaBank2.text,
+      'namaPemilikRekening2': namaPemilikRekening2.text,
+      'noRekening2': noRekening2.text,
+    };
+    
+    Step7CacheService.saveFormData(data);
+  }
+
+  /// Load cached data into form fields
+  void _loadFromCache() {
+    final cachedData = Step7CacheService.loadFormData();
+    if (cachedData == null) return;
+    
+    setState(() {
+      // DATA PRIBADI
+      if (cachedData['pendidikanTerakhir']?.isNotEmpty == true) {
+        pendidikanTerakhir.text = cachedData['pendidikanTerakhir'];
+      }
+      if (cachedData['nomorNPWP']?.isNotEmpty == true) {
+        nomorNPWP.text = cachedData['nomorNPWP'];
+      }
+      if (cachedData['namaIbuKandung']?.isNotEmpty == true) {
+        namaIbuKandung.text = cachedData['namaIbuKandung'];
+      }
+      if (cachedData['statusPerkawinan']?.isNotEmpty == true) {
+        statusPerkawinan.text = cachedData['statusPerkawinan'];
+      }
+      if (cachedData['namaPasangan']?.isNotEmpty == true) {
+        namaPasangan.text = cachedData['namaPasangan'];
+      }
+      if (cachedData['statusKepemilikanRumah']?.isNotEmpty == true) {
+        statusKepemilikanRumahController.text = cachedData['statusKepemilikanRumah'];
+      }
+      if (cachedData['noTelpRumah']?.isNotEmpty == true) {
+        noTelpRumah.text = cachedData['noTelpRumah'];
+      }
+      if (cachedData['noFaksimiliRumah']?.isNotEmpty == true) {
+        noFaksimiliRumah.text = cachedData['noFaksimiliRumah'];
+      }
+      if (cachedData['noHandphone']?.isNotEmpty == true) {
+        noHandphone.text = cachedData['noHandphone'];
+      }
+      if (cachedData['tujuanPembukaanRekening']?.isNotEmpty == true) {
+        tujuanPembukaanRekening.text = cachedData['tujuanPembukaanRekening'];
+      }
+      if (cachedData['tujuanPembukaanRekeningIfLainnya']?.isNotEmpty == true) {
+        tujuanPembukaanRekeningIfLainnya.text = cachedData['tujuanPembukaanRekeningIfLainnya'];
+      }
+      if (cachedData['pengalamanInvestasi']?.isNotEmpty == true) {
+        pengalamanInvestasi.text = cachedData['pengalamanInvestasi'];
+      }
+      if (cachedData['bidangInvestasi']?.isNotEmpty == true) {
+        bidangInvestasi.text = cachedData['bidangInvestasi'];
+      }
+      
+      // PIHAK YANG DAPAT DIHUBUNGI DALAM KEADAAN DARURAT
+      if (cachedData['namaKontakDarurat']?.isNotEmpty == true) {
+        namaKontakDarurat.text = cachedData['namaKontakDarurat'];
+      }
+      if (cachedData['alamatRumahDarurat']?.isNotEmpty == true) {
+        alamatRumahDarurat.text = cachedData['alamatRumahDarurat'];
+      }
+      if (cachedData['kodePosKontakDarurat']?.isNotEmpty == true) {
+        kodePosKontakDarurat.text = cachedData['kodePosKontakDarurat'];
+      }
+      if (cachedData['noTelpKontakDarurat']?.isNotEmpty == true) {
+        noTelpKontakDarurat.text = cachedData['noTelpKontakDarurat'];
+      }
+      if (cachedData['hubunganKontakDarurat']?.isNotEmpty == true) {
+        hubunganKontakDarurat.text = cachedData['hubunganKontakDarurat'];
+      }
+      
+      // PEKERJAAN
+      if (cachedData['pekerjaanSaya']?.isNotEmpty == true) {
+        pekerjaanSaya.text = cachedData['pekerjaanSaya'];
+      }
+      if (cachedData['namaPerusahaan']?.isNotEmpty == true) {
+        namaPerusahaan.text = cachedData['namaPerusahaan'];
+      }
+      if (cachedData['bidangUsaha']?.isNotEmpty == true) {
+        bidangUsaha.text = cachedData['bidangUsaha'];
+      }
+      if (cachedData['jabatan']?.isNotEmpty == true) {
+        jabatan.text = cachedData['jabatan'];
+      }
+      if (cachedData['lamaBekerja']?.isNotEmpty == true) {
+        lamaBekerja.text = cachedData['lamaBekerja'];
+      }
+      if (cachedData['lamaBekerjaKantorSebelumnya']?.isNotEmpty == true) {
+        lamaBekerjaKantorSebelumnya.text = cachedData['lamaBekerjaKantorSebelumnya'];
+      }
+      if (cachedData['alamatKantor']?.isNotEmpty == true) {
+        alamatKantor.text = cachedData['alamatKantor'];
+      }
+      if (cachedData['kodePosKantor']?.isNotEmpty == true) {
+        kodePosKantor.text = cachedData['kodePosKantor'];
+      }
+      if (cachedData['noTelpKantor']?.isNotEmpty == true) {
+        noTelpKantor.text = cachedData['noTelpKantor'];
+      }
+      if (cachedData['noFaksimiliKantor']?.isNotEmpty == true) {
+        noFaksimiliKantor.text = cachedData['noFaksimiliKantor'];
+      }
+      
+      // DAFTAR KEKAYAAN
+      if (cachedData['sumberPenghasilan']?.isNotEmpty == true) {
+        sumberPenghasilan.text = cachedData['sumberPenghasilan'];
+      }
+      if (cachedData['penghasilanPerTahun']?.isNotEmpty == true) {
+        penghasilanPerTahun.text = cachedData['penghasilanPerTahun'];
+      }
+      if (cachedData['lokasiRumah']?.isNotEmpty == true) {
+        lokasiRumah.text = cachedData['lokasiRumah'];
+      }
+      if (cachedData['nilaiNJOP']?.isNotEmpty == true) {
+        nilaiNJOP.text = cachedData['nilaiNJOP'];
+      }
+      if (cachedData['depositBank']?.isNotEmpty == true) {
+        depositBank.text = cachedData['depositBank'];
+      }
+      if (cachedData['kekayaanLainnya']?.isNotEmpty == true) {
+        kekayaanLainnya.text = cachedData['kekayaanLainnya'];
+      }
+      if (cachedData['jumlahKekayaan']?.isNotEmpty == true) {
+        jumlahKekayaan.text = cachedData['jumlahKekayaan'];
+      }
+      
+      // REKENING BANK
+      if (cachedData['showBank2'] == true) {
+        showBank2.value = true;
+      }
+      if (cachedData['namaBank1']?.isNotEmpty == true) {
+        namaBank1.text = cachedData['namaBank1'];
+      }
+      if (cachedData['namaPemilikRekening1']?.isNotEmpty == true) {
+        namaPemilikRekening1.text = cachedData['namaPemilikRekening1'];
+      }
+      if (cachedData['noRekening1']?.isNotEmpty == true) {
+        noRekening1.text = cachedData['noRekening1'];
+      }
+      if (cachedData['namaBank2']?.isNotEmpty == true) {
+        namaBank2.text = cachedData['namaBank2'];
+      }
+      if (cachedData['namaPemilikRekening2']?.isNotEmpty == true) {
+        namaPemilikRekening2.text = cachedData['namaPemilikRekening2'];
+      }
+      if (cachedData['noRekening2']?.isNotEmpty == true) {
+        noRekening2.text = cachedData['noRekening2'];
+      }
+    });
+  }
+
+  /// Add listeners to all controllers to auto-save on changes
+  void _addCacheListeners() {
+    // DATA PRIBADI
+    pendidikanTerakhir.addListener(_saveToCache);
+    nomorNPWP.addListener(_saveToCache);
+    namaIbuKandung.addListener(_saveToCache);
+    statusPerkawinan.addListener(_saveToCache);
+    namaPasangan.addListener(_saveToCache);
+    statusKepemilikanRumahController.addListener(_saveToCache);
+    noTelpRumah.addListener(_saveToCache);
+    noFaksimiliRumah.addListener(_saveToCache);
+    noHandphone.addListener(_saveToCache);
+    tujuanPembukaanRekening.addListener(_saveToCache);
+    tujuanPembukaanRekeningIfLainnya.addListener(_saveToCache);
+    pengalamanInvestasi.addListener(_saveToCache);
+    bidangInvestasi.addListener(_saveToCache);
+    
+    // PIHAK YANG DAPAT DIHUBUNGI DALAM KEADAAN DARURAT
+    namaKontakDarurat.addListener(_saveToCache);
+    alamatRumahDarurat.addListener(_saveToCache);
+    kodePosKontakDarurat.addListener(_saveToCache);
+    noTelpKontakDarurat.addListener(_saveToCache);
+    hubunganKontakDarurat.addListener(_saveToCache);
+    
+    // PEKERJAAN
+    pekerjaanSaya.addListener(_saveToCache);
+    namaPerusahaan.addListener(_saveToCache);
+    bidangUsaha.addListener(_saveToCache);
+    jabatan.addListener(_saveToCache);
+    lamaBekerja.addListener(_saveToCache);
+    lamaBekerjaKantorSebelumnya.addListener(_saveToCache);
+    alamatKantor.addListener(_saveToCache);
+    kodePosKantor.addListener(_saveToCache);
+    noTelpKantor.addListener(_saveToCache);
+    noFaksimiliKantor.addListener(_saveToCache);
+    
+    // DAFTAR KEKAYAAN
+    sumberPenghasilan.addListener(_saveToCache);
+    penghasilanPerTahun.addListener(_saveToCache);
+    lokasiRumah.addListener(_saveToCache);
+    nilaiNJOP.addListener(_saveToCache);
+    depositBank.addListener(_saveToCache);
+    kekayaanLainnya.addListener(_saveToCache);
+    jumlahKekayaan.addListener(_saveToCache);
+    
+    // REKENING BANK
+    namaBank1.addListener(_saveToCache);
+    namaPemilikRekening1.addListener(_saveToCache);
+    noRekening1.addListener(_saveToCache);
+    namaBank2.addListener(_saveToCache);
+    namaPemilikRekening2.addListener(_saveToCache);
+    noRekening2.addListener(_saveToCache);
+  }
+
+  /// Remove all cache listeners
+  void _removeCacheListeners() {
+    // DATA PRIBADI
+    pendidikanTerakhir.removeListener(_saveToCache);
+    nomorNPWP.removeListener(_saveToCache);
+    namaIbuKandung.removeListener(_saveToCache);
+    statusPerkawinan.removeListener(_saveToCache);
+    namaPasangan.removeListener(_saveToCache);
+    statusKepemilikanRumahController.removeListener(_saveToCache);
+    noTelpRumah.removeListener(_saveToCache);
+    noFaksimiliRumah.removeListener(_saveToCache);
+    noHandphone.removeListener(_saveToCache);
+    tujuanPembukaanRekening.removeListener(_saveToCache);
+    tujuanPembukaanRekeningIfLainnya.removeListener(_saveToCache);
+    pengalamanInvestasi.removeListener(_saveToCache);
+    bidangInvestasi.removeListener(_saveToCache);
+    
+    // PIHAK YANG DAPAT DIHUBUNGI DALAM KEADAAN DARURAT
+    namaKontakDarurat.removeListener(_saveToCache);
+    alamatRumahDarurat.removeListener(_saveToCache);
+    kodePosKontakDarurat.removeListener(_saveToCache);
+    noTelpKontakDarurat.removeListener(_saveToCache);
+    hubunganKontakDarurat.removeListener(_saveToCache);
+    
+    // PEKERJAAN
+    pekerjaanSaya.removeListener(_saveToCache);
+    namaPerusahaan.removeListener(_saveToCache);
+    bidangUsaha.removeListener(_saveToCache);
+    jabatan.removeListener(_saveToCache);
+    lamaBekerja.removeListener(_saveToCache);
+    lamaBekerjaKantorSebelumnya.removeListener(_saveToCache);
+    alamatKantor.removeListener(_saveToCache);
+    kodePosKantor.removeListener(_saveToCache);
+    noTelpKantor.removeListener(_saveToCache);
+    noFaksimiliKantor.removeListener(_saveToCache);
+    
+    // DAFTAR KEKAYAAN
+    sumberPenghasilan.removeListener(_saveToCache);
+    penghasilanPerTahun.removeListener(_saveToCache);
+    lokasiRumah.removeListener(_saveToCache);
+    nilaiNJOP.removeListener(_saveToCache);
+    depositBank.removeListener(_saveToCache);
+    kekayaanLainnya.removeListener(_saveToCache);
+    jumlahKekayaan.removeListener(_saveToCache);
+    
+    // REKENING BANK
+    namaBank1.removeListener(_saveToCache);
+    namaPemilikRekening1.removeListener(_saveToCache);
+    noRekening1.removeListener(_saveToCache);
+    namaBank2.removeListener(_saveToCache);
+    namaPemilikRekening2.removeListener(_saveToCache);
+    noRekening2.removeListener(_saveToCache);
+  }
+
   // Helper function to get file size in KB
   String getFileSizeInKB(String filePath) {
     if (filePath.isEmpty) return "";
@@ -267,12 +584,23 @@ class _Step7State extends State<Step7> {
         'appFotoImage4': progressController.progressData.value?.response?.appFotoImage3,
         'appFotoImage5': progressController.progressData.value?.response?.appFotoImage4,
       });
+      
+      // Load cached data (overrides API data if exists)
+      _loadFromCache();
+      
+      // Add listeners for auto-save after initial load
+      _addCacheListeners();
+      _isInitializing = false;
+      
       regolController.isLoading(false);
     });
   }
 
   @override
   void dispose() {
+    // Remove cache listeners before disposing
+    _removeCacheListeners();
+    
     nama.dispose();
     tempatLahir.dispose();
     tanggalLahir.dispose();
@@ -1556,6 +1884,8 @@ class _Step7State extends State<Step7> {
                   );
 
                   if (result) {
+                    // Clear cached form data after successful submit
+                    await Step7CacheService.clearFormData();
                     Get.to(() => const Step8());
                     return;
                   }

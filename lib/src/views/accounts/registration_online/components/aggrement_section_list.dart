@@ -6,11 +6,15 @@ import 'package:rrfx/src/views/accounts/registration_online/controllers/agreemen
 
 class AgreementSectionList extends StatelessWidget {
   final Map<String, List<dynamic>> sections;
-  final AgreementSectionController controller = Get.put(AgreementSectionController());
-
-  AgreementSectionList({super.key, required this.sections}) {
-    controller.initSections(sections.length);
+  
+  AgreementSectionController get controller {
+    final ctrl = Get.find<AgreementSectionController>();
+    // Initialize sections if needed
+    ctrl.initSections(sections.length);
+    return ctrl;
   }
+
+  const AgreementSectionList({super.key, required this.sections});
 
   String _toRoman(int number) {
     switch (number) {

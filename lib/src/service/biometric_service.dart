@@ -17,6 +17,10 @@ class BiometricService {
   /// Check if device has biometric sensors
   Future<bool> canCheckBiometrics() async {
     try {
+      // For iOS, use isDeviceSupported() which is more reliable
+      if (Platform.isIOS) {
+        return await _localAuth.isDeviceSupported();
+      }
       return await _localAuth.canCheckBiometrics;
     } catch (e) {
       Get.log('Error checking biometrics: $e');
@@ -27,9 +31,20 @@ class BiometricService {
   /// Check if device has biometric authentication available
   Future<bool> deviceSupportsBiometric() async {
     try {
-      // Check if device can use biometrics
+      // For iOS, isDeviceSupported() is more reliable than canCheckBiometrics
+      final isSupported = await _localAuth.isDeviceSupported();
+      
+      if (Platform.isIOS) {
+        // On iOS, isDeviceSupported returns true if device has Face ID or Touch ID capability
+        // Even if no biometrics are enrolled, we still want to show the option
+        Get.log('[BiometricService] iOS - isDeviceSupported: $isSupported');
+        return isSupported;
+      }
+      
+      // For Android, check both
       final canCheck = await _localAuth.canCheckBiometrics;
       final biometrics = await _localAuth.getAvailableBiometrics();
+      Get.log('[BiometricService] Android - canCheck: $canCheck, biometrics: $biometrics');
       return canCheck && biometrics.isNotEmpty;
     } catch (e) {
       Get.log('Error checking device support: $e');
@@ -40,7 +55,9 @@ class BiometricService {
   /// Get available biometric types on device
   Future<List<BiometricType>> getAvailableBiometrics() async {
     try {
-      return await _localAuth.getAvailableBiometrics();
+      final biometrics = await _localAuth.getAvailableBiometrics();
+      Get.log('[BiometricService] Available biometrics: $biometrics');
+      return biometrics;
     } catch (e) {
       Get.log('Error getting available biometrics: $e');
       return [];
@@ -70,7 +87,8 @@ class BiometricService {
       // Get available biometrics
       final availableBiometrics = await getAvailableBiometrics();
       
-      // Untuk iOS, kadang availableBiometrics bisa kosong tapi tetap bisa authenticate
+      // Untuk Android, jika tidak ada biometric terdaftar, throw error
+      // Untuk iOS, kita tetap lanjut karena iOS akan handle dengan prompt Face ID/Touch ID setup
       if (availableBiometrics.isEmpty && !Platform.isIOS) {
         throw Exception('Tidak ada biometric terdaftar di device');
       }
@@ -80,12 +98,20 @@ class BiometricService {
           ? 'Autentikasi diperlukan untuk mengakses aplikasi'
           : reason;
       
+      // Untuk iOS: jika tidak ada biometric terdaftar, gunakan biometricOnly: false
+      // agar iOS bisa fallback ke device passcode dan prompt setup biometric
+      final bool useBiometricOnly = Platform.isIOS 
+          ? availableBiometrics.isNotEmpty  // false jika tidak ada biometric enrolled
+          : false;  // Android selalu allow fallback
+      
+      Get.log('[BiometricService] Authenticating with biometricOnly: $useBiometricOnly');
+      
       // Authenticate dengan opsi berbeda untuk iOS dan Android
       final isAuthenticated = await _localAuth.authenticate(
         localizedReason: localizedReason,
         options: AuthenticationOptions(
           stickyAuth: stickyAuth,
-          biometricOnly: Platform.isIOS ? true : false, // iOS: biometric only, Android: allow fallback
+          biometricOnly: useBiometricOnly,
           useErrorDialogs: useErrorDialogs,
           sensitiveTransaction: false,
         ),
@@ -94,11 +120,16 @@ class BiometricService {
       Get.log('[BiometricService] Authentication result: $isAuthenticated');
       return isAuthenticated;
     } on PlatformException catch (e) {
+      Get.log('[BiometricService] PlatformException: ${e.code} - ${e.message}');
       
       // Handle specific errors
       if (e.code == 'NotAvailable') {
         throw Exception('Biometric tidak tersedia di device ini');
       } else if (e.code == 'NotEnrolled') {
+        // Untuk iOS, ini berarti user belum setup Face ID/Touch ID
+        if (Platform.isIOS) {
+          throw Exception('Silakan setup Face ID atau Touch ID di Settings iPhone terlebih dahulu');
+        }
         throw Exception('Tidak ada biometric terdaftar di device');
       } else if (e.code == 'LockedOut' || e.code == 'LockedOutTemporarily') {
         throw Exception('Terlalu banyak percobaan gagal. Coba lagi nanti');
@@ -151,12 +182,41 @@ class BiometricService {
     try {
       final availableBiometrics = await getAvailableBiometrics();
       
+      Get.log('[BiometricService] Getting biometric type name, available: $availableBiometrics');
+      
+      // Check for Face ID (iOS) or face recognition (Android)
+      if (availableBiometrics.contains(BiometricType.face)) {
+        return Platform.isIOS ? 'Face ID' : 'Face Recognition';
+      }
+      
+      // Check for Touch ID (iOS) or fingerprint (Android)
       if (availableBiometrics.contains(BiometricType.fingerprint)) {
-        return 'Fingerprint';
-      } else if (availableBiometrics.contains(BiometricType.face)) {
-        return 'Face Recognition';
-      } else if (availableBiometrics.contains(BiometricType.iris)) {
+        return Platform.isIOS ? 'Touch ID' : 'Fingerprint';
+      }
+      
+      // Check for strong biometric (Android 10+)
+      if (availableBiometrics.contains(BiometricType.strong)) {
+        return 'Biometric';
+      }
+      
+      // Check for weak biometric
+      if (availableBiometrics.contains(BiometricType.weak)) {
+        return 'Biometric';
+      }
+      
+      if (availableBiometrics.contains(BiometricType.iris)) {
         return 'Iris Recognition';
+      }
+      
+      // If no specific type found but device supports biometric
+      if (Platform.isIOS) {
+        // Try to determine iOS biometric type from device capability
+        final isSupported = await _localAuth.isDeviceSupported();
+        if (isSupported) {
+          // iPhone X and later use Face ID, earlier devices use Touch ID
+          // This is a fallback - actual type should be detected from availableBiometrics
+          return 'Face ID / Touch ID';
+        }
       }
       
       return 'Biometric';

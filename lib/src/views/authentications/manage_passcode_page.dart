@@ -116,7 +116,8 @@ class _ManagePasscodePageState extends State<ManagePasscodePage>
           setState(() {
             isLoading = false;
           });
-          _showError('Autentikasi biometric dibatalkan atau gagal');
+          // Show more helpful message for iOS users
+          _showError('Autentikasi biometric dibatalkan. Pastikan Face ID atau Touch ID sudah diaktifkan di Settings iPhone.');
         }
       } else {
         // Disable biometric - tidak perlu verifikasi, langsung disable
@@ -146,7 +147,12 @@ class _ManagePasscodePageState extends State<ManagePasscodePage>
       setState(() {
         isLoading = false;
       });
-      _showError('Error: $e');
+      // Show the actual error message from biometric service
+      String errorMsg = e.toString();
+      if (errorMsg.contains('Exception:')) {
+        errorMsg = errorMsg.replaceAll('Exception:', '').trim();
+      }
+      _showError(errorMsg);
     }
   }
 

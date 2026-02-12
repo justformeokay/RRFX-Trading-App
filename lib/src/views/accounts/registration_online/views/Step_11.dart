@@ -349,8 +349,8 @@ class _Step11State extends State<Step11> with SingleTickerProviderStateMixin {
 
           // Lanjutkan ke API call
           bool result = await _regolRepository.step11A(
-            kantorPenyelesaian: selecterdKantorPerselisihan,
-            kotaPenyelesaian: selectedPerselisihan,
+            kantorPenyelesaian: agreementController.selectedKota.value ?? selecterdKantorPerselisihan,
+            kotaPenyelesaian: agreementController.selectedPenyelesaian.value ?? selectedPerselisihan,
           );
 
           if (result) {
