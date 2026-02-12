@@ -4,6 +4,7 @@ import 'package:icons_plus/icons_plus.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/alerts/default.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
+import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
 import 'package:rrfx/src/components/appbars/default.dart';
 import 'package:rrfx/src/components/bottomsheets/material_bottom_sheets.dart';
 import 'package:rrfx/src/components/buttons/outlined_button.dart';
@@ -43,6 +44,7 @@ class _DepositState extends State<Deposit> {
   RxBool isLoading = false.obs;
   RxString currencyCodeSelected = "".obs;
   RxList akunTradingList = [].obs;
+  RxBool isMaxLimitDialogShowing = false.obs; // Prevent popup looping
   final _formKey = GlobalKey<FormState>();
   TextEditingController myBankCabang = TextEditingController();
   TextEditingController myBankName = TextEditingController();
@@ -332,6 +334,7 @@ class _DepositState extends State<Deposit> {
                             if (clean.isEmpty) {
                               myAmount.text = "";
                               finalDepositAmount.value = "";
+                              isMaxLimitDialogShowing.value = false; // Reset flag
                               return;
                             }
 
@@ -345,14 +348,29 @@ class _DepositState extends State<Deposit> {
                                 myAmount.text = NumberFormattersService.formatRupiah(maxRupiah);
                                 finalDepositAmount.value = maxRupiah.toString();
                                 
-                                // Show warning
-                                AppSnackbar.error("Maksimal deposit: Rp100.000.000");
+                                // Show warning only once (prevent looping popups)
+                                if (!isMaxLimitDialogShowing.value) {
+                                  isMaxLimitDialogShowing.value = true;
+                                  
+                                  ModernAlertDialog.warning(
+                                    title: "Batas Maksimal Deposit",
+                                    message: "Jumlah deposit tidak boleh melebihi Rp100.000.000. Sistem telah menetapkan jumlah ke batas maksimal.",
+                                    buttonText: "OK",
+                                    onPressed: () {
+                                      isMaxLimitDialogShowing.value = false; // Allow next popup if user tries again
+                                      Get.back();
+                                    },
+                                  );
+                                }
                                 
                                 // Restore cursor position
                                 myAmount.selection = TextSelection.fromPosition(
                                   TextPosition(offset: myAmount.text.length),
                                 );
                                 return;
+                              } else {
+                                // Reset flag ketika input valid
+                                isMaxLimitDialogShowing.value = false;
                               }
 
                               // ---- Format ke tampilan ----
@@ -371,6 +389,9 @@ class _DepositState extends State<Deposit> {
                               // ---- Simpan nilai final yang BENAR (string) ----
                               finalDepositAmount.value = val.toString(); 
                               // contoh: 0.2, 20.0, 150.55
+                              
+                              // Reset flag
+                              isMaxLimitDialogShowing.value = false;
                             }
 
                             // menjaga cursor tetap di akhir

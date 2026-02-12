@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
@@ -16,7 +17,6 @@ import 'package:rrfx/src/views/authentications/manage_passcode_page.dart';
 import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
 import 'package:rrfx/src/views/resources/resources_center.dart';
 import 'package:rrfx/src/views/settings/daftar_bank_saya.dart';
-import 'package:rrfx/src/views/settings/delete_account.dart';
 import 'package:rrfx/src/views/settings/documents/views/document_list_page.dart';
 import 'package:rrfx/src/views/settings/invite_link.dart';
 import 'package:rrfx/src/views/settings/request_ib_page.dart';
@@ -852,7 +852,9 @@ class _SettingsState extends State<Settings> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => Get.to(() => const DeleteAccountPage()),
+          onTap: () {
+            Get.to(() => _DeleteAccountWebView());
+          },
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -1023,4 +1025,39 @@ class _MenuItemData {
     this.enabled = true,
     this.trailing,
   });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// DELETE ACCOUNT WEBVIEW
+// ════════════════════════════════════════════════════════════════════════════
+class _DeleteAccountWebView extends StatefulWidget {
+  @override
+  State<_DeleteAccountWebView> createState() => _DeleteAccountWebViewState();
+}
+
+class _DeleteAccountWebViewState extends State<_DeleteAccountWebView> {
+  late WebViewController _webViewController;
+
+  @override
+  void initState() {
+    super.initState();
+    _webViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..loadRequest(
+        Uri.parse('https://app.rrfx.co.id/delete-account'),
+      );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Delete Account'),
+        centerTitle: true,
+        elevation: 0,
+        forceMaterialTransparency: true,
+      ),
+      body: WebViewWidget(controller: _webViewController),
+    );
+  }
 }

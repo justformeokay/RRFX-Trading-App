@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:get/get.dart';
@@ -113,11 +114,29 @@ class AuthService extends GetxController {
       Get.log('Access Token (first 20 chars): ${accessToken?.substring(0, min(20, accessToken?.length ?? 0)) ?? 'NULL'}...');
       Get.log('───────────────────────────────────────────');
 
-      http.Response response = await http.post(
-        Uri.parse(fullUrl), 
-        headers: headers,
-        body: body
-      );
+      // Add 20 second timeout to prevent indefinite hanging
+      http.Response response;
+      try {
+        response = await http.post(
+          Uri.parse(fullUrl), 
+          headers: headers,
+          body: body
+        ).timeout(
+          const Duration(seconds: 20),
+          onTimeout: () => throw Exception('Request timeout - koneksi memakan waktu terlalu lama'),
+        );
+      } catch (e) {
+        if (e.toString().contains('timeout') || e.toString().contains('terlalu lama')) {
+          Get.log('⚠️ [AuthService.post] Request timeout - no response after 20 seconds');
+          return {
+            'status': false,
+            'statusCode': 0,
+            'message': 'TimeoutException: Koneksi memakan waktu terlalu lama (> 20 detik)',
+            'response': {},
+          };
+        }
+        rethrow;
+      }
 
       // DEBUG: Log response details
       Get.log('📥 POST RESPONSE');
@@ -250,11 +269,20 @@ class AuthService extends GetxController {
       Get.log('Stack trace: $stackTrace');
       print('❌ AuthService POST Error: $message');
       
+      // Detect specific error types for better error messaging
+      String errorMessage = 'Request failed: $message';
+      
+      if (message.contains('timeout') || message.contains('terlalu lama')) {
+        errorMessage = 'TimeoutException: Koneksi memakan waktu terlalu lama (> 20 detik)';
+      } else if (message.contains('Connection')) {
+        errorMessage = 'SocketException: Koneksi internet terputus atau tidak tersedia';
+      }
+      
       // Return graceful error response instead of throwing
       return {
         'status': false,
         'statusCode': 0,
-        'message': 'Request failed: $message',
+        'message': errorMessage,
         'response': {},
       };
     }
@@ -397,10 +425,28 @@ class AuthService extends GetxController {
       Get.log('Access Token (first 20 chars): ${accessToken?.substring(0, min(20, accessToken?.length ?? 0)) ?? 'NULL'}...');
       Get.log('───────────────────────────────────────────');
 
-      http.Response response = await http.get(
-        Uri.parse(fullUrl), 
-        headers: headers,
-      );
+      // Add 20 second timeout to prevent indefinite hanging
+      http.Response response;
+      try {
+        response = await http.get(
+          Uri.parse(fullUrl), 
+          headers: headers,
+        ).timeout(
+          const Duration(seconds: 20),
+          onTimeout: () => throw Exception('Request timeout - koneksi memakan waktu terlalu lama'),
+        );
+      } catch (e) {
+        if (e.toString().contains('timeout') || e.toString().contains('terlalu lama')) {
+          Get.log('⚠️ [AuthService.get] Request timeout - no response after 20 seconds');
+          return {
+            'status': false,
+            'statusCode': 0,
+            'message': 'TimeoutException: Koneksi memakan waktu terlalu lama (> 20 detik)',
+            'response': {},
+          };
+        }
+        rethrow;
+      }
 
       Get.log('📥 GET RESPONSE');
       Get.log('Status Code: ${response.statusCode}');
@@ -547,11 +593,20 @@ class AuthService extends GetxController {
         };
       }
       
+      // Detect specific error types for better error messaging
+      String errorMessage = 'Network error: ${e.toString()}';
+      
+      if (message.contains('timeout') || message.contains('terlalu lama')) {
+        errorMessage = 'TimeoutException: Koneksi memakan waktu terlalu lama (> 20 detik)';
+      } else if (message.contains('Connection')) {
+        errorMessage = 'SocketException: Koneksi internet terputus atau tidak tersedia';
+      }
+      
       // Return error response instead of throwing
       return {
         'status': false,
         'statusCode': 500,
-        'message': 'Network error: ${e.toString()}',
+        'message': errorMessage,
         'response': {},
       };
     }

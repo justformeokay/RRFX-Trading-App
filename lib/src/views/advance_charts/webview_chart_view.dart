@@ -5,9 +5,14 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:http/http.dart' as http;
 import 'package:rrfx/src/components/account_list/account_controller.dart';
+import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
 import 'package:rrfx/src/components/colors/default.dart';
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/views/chart/controllers/chart_controller.dart';
+import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'controllers/symbols_controller.dart';
 import 'widgets/market_selector_sheet.dart';
 import 'widgets/chart_trading_panel.dart';
@@ -39,6 +44,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
   String? _currentSymbol;
   bool _hasConnection = true;
   bool _isTimeout = false;
+  bool _isCreatingDemoAccount = false; // Track demo account creation
   late StreamSubscription _connectionSubscription;
   Timer? _timeoutTimer;
   
@@ -156,6 +162,24 @@ class _WebViewChartViewState extends State<WebViewChartView> {
     final isDark = Get.isDarkMode;
     final size = MediaQuery.of(context).size;
     final theme = Theme.of(context);
+
+    // Check if user has demo accounts - if not, show create demo page
+    if (accountController.demoAccounts.isEmpty) {
+      return GestureDetector(
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        child: Scaffold(
+          backgroundColor: isDark ? Colors.black : Colors.white,
+          appBar: AppBar(
+            leadingWidth: size.width * 0.25,
+            title: Text(
+              'Demo Chart',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+            ),
+          ),
+          body: _buildNoDemoAccountState(theme, isDark),
+        ),
+      );
+    }
 
     // Show error if no connection
     if (!_hasConnection) {
@@ -615,6 +639,282 @@ class _WebViewChartViewState extends State<WebViewChartView> {
     _cancelTimeoutTimer();
     webViewController = null;
     super.dispose();
+  }
+
+  /// Create demo account via API POST
+  Future<void> _createDemoAccount() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? accessToken = prefs.getString('accessToken'); 
+    if(accessToken == null || accessToken.isEmpty){
+      ModernAlertDialog.error(
+        title: 'Gagal',
+        message: 'Anda harus login terlebih dahulu untuk membuat akun demo.',
+        buttonText: 'OK',
+        onPressed: () {
+          Get.offAll(() => MainpageWithoutLogin());
+        },
+      );
+      return;
+    }
+    if (_isCreatingDemoAccount) return; // Prevent multiple requests
+
+    setState(() {
+      _isCreatingDemoAccount = true;
+    });
+
+    try {
+      Get.log('🔄 [WebViewChart] Creating demo account...');
+      
+      final response = await http.post(
+        Uri.parse('${GlobalVariable.mainURL}/regol/createDemo'),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+      ).timeout(
+        const Duration(seconds: 20),
+        onTimeout: () => throw Exception('Request timeout'),
+      );
+
+      Get.log('📥 [WebViewChart] Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        Get.log('✅ [WebViewChart] Demo account created successfully');
+        
+        // Show success dialog
+        ModernAlertDialog.success(
+          title: 'Berhasil',
+          message: 'Akun demo berhasil dibuat! Silakan refresh halaman ini untuk melihat akun demo Anda.',
+          buttonText: 'OK',
+          onPressed: () {
+            // Refresh account data
+            accountController.fetchAccountInfo().then((_) {
+              // Refresh page
+              setState(() {
+                _isCreatingDemoAccount = false;
+              });
+            });
+          },
+        );
+      } else {
+        Get.log('❌ [WebViewChart] Failed to create demo account: ${response.statusCode}');
+        ModernAlertDialog.error(
+          title: 'Gagal',
+          message: 'Gagal membuat akun demo. Coba lagi nanti.',
+          buttonText: 'OK',
+          onPressed: () {
+            setState(() {
+              _isCreatingDemoAccount = false;
+            });
+          },
+        );
+      }
+    } on TimeoutException catch (_) {
+      Get.log('⚠️ [WebViewChart] Demo account creation timeout');
+      ModernAlertDialog.error(
+        title: 'Timeout',
+        message: 'Koneksi ke server memakan waktu terlalu lama. Silakan coba lagi.',
+        buttonText: 'OK',
+        onPressed: () {
+          setState(() {
+            _isCreatingDemoAccount = false;
+          });
+        },
+      );
+    } catch (e) {
+      Get.log('❌ [WebViewChart] Error creating demo account: $e');
+      ModernAlertDialog.error(
+        title: 'Gagal',
+        message: 'Terjadi kesalahan saat membuat akun demo. Coba lagi nanti.',
+        buttonText: 'OK',
+        onPressed: () {
+          setState(() {
+            _isCreatingDemoAccount = false;
+          });
+        },
+      );
+    }
+  }
+
+  /// Build UI for no demo account state
+  Widget _buildNoDemoAccountState(ThemeData theme, bool isDarkMode) {
+    return Center(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Animated Icon
+              TweenAnimationBuilder(
+                tween: Tween<double>(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.elasticOut,
+                builder: (context, double value, child) {
+                  return Transform.scale(
+                    scale: value,
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: CustomColor.secondaryColor.withOpacity(0.1),
+                      ),
+                      child: Icon(
+                        Iconsax.chart_square_outline,
+                        size: 60,
+                        color: CustomColor.secondaryColor,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 32),
+
+              // Title
+              Text(
+                'Belum Ada Akun Demo',
+                style: GoogleFonts.inter(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurface,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+
+              // Description
+              Text(
+                'Untuk menggunakan fitur demo chart, Anda perlu membuat akun demo terlebih dahulu. Akun demo memungkinkan Anda berlatih trading tanpa risiko finansial.',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  height: 1.6,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+
+              // Benefits Card
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: CustomColor.secondaryColor.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: CustomColor.secondaryColor.withOpacity(0.2),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Iconsax.info_circle_outline,
+                          size: 18,
+                          color: CustomColor.secondaryColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Keuntungan Akun Demo',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '• Praktik trading tanpa risiko finansial\n• Dana virtual unlimited\n• Akses ke semua fitur chart\n• Sempurna untuk pemula',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        height: 1.6,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // Action buttons
+              Column(
+                children: [
+                  // Create demo button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: _isCreatingDemoAccount ? null : _createDemoAccount,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: CustomColor.secondaryColor,
+                        foregroundColor: Colors.black,
+                        disabledBackgroundColor: CustomColor.secondaryColor.withOpacity(0.6),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      icon: _isCreatingDemoAccount
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  isDarkMode ? Colors.black87 : Colors.white,
+                                ),
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : const Icon(Iconsax.add_circle_outline, size: 20),
+                      label: Text(
+                        _isCreatingDemoAccount ? 'Membuat Akun...' : 'Buat Akun Demo',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Back button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: theme.colorScheme.onSurface,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        side: BorderSide(
+                          color: theme.dividerColor.withOpacity(0.5),
+                        ),
+                      ),
+                      icon: const Icon(Iconsax.arrow_left_outline, size: 20),
+                      label: Text(
+                        'Kembali',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildConnectionErrorState(ThemeData theme, bool isDarkMode) {

@@ -1,15 +1,21 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
+import 'package:http/http.dart' as http;
 import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/colors/default.dart';
+import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 // Asumsikan path import ini sudah benar di project Anda
 import 'package:rrfx/src/views/markets/controllers/market_mt5_controller.dart'; 
 import 'package:rrfx/src/views/markets/models/market_mt5_model.dart';
 import 'package:rrfx/src/views/markets/components/empty_market_state.dart';
 import 'package:rrfx/src/views/advance_charts/webview_chart_view_from_tile.dart';
 import 'package:rrfx/src/helpers/handlers/holiday.dart';
+import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Definisi warna trading (tetap)
 const Color _upColor = Colors.blue;
@@ -18,6 +24,69 @@ const Color _neutralColor = Colors.grey;
 
 class MarketsMeta5View extends GetView<MarketMt5Controller> {
   const MarketsMeta5View({super.key});
+
+  // --- Helper: Create demo account ---
+  Future<void> _createDemoAccount() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? accessToken = prefs.getString('accessToken');
+    if (accessToken == null || accessToken.isEmpty) {
+      ModernAlertDialog.warning(
+        title: 'Perlu Login',
+        message: 'Anda harus login terlebih dahulu untuk membuat akun demo.',
+        buttonText: 'OK',
+        onPressed: () {
+          Get.offAll(() => MainpageWithoutLogin());
+        },
+      );
+      return;
+    }
+    try {
+      final header = {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+      };
+      final response = await http
+          .post(Uri.parse('${GlobalVariable.mainURL}/regol/createDemo'), headers: header)
+          .timeout(const Duration(seconds: 20), onTimeout: () {
+        throw TimeoutException('Request timeout');
+      });
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final accountController = Get.find<AccountController>();
+        
+        ModernAlertDialog.success(
+          title: 'Berhasil',
+          message: 'Akun demo berhasil dibuat! Refresh halaman untuk melihat akun demo Anda.',
+          buttonText: 'OK',
+          onPressed: () {
+            Get.back();
+            accountController.fetchAccountInfo();
+          },
+        );
+      } else {
+        ModernAlertDialog.error(
+          title: 'Gagal',
+          message: 'Gagal membuat akun demo. Coba lagi nanti.',
+          buttonText: 'OK',
+          onPressed: () => Get.back(),
+        );
+      }
+    } on TimeoutException catch (_) {
+      ModernAlertDialog.error(
+        title: 'Timeout',
+        message: 'Koneksi ke server memakan waktu terlalu lama. Coba lagi nanti.',
+        buttonText: 'OK',
+        onPressed: () => Get.back(),
+      );
+    } catch (e) {
+      ModernAlertDialog.error(
+        title: 'Gagal',
+        message: 'Terjadi kesalahan saat membuat akun demo. Coba lagi nanti.',
+        buttonText: 'OK',
+        onPressed: () => Get.back(),
+      );
+    }
+  }
 
   // --- Helper: Menentukan apakah sebuah simbol harus 0 desimal ---
   bool _isZeroDecimalPair(String symbol) {
@@ -502,6 +571,17 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
     final spreadInt = calcSpread(model.symbol, model.spread);
 
     void goToChart() {
+      // Check if user has demo accounts
+      if (accountController.demoAccounts.isEmpty) {
+        ModernAlertDialog.warning(
+          title: 'Belum Ada Akun Demo',
+          message: 'Anda perlu membuat akun demo terlebih dahulu untuk menggunakan fitur chart trading. Tekan tombol di bawah untuk membuat akun demo.',
+          buttonText: 'Buat Akun Demo',
+          onPressed: _createDemoAccount,
+        );
+        return;
+      }
+
       Get.to(() => WebViewChartViewFromTile(
         login: int.tryParse(accountController.selectedAccount.value?.login ?? "0") ?? 0,
         marketName: model.symbol,

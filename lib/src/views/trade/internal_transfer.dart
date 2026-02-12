@@ -40,12 +40,46 @@ class _InternalTransferState extends State<InternalTransfer> {
     });
 
     Future.delayed(Duration.zero, () {
-      tradingController.getTradingAccount().then((result) {
-        if (widget.loginID != null) {
-          selectedSenderLogin(widget.loginID!);
-        }
-        if (!result) {
-          if (mounted) {
+      _loadTradingAccounts();
+    });
+  }
+
+  /// Load trading accounts dengan timeout handling
+  Future<void> _loadTradingAccounts() async {
+    try {
+      Get.log('🔄 [INTERNAL_TRANSFER] Loading trading accounts...');
+      
+      // Call getTradingAccount - already has timeout in authService
+      final result = await tradingController.getTradingAccount();
+
+      if (widget.loginID != null) {
+        selectedSenderLogin(widget.loginID!);
+      }
+
+      if (!result) {
+        if (mounted) {
+          // Cek responseMessage untuk error type
+          final errorMsg = tradingController.responseMessage.value.toLowerCase();
+          
+          Get.log('❌ [INTERNAL_TRANSFER] Failed to load accounts: ${tradingController.responseMessage.value}');
+          
+          // Detect timeout error
+          if (errorMsg.contains('timeout') || errorMsg.contains('too long')) {
+            _showNetworkErrorDialog(
+              title: "Permintaan Timeout",
+              message: "Koneksi ke server memakan waktu terlalu lama (> 20 detik). Periksa koneksi internet Anda dan coba lagi.",
+            );
+          }
+          // Detect connection error
+          else if (errorMsg.contains('socket') || errorMsg.contains('connection') || 
+                   errorMsg.contains('address') || errorMsg.contains('unavailable')) {
+            _showNetworkErrorDialog(
+              title: "Koneksi Terputus",
+              message: "Tidak dapat terhubung ke server. Periksa koneksi internet Anda dan coba lagi.",
+            );
+          }
+          // Generic error
+          else {
             ModernAlertDialog.error(
               title: "Gagal Memuat Data",
               message: tradingController.responseMessage.value.isEmpty
@@ -54,9 +88,19 @@ class _InternalTransferState extends State<InternalTransfer> {
             );
           }
         }
-        isLoading(false);
-      });
-    });
+      }
+
+      isLoading(false);
+    } catch (e) {
+      Get.log('❌ [INTERNAL_TRANSFER] Unexpected error when loading accounts: $e');
+      if (mounted) {
+        ModernAlertDialog.error(
+          title: "Gagal Memuat Data",
+          message: "Terjadi kesalahan yang tidak terduga. Silakan coba lagi.",
+        );
+      }
+      isLoading(false);
+    }
   }
 
   @override
@@ -1181,42 +1225,190 @@ class _InternalTransferState extends State<InternalTransfer> {
       return;
     }
 
-    // final amount = NumberFormatter.cleanCurrencyString(amountController.text);
-    final result = await settingController.internalTransfer(
-      // amount: amount,
-      amount: amountController.text,
-      tradingIDReceiver: selectedReceiverLogin.value,
-      tradingIDSender: selectedSenderLogin.value,
-    );
+    try {
+      Get.log('🔄 [INTERNAL_TRANSFER] Processing transfer...');
+      
+      // final amount = NumberFormatter.cleanCurrencyString(amountController.text);
+      final result = await settingController.internalTransfer(
+        // amount: amount,
+        amount: amountController.text,
+        tradingIDReceiver: selectedReceiverLogin.value,
+        tradingIDSender: selectedSenderLogin.value,
+      );
 
-    if (result) {
-      if (mounted) {
-        CustomAlert.alertDialogCustomSuccess(
-          context,
-          message: settingController.responseMessage.value,
-          onTap: () {
-            Get.back();
-            Get.back();
-          },
-        );
-      }
-    } else {
-      if (mounted) {
-        // Gunakan pesan yang user-friendly tanpa detail teknis
-        String errorMessage = "Transfer gagal dilakukan. Silakan periksa kembali data Anda dan coba lagi.";
-        
-        // Jika ada pesan dari server, gunakan pesan generic untuk security
-        if (settingController.responseMessage.value.isNotEmpty &&
-            !settingController.responseMessage.value.toLowerCase().contains('exception') &&
-            !settingController.responseMessage.value.toLowerCase().contains('error:')) {
-          errorMessage = settingController.responseMessage.value;
+      if (result) {
+        if (mounted) {
+          Get.log('✅ [INTERNAL_TRANSFER] Transfer successful');
+          CustomAlert.alertDialogCustomSuccess(
+            context,
+            message: settingController.responseMessage.value,
+            onTap: () {
+              Get.back();
+              Get.back();
+            },
+          );
         }
-        
+      } else {
+        if (mounted) {
+          final errorMsg = settingController.responseMessage.value.toLowerCase();
+          
+          Get.log('❌ [INTERNAL_TRANSFER] Transfer failed: ${settingController.responseMessage.value}');
+          
+          // Detect timeout error
+          if (errorMsg.contains('timeout') || errorMsg.contains('too long')) {
+            _showNetworkErrorDialog(
+              title: "Permintaan Timeout",
+              message: "Koneksi ke server memakan waktu terlalu lama (> 20 detik). Periksa koneksi internet Anda dan coba lagi.",
+            );
+          }
+          // Detect connection error
+          else if (errorMsg.contains('socket') || errorMsg.contains('connection') || 
+                   errorMsg.contains('address') || errorMsg.contains('unavailable')) {
+            _showNetworkErrorDialog(
+              title: "Koneksi Terputus",
+              message: "Tidak dapat terhubung ke server. Periksa koneksi internet Anda dan coba lagi.",
+            );
+          }
+          // Generic error
+          else {
+            // Gunakan pesan yang user-friendly tanpa detail teknis
+            String errorMessage = "Transfer gagal dilakukan. Silakan periksa kembali data Anda dan coba lagi.";
+            
+            // Jika ada pesan dari server, gunakan pesan generic untuk security
+            if (settingController.responseMessage.value.isNotEmpty &&
+                !settingController.responseMessage.value.toLowerCase().contains('exception') &&
+                !settingController.responseMessage.value.toLowerCase().contains('error:')) {
+              errorMessage = settingController.responseMessage.value;
+            }
+            
+            ModernAlertDialog.error(
+              title: "Transfer Gagal",
+              message: errorMessage,
+            );
+          }
+        }
+      }
+    } catch (e) {
+      Get.log('❌ [INTERNAL_TRANSFER] Unexpected error during transfer: $e');
+      if (mounted) {
         ModernAlertDialog.error(
           title: "Transfer Gagal",
-          message: errorMessage,
+          message: "Terjadi kesalahan yang tidak terduga. Silakan coba lagi.",
         );
       }
     }
+  }
+
+  /// Menampilkan dialog error untuk masalah koneksi dengan desain modern dan informatif
+  Future<void> _showNetworkErrorDialog({
+    required String title,
+    required String message,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.cloud_off_rounded,
+                  color: Colors.orange,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          titlePadding: const EdgeInsets.all(16),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                message,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  height: 1.6,
+                  color: isDark ? Colors.grey[300] : Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Colors.blue.withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.info_outline,
+                      color: Colors.blue,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Tips: Pastikan WiFi atau koneksi data Anda aktif, lalu coba lagi.',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'OK',
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF6B7280),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        );
+      },
+    );
   }
 }

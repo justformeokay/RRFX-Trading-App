@@ -1,16 +1,85 @@
+import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
+import 'package:http/http.dart' as http;
 import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
+import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
 import 'package:rrfx/src/components/bottomsheets/material_bottom_sheets.dart';
 import 'package:rrfx/src/components/colors/default.dart';
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/views/advance_charts/webview_chart_view_from_tile.dart';
 import 'package:rrfx/src/views/chart/components/flag_pair.dart';
+import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'gauge_range.dart';
+
+// Helper function to create demo account
+Future<void> _createDemoAccount() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String? accessToken = prefs.getString('accessToken');
+  if (accessToken == null || accessToken.isEmpty) {
+    ModernAlertDialog.warning(
+      title: 'Perlu Login',
+      message: 'Anda harus login terlebih dahulu untuk membuat akun demo.',
+      buttonText: 'OK',
+      onPressed: () {
+        Get.offAll(() => MainpageWithoutLogin());
+      },
+    );
+    return;
+  }
+  try {
+    final header = {
+      'Authorization': 'Bearer $accessToken',
+      'Content-Type': 'application/json',
+    };
+    final response = await http
+        .post(Uri.parse('${GlobalVariable.mainURL}/regol/createDemo'), headers: header)
+        .timeout(const Duration(seconds: 20), onTimeout: () {
+      throw TimeoutException('Request timeout');
+    });
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final accountController = Get.find<AccountController>();
+      
+      ModernAlertDialog.success(
+        title: 'Berhasil',
+        message: 'Akun demo berhasil dibuat! Refresh halaman untuk melihat akun demo Anda.',
+        buttonText: 'OK',
+        onPressed: () {
+          Get.back();
+          accountController.fetchAccountInfo();
+        },
+      );
+    } else {
+      ModernAlertDialog.error(
+        title: 'Gagal',
+        message: 'Gagal membuat akun demo. Coba lagi nanti.',
+        buttonText: 'OK',
+        onPressed: () => Get.back(),
+      );
+    }
+  } on TimeoutException catch (_) {
+    ModernAlertDialog.error(
+      title: 'Timeout',
+      message: 'Koneksi ke server memakan waktu terlalu lama. Coba lagi nanti.',
+      buttonText: 'OK',
+      onPressed: () => Get.back(),
+    );
+  } catch (e) {
+    ModernAlertDialog.error(
+      title: 'Gagal',
+      message: 'Terjadi kesalahan saat membuat akun demo. Coba lagi nanti.',
+      buttonText: 'OK',
+      onPressed: () => Get.back(),
+    );
+  }
+}
 
 Widget marketItem(BuildContext context, Size size, {String? marketName, String? flagPair, String? flagPaired, String? date, String? stopLoss, String? bid, String? recommendation, String? ask, String? sma10, String? sma20, String? sma50, String? priceVsSMA, String? histogram, String? signalLine, String? macdLine, String? upper, String? lower, String? middle, String? pricePosition, String? rsi, String? signalSummaryRSI, String? signalSummaryMACD, String? signalSummarySMA, String? signalSummaryBollingerBands, List? tradingAccountUser}){
   final accountController = Get.put(AccountController());
@@ -195,6 +264,18 @@ Widget marketItem(BuildContext context, Size size, {String? marketName, String? 
                       CustomScaffoldMessanger.showAppSnackBar(context, message: "Silakan pilih akun trading terlebih dahulu.", type: SnackBarType.info);
                       return;
                     }
+                    
+                    // Check if user has demo accounts
+                    if (accountController.demoAccounts.isEmpty) {
+                      ModernAlertDialog.warning(
+                        title: 'Belum Ada Akun Demo',
+                        message: 'Anda perlu membuat akun demo terlebih dahulu untuk menggunakan fitur chart trading. Tekan tombol di bawah untuk membuat akun demo.',
+                        buttonText: 'Buat Akun Demo',
+                        onPressed: _createDemoAccount,
+                      );
+                      return;
+                    }
+                    
                     Get.to(() => WebViewChartViewFromTile(
                       login: int.parse(accountController.selectedAccount.value?.login ?? '0'), 
                       marketName: "$marketName.db", 

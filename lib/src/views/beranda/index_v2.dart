@@ -6,10 +6,13 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
 import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/account_list/account_selection_bottom_sheet.dart';
 import 'package:rrfx/src/components/alerts/popup.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
+import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/components/bottomsheets/material_bottom_sheets.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/popups/pending_verification_popup.dart';
@@ -30,10 +33,12 @@ import 'package:rrfx/src/views/beranda/rrfx-contents/news/news_page.dart';
 import 'package:rrfx/src/views/beranda/rrfx-contents/promotions/promotion_section.dart';
 import 'package:rrfx/src/views/chart/components/flag_pair.dart';
 import 'package:rrfx/src/views/no_auth_view/explore/explore_content_controller.dart';
+import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
 import 'package:rrfx/src/views/trade/deposit.dart';
 import 'package:rrfx/src/views/advance_charts/webview_chart_view_from_tile.dart';
 import 'package:rrfx/src/views/trade/internal_transfer.dart';
 import 'package:rrfx/src/views/trade/withdrawal.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class IndexV2 extends StatefulWidget {
   const IndexV2({super.key});
@@ -60,6 +65,7 @@ class _IndexV2State extends State<IndexV2> {
   RxBool haveDemoAccount = false.obs;
   RxBool haveRealAccount = false.obs;
   RxBool isLoadingAccount = false.obs;
+  bool _isCreatingDemoAccount = false; // Track demo account creation
   Map<String, String>? flag;
   Timer? _timer;
   RxList menus =
@@ -160,6 +166,102 @@ class _IndexV2State extends State<IndexV2> {
       startTradingSignalTimer();
       fetchPendingAccountStatus();
     });
+  }
+
+  Future<void> _createDemoAccount() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? accessToken = prefs.getString('accessToken');
+    if (accessToken == null || accessToken.isEmpty) {
+      ModernAlertDialog.warning(
+        title: 'Perlu Login',
+        message: 'Anda harus login terlebih dahulu untuk membuat akun demo.',
+        buttonText: 'OK',
+        onPressed: () {
+          Get.offAll(() => MainpageWithoutLogin());
+        },
+      );
+      return;
+    }
+    if (_isCreatingDemoAccount) return;
+    setState(() {
+      _isCreatingDemoAccount = true;
+    });
+
+    try {
+      final header = {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+      };
+      final response = await http
+          .post(Uri.parse('${GlobalVariable.mainURL}/regol/createDemo'), headers: header)
+          .timeout(const Duration(seconds: 20), onTimeout: () {
+        throw TimeoutException('Request timeout');
+      });
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Get demo account reference
+        final accountController = Get.find<AccountController>();
+        
+        // Show success dialog and refresh account data
+        ModernAlertDialog.success(
+          title: 'Berhasil',
+          message: 'Akun demo berhasil dibuat! Refresh halaman untuk melihat akun demo Anda.',
+          buttonText: 'OK',
+          onPressed: () {
+            Get.back();
+            accountController.fetchAccountInfo().then((_) {
+              if (mounted) {
+                setState(() {
+                  _isCreatingDemoAccount = false;
+                });
+              }
+            });
+          },
+        );
+      } else {
+        if (mounted) {
+          ModernAlertDialog.error(
+            title: 'Gagal',
+            message: 'Gagal membuat akun demo. Coba lagi nanti.',
+            buttonText: 'OK',
+            onPressed: () {
+              Get.back();
+              setState(() {
+                _isCreatingDemoAccount = false;
+              });
+            },
+          );
+        }
+      }
+    } on TimeoutException catch (_) {
+      if (mounted) {
+        ModernAlertDialog.error(
+          title: 'Timeout',
+          message: 'Koneksi ke server memakan waktu terlalu lama. Coba lagi nanti.',
+          buttonText: 'OK',
+          onPressed: () {
+            Get.back();
+            setState(() {
+              _isCreatingDemoAccount = false;
+            });
+          },
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ModernAlertDialog.error(
+          title: 'Gagal',
+          message: 'Terjadi kesalahan saat membuat akun demo. Coba lagi nanti.',
+          buttonText: 'OK',
+          onPressed: () {
+            Get.back();
+            setState(() {
+              _isCreatingDemoAccount = false;
+            });
+          },
+        );
+      }
+    }
   }
 
   void _runTradingSignal() {
@@ -917,6 +1019,17 @@ class _IndexV2State extends State<IndexV2> {
                             ),
                             utilitiesController.isLoading.value,
                             () {
+                              // Check if user has demo accounts
+                              if (controller.demoAccounts.isEmpty) {
+                                ModernAlertDialog.warning(
+                                  title: 'Belum Ada Akun Demo',
+                                  message: 'Anda perlu membuat akun demo terlebih dahulu untuk menggunakan fitur chart trading. Tekan tombol di bawah untuk membuat akun demo.',
+                                  buttonText: 'Buat Akun Demo',
+                                  onPressed: _createDemoAccount,
+                                );
+                                return;
+                              }
+
                               String? selectedAccountType =
                                   controller.selectedAccount.value?.type;
                               if (selectedAccountType == null) {
@@ -1640,7 +1753,6 @@ class _IndexV2State extends State<IndexV2> {
   /// Widget untuk menampilkan status badge dengan icon dan warna
   Widget buildPendingStatusBadge() {
     return Obx(() {
-      final isDark = Get.isDarkMode;
       final color = backgroundStatusPending.value ?? Colors.grey;
       final icon = iconStatusPending.value ?? Iconsax.info_circle_outline;
       final status = pendingAccountStatus.value;
