@@ -91,6 +91,8 @@ class _PromotionSectionState extends State<PromotionSection> {
     });
   }
 
+  fungsi(){}
+
   Widget _buildPromotionCard(bool isDark, dynamic item) {
     return Padding(
       padding: const EdgeInsets.only(right: 14),
