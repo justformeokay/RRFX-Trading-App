@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -33,6 +32,18 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
   RxInt initialIndexTab = 0.obs;
   RxString selectedLoginID = "".obs;
   TradingController tradingController = Get.put(TradingController());
+
+  // Filter state variables
+  final RxBool _showFilters = false.obs;
+  final RxString _selectedStatus = 'all'.obs;
+  final RxString _selectedDateRange = 'all'.obs;
+  final RxString _selectedAccount = 'all'.obs;
+  final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _minAmountController = TextEditingController();
+  final TextEditingController _maxAmountController = TextEditingController();
+  final RxString _searchQuery = ''.obs;
+  DateTime? _customStartDate;
+  DateTime? _customEndDate;
 
   // ScrollControllers for each tab
   final ScrollController _depositScrollController = ScrollController();
@@ -84,6 +95,11 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
   @override
   void initState() {
     super.initState();
+    // Set up search listener
+    _searchController.addListener(() {
+      _searchQuery.value = _searchController.text;
+    });
+    
     Future.delayed(Duration.zero, () {
       getAndSetAccountTrading();
       userController.historyWithdrawAndDeposit();
@@ -96,37 +112,716 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
     _depositScrollController.dispose();
     _withdrawalScrollController.dispose();
     _internalTransferScrollController.dispose();
+    _searchController.dispose();
+    _minAmountController.dispose();
+    _maxAmountController.dispose();
     super.dispose();
+  }
+
+  // Filter methods
+  List<dynamic> _applyFilters(List<dynamic> items) {
+    return items.where((item) {
+      // Status filter
+      if (_selectedStatus.value != 'all' && item.status != _selectedStatus.value) {
+        return false;
+      }
+
+      // Date range filter 
+      if (_selectedDateRange.value != 'all') {
+        try {
+          final itemDate = DateTime.parse(item.datetime);
+          final now = DateTime.now();
+          
+          switch (_selectedDateRange.value) {
+            case 'last7days':
+              if (itemDate.isBefore(now.subtract(const Duration(days: 7)))) {
+                return false; 
+              }
+              break;
+            case 'last30days':
+              if (itemDate.isBefore(now.subtract(const Duration(days: 30)))) {
+                return false;
+              }
+              break;
+            case 'last90days':
+              if (itemDate.isBefore(now.subtract(const Duration(days: 90)))) {
+                return false;
+              }
+              break;
+            case 'custom':
+              if (_customStartDate != null && itemDate.isBefore(_customStartDate!)) {
+                return false;
+              }
+              if (_customEndDate != null && itemDate.isAfter(_customEndDate!.add(const Duration(days: 1)))) {
+                return false;
+              }
+              break;
+          }
+        } catch (e) {
+          // If date parsing fails, exclude item
+          return false;
+        }
+      }
+
+      // Account filter
+      if (_selectedAccount.value != 'all' && item.login?.toString() != _selectedAccount.value) {
+        return false;
+      }
+
+      // Amount range filter
+      if (_minAmountController.text.isNotEmpty || _maxAmountController.text.isNotEmpty) {
+        try {
+          // Extract numeric amount from string like '$100.00' or '100 USD'
+          final amountStr = item.amount?.toString().replaceAll(RegExp(r'[^\d.]'), '') ?? '0';
+          final itemAmount = double.tryParse(amountStr) ?? 0;
+          
+          if (_minAmountController.text.isNotEmpty) {
+            final minAmount = double.tryParse(_minAmountController.text) ?? 0;
+            if (itemAmount < minAmount) return false;
+          }
+          
+          if (_maxAmountController.text.isNotEmpty) {
+            final maxAmount = double.tryParse(_maxAmountController.text) ?? double.infinity;
+            if (itemAmount > maxAmount) return false;
+          }
+        } catch (e) {
+          // If amount parsing fails, include item
+        }
+      }
+
+      // Search filter
+      if (_searchQuery.value.isNotEmpty) {
+        final query = _searchQuery.value.toLowerCase();
+        final searchableText = [
+          item.id?.toString() ?? '',
+          item.type?.toString() ?? '',
+          item.status?.toString() ?? '',
+          item.amount?.toString() ?? '',
+          item.login?.toString() ?? '',
+        ].join(' ').toLowerCase();
+        
+        if (!searchableText.contains(query)) {
+          return false;
+        }
+      }
+
+      return true;
+    }).toList();
+  }
+
+  void _clearAllFilters() {
+    _selectedStatus.value = 'all';
+    _selectedDateRange.value = 'all';
+    _selectedAccount.value = 'all';
+    _searchController.clear();
+    _minAmountController.clear();
+    _maxAmountController.clear();
+    _searchQuery.value = '';
+    _customStartDate = null;
+    _customEndDate = null;
+  }
+
+  bool get _hasActiveFilters => 
+    _selectedStatus.value != 'all' ||
+    _selectedDateRange.value != 'all' ||
+    _selectedAccount.value != 'all' ||
+    _searchQuery.value.isNotEmpty ||
+    _minAmountController.text.isNotEmpty ||
+    _maxAmountController.text.isNotEmpty;
+
+  Widget _buildFilterBar() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Obx(() {
+      final isExpanded = _showFilters.value;
+      
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOut,
+          decoration: BoxDecoration(
+            color: isDark ? Colors.grey.shade900 : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isExpanded
+                  ? CustomColor.secondaryColor.withOpacity(0.5)
+                  : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+              width: 1.5,
+            ),
+            boxShadow: [
+              if (isExpanded)
+                BoxShadow(
+                  color: CustomColor.secondaryColor.withOpacity(0.15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                )
+              else
+                BoxShadow(
+                  color: isDark ? Colors.black.withOpacity(0.2) : Colors.grey.withOpacity(0.08),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Filter Header - Interactive
+              GestureDetector(
+                onTap: () => _showFilters.toggle(),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: CustomColor.secondaryColor.withOpacity(
+                                isExpanded ? 0.2 : 0.1,
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              Iconsax.filter_outline,
+                              size: 22,
+                              color: CustomColor.secondaryColor,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Advanced Filters',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: theme.textTheme.bodyLarge?.color,
+                                ),
+                              ),
+                              if (_hasActiveFilters)
+                                Text(
+                                  'Filters Applied',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          if (_hasActiveFilters) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.green.withOpacity(0.3),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.check_circle,
+                                    size: 14,
+                                    color: Colors.green,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Active',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          AnimatedRotation(
+                            turns: isExpanded ? 0.5 : 0,
+                            duration: const Duration(milliseconds: 300),
+                            child: Icon(
+                              Icons.expand_more_rounded,
+                              size: 24,
+                              color: CustomColor.secondaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Animated Filter Content
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                child: isExpanded
+                    ? Column(
+                        children: [
+                          Divider(
+                            height: 1,
+                            color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Search Bar - Enhanced
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
+                                    ),
+                                  ),
+                                  child: TextField(
+                                    controller: _searchController,
+                                    onChanged: (value) => _searchQuery.value = value,
+                                    decoration: InputDecoration(
+                                      hintText: 'Search transactions...',
+                                      hintStyle: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        color: theme.textTheme.bodySmall?.color,
+                                      ),
+                                      prefixIcon: Icon(
+                                        Icons.search_rounded,
+                                        color: CustomColor.secondaryColor,
+                                      ),
+                                      suffixIcon: _searchQuery.value.isNotEmpty
+                                          ? GestureDetector(
+                                              onTap: () {
+                                                _searchController.clear();
+                                                _searchQuery.value = '';
+                                              },
+                                              child: Icon(
+                                                Icons.close_rounded,
+                                                color: Colors.red,
+                                              ),
+                                            )
+                                          : null,
+                                      border: InputBorder.none,
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 14,
+                                      ),
+                                    ),
+                                    style: GoogleFonts.inter(fontSize: 14),
+                                  ),
+                                ),
+
+                                const SizedBox(height: 20),
+
+                                // Status Filter - Chip Style
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Status',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: theme.textTheme.bodyLarge?.color,
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
+                                        _buildStatusChip('All', 'all', Colors.grey, theme),
+                                        _buildStatusChip('Pending', 'pending', Colors.orange, theme),
+                                        _buildStatusChip('Success', 'success', Colors.green, theme),
+                                        _buildStatusChip('Rejected', 'reject', Colors.red, theme),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 20),
+
+                                // Date Range and Min Amount
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: _buildFilterCard(
+                                        context,
+                                        'Date Range',
+                                        Icons.calendar_month_rounded,
+                                        DropdownButtonFormField<String>(
+                                          value: _selectedDateRange.value,
+                                          decoration: InputDecoration(
+                                            border: InputBorder.none,
+                                            contentPadding: const EdgeInsets.symmetric(
+                                              horizontal: 0,
+                                              vertical: 8,
+                                            ),
+                                          ),
+                                          items: const [
+                                            DropdownMenuItem(
+                                              value: 'all',
+                                              child: Text('All Time', style: TextStyle(fontSize: 13)),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'last7days',
+                                              child: Text('Last 7 days', style: TextStyle(fontSize: 13)),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'last30days',
+                                              child: Text('Last 30 days', style: TextStyle(fontSize: 13)),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'last90days',
+                                              child: Text('Last 90 days', style: TextStyle(fontSize: 13)),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'custom',
+                                              child: Text('Custom Range', style: TextStyle(fontSize: 13)),
+                                            ),
+                                          ],
+                                          onChanged: (value) {
+                                            _selectedDateRange.value = value ?? 'all';
+                                            if (value == 'custom') {
+                                              _showCustomDatePicker();
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _buildFilterCard(
+                                        context,
+                                        'Min Amount',
+                                        Icons.money_rounded,
+                                        TextField(
+                                          controller: _minAmountController,
+                                          keyboardType: TextInputType.number,
+                                          decoration: InputDecoration(
+                                            hintText: '0',
+                                            hintStyle: GoogleFonts.inter(fontSize: 13),
+                                            border: InputBorder.none,
+                                            contentPadding: const EdgeInsets.symmetric(
+                                              horizontal: 0,
+                                              vertical: 8,
+                                            ),
+                                          ),
+                                          style: GoogleFonts.inter(fontSize: 13),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 12),
+
+                                // Max Amount
+                                _buildFilterCard(
+                                  context,
+                                  'Max Amount',
+                                  Icons.money_rounded,
+                                  TextField(
+                                    controller: _maxAmountController,
+                                    keyboardType: TextInputType.number,
+                                    decoration: InputDecoration(
+                                      hintText: '∞',
+                                      hintStyle: GoogleFonts.inter(fontSize: 13),
+                                      border: InputBorder.none,
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 0,
+                                        vertical: 8,
+                                      ),
+                                    ),
+                                    style: GoogleFonts.inter(fontSize: 13),
+                                  ),
+                                ),
+
+                                const SizedBox(height: 16),
+
+                                // Action Buttons
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        onPressed: _clearAllFilters,
+                                        icon: const Icon(Icons.refresh_rounded),
+                                        label: const Text('Clear'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: isDark
+                                              ? Colors.grey.shade800
+                                              : Colors.grey.shade200,
+                                          foregroundColor: isDark
+                                              ? Colors.grey.shade100
+                                              : Colors.grey.shade800,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        onPressed: () => _showFilters.toggle(),
+                                        icon: const Icon(Icons.check_circle),
+                                        label: const Text('Apply'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: CustomColor.secondaryColor,
+                                          foregroundColor: Colors.black,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildStatusChip(
+    String label,
+    String value,
+    Color color,
+    ThemeData theme,
+  ) {
+    return Obx(() {
+      final isSelected = _selectedStatus.value == value;
+      return GestureDetector(
+        onTap: () => _selectedStatus.value = value,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? color.withOpacity(0.2)
+                : (theme.brightness == Brightness.dark
+                    ? Colors.grey.shade800
+                    : Colors.grey.shade100),
+            border: Border.all(
+              color: isSelected
+                  ? color.withOpacity(0.6)
+                  : (theme.brightness == Brightness.dark
+                      ? Colors.grey.shade700
+                      : Colors.grey.shade300),
+              width: isSelected ? 2 : 1,
+            ),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isSelected)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: Icon(
+                    Icons.check_rounded,
+                    size: 16,
+                    color: color,
+                  ),
+                ),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected ? color : null,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildFilterCard(
+    BuildContext context,
+    String label,
+    IconData icon,
+    Widget child,
+  ) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: CustomColor.secondaryColor,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: theme.textTheme.bodySmall?.color,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          child,
+        ],
+      ),
+    );
+  }
+
+  void _showCustomDatePicker() async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      initialDateRange: _customStartDate != null && _customEndDate != null
+          ? DateTimeRange(start: _customStartDate!, end: _customEndDate!)
+          : null,
+    );
+    
+    if (picked != null) {
+      _customStartDate = picked.start;
+      _customEndDate = picked.end;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final theme = Theme.of(context);
     return Obx(
       () => DefaultTabController(
         length: 3,
         initialIndex: initialIndexTab.value,
         child: Scaffold(
           appBar: AppBar(
+            elevation: 0,
+            centerTitle: false,
+            backgroundColor: theme.brightness == Brightness.dark 
+              ? Colors.grey.shade900 
+              : Colors.white,
             title: Text(
               "Riwayat Deposit & Withdrawal",
-              style: GoogleFonts.inter(),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: theme.textTheme.bodyLarge?.color,
+              ),
             ),
-            bottom: TabBar(
-              dividerHeight: 0.5,
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: CustomColor.secondaryColor,
-              labelStyle: TextStyle(fontWeight: FontWeight.bold),
-              unselectedLabelColor:
-                  Theme.of(context).textTheme.labelSmall?.color,
-              tabAlignment: TabAlignment.fill,
-              indicatorColor: CustomColor.secondaryColor,
-              dividerColor: Theme.of(context).dividerColor.withOpacity(0.3),
-              tabs: const [
-                Tab(text: 'Deposit'),
-                Tab(text: 'Withdrawal'),
-                Tab(text: 'Internal Transfer'),
-              ],
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(70),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: TabBar(
+                      dividerHeight: 0,
+                      isScrollable: false,
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: theme.textTheme.labelSmall?.color,
+                      tabAlignment: TabAlignment.fill,
+                      indicator: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            CustomColor.secondaryColor,
+                            CustomColor.secondaryColor.withOpacity(0.8),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: CustomColor.secondaryColor.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      labelStyle: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
+                      ),
+                      unselectedLabelStyle: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      tabs: [
+                        Tab(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.arrow_downward_rounded, size: 18),
+                              const SizedBox(width: 8),
+                              const Text('Deposit'),
+                            ],
+                          ),
+                        ),
+                        Tab(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.arrow_upward_rounded, size: 18),
+                              const SizedBox(width: 8),
+                              const Text('Withdrawal'),
+                            ],
+                          ),
+                        ),
+                        Tab(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.swap_horiz_rounded, size: 18),
+                              const SizedBox(width: 8),
+                              const Text('Transfer'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           body: TabBarView(
@@ -311,9 +1006,140 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
             }
           });
 
-      // Group by month
+      // Apply filters to internal transfers (with modified filter for transfer-specific fields)
+      final filteredTransfers = sortedTransfers.where((item) {
+        // Date range filter 
+        if (_selectedDateRange.value != 'all') {
+          try {
+            final itemDate = DateTime.parse(item.datetime);
+            final now = DateTime.now();
+            
+            switch (_selectedDateRange.value) {
+              case 'last7days':
+                if (itemDate.isBefore(now.subtract(const Duration(days: 7)))) {
+                  return false; 
+                }
+                break;
+              case 'last30days':
+                if (itemDate.isBefore(now.subtract(const Duration(days: 30)))) {
+                  return false;
+                }
+                break;
+              case 'last90days':
+                if (itemDate.isBefore(now.subtract(const Duration(days: 90)))) {
+                  return false;
+                }
+                break;
+              case 'custom':
+                if (_customStartDate != null && itemDate.isBefore(_customStartDate!)) {
+                  return false;
+                }
+                if (_customEndDate != null && itemDate.isAfter(_customEndDate!.add(const Duration(days: 1)))) {
+                  return false;
+                }
+                break;
+            }
+          } catch (e) {
+            return false;
+          }
+        }
+
+        // Amount range filter
+        if (_minAmountController.text.isNotEmpty || _maxAmountController.text.isNotEmpty) {
+          try {
+            final amountStr = item.amount?.toString().replaceAll(RegExp(r'[^\d.]'), '') ?? '0';
+            final itemAmount = double.tryParse(amountStr) ?? 0;
+            
+            if (_minAmountController.text.isNotEmpty) {
+              final minAmount = double.tryParse(_minAmountController.text) ?? 0;
+              if (itemAmount < minAmount) return false;
+            }
+            
+            if (_maxAmountController.text.isNotEmpty) {
+              final maxAmount = double.tryParse(_maxAmountController.text) ?? double.infinity;
+              if (itemAmount > maxAmount) return false;
+            }
+          } catch (e) {
+            // If amount parsing fails, include item
+          }
+        }
+
+        // Search filter (for internal transfers, search in code, amount, from, to)
+        if (_searchQuery.value.isNotEmpty) {
+          final query = _searchQuery.value.toLowerCase();
+          final searchableText = [
+            item.code?.toString() ?? '',
+            item.amount?.toString() ?? '',
+            item.from?.toString() ?? '',
+            item.to?.toString() ?? '',
+            item.ticketFrom?.toString() ?? '',
+            item.ticketTo?.toString() ?? '',
+          ].join(' ').toLowerCase();
+          
+          if (!searchableText.contains(query)) {
+            return false;
+          }
+        }
+
+        return true;
+      }).toList();
+
+      if (filteredTransfers.isEmpty && transfers.isNotEmpty) {
+        // Show no results message when filters return empty but original data exists
+        return Column(
+          children: [
+            _buildFilterBar(),
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Iconsax.search_status_1_outline,
+                        size: 80,
+                        color: CustomColor.secondaryColor.withOpacity(0.5),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        "No Results Found",
+                        style: GoogleFonts.inter(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: theme.textTheme.bodyLarge?.color,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        "Try adjusting your filter criteria\nto see more results",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: _clearAllFilters,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: CustomColor.secondaryColor,
+                          foregroundColor: Colors.black,
+                        ),
+                        child: const Text('Clear Filters'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      }
+
+      // Group by month (using filtered transfers)
       Map<String, List<dynamic>> groupedTransfers = {};
-      for (var transfer in sortedTransfers) {
+      for (var transfer in filteredTransfers) {
         try {
           if (transfer.datetime == null) continue; // Skip if datetime is null
           final dateTime = DateTime.parse(transfer.datetime!);
@@ -331,15 +1157,19 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
         }
       }
 
-      return RefreshIndicator(
-        color: CustomColor.secondaryColor,
-        onRefresh: () async {
-          await userController.getInternalTransferHistory();
-        },
-        child: Scrollbar(
-          controller: _internalTransferScrollController,
-          thumbVisibility: true,
-          thickness: 4.0,
+      return Column(
+        children: [
+          _buildFilterBar(),
+          Expanded(
+            child: RefreshIndicator(
+              color: CustomColor.secondaryColor,
+              onRefresh: () async {
+                await userController.getInternalTransferHistory();
+              },
+              child: Scrollbar(
+                controller: _internalTransferScrollController,
+                thumbVisibility: true,
+                thickness: 4.0,
           radius: const Radius.circular(10),
           child: ListView.builder(
             controller: _internalTransferScrollController,
@@ -687,8 +1517,11 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
             },
           ),
         ),
-      );
-    });
+              ),
+            ),
+          ],
+        );
+      });
   }
 
   void _showTransferDetail(BuildContext context, dynamic item) {
@@ -954,6 +1787,62 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
               .toList() ??
           [];
 
+      // Apply filters to deposits
+      final filteredDeposits = _applyFilters(deposits);
+
+      if (filteredDeposits.isEmpty && deposits.isNotEmpty) {
+        // Show no results message when filters return empty but original data exists
+        return Column(
+          children: [
+            _buildFilterBar(),
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Iconsax.search_status_1_outline,
+                        size: 80,
+                        color: CustomColor.secondaryColor.withOpacity(0.5),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        "No Results Found",
+                        style: GoogleFonts.inter(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: theme.textTheme.bodyLarge?.color,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        "Try adjusting your filter criteria\nto see more results",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: _clearAllFilters,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: CustomColor.secondaryColor,
+                          foregroundColor: Colors.black,
+                        ),
+                        child: const Text('Clear Filters'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      }
+
       if (deposits.isEmpty) {
         return Center(
           child: SingleChildScrollView(
@@ -1077,9 +1966,9 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
         );
       }
 
-      // Group by month
+      // Group by month (using filtered deposits)
       Map<String, List<dynamic>> groupedDeposits = {};
-      for (var deposit in deposits) {
+      for (var deposit in filteredDeposits) {
         try {
           final dateTime = DateTime.parse(deposit.datetime);
           final monthKey = "${_getMonthName(dateTime.month)} ${dateTime.year}";
@@ -1096,24 +1985,28 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
         }
       }
 
-      return RefreshIndicator(
-        color: CustomColor.secondaryColor,
-        onRefresh: () async {
-          await userController.historyWithdrawAndDeposit();
-        },
-        child: Scrollbar(
-          controller: _depositScrollController,
-          thumbVisibility: true,
-          thickness: 4.0,
-          radius: const Radius.circular(10),
-          child: ListView.builder(
-            controller: _depositScrollController,
-            primary: false,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            itemCount: groupedDeposits.length,
-            itemBuilder: (context, groupIndex) {
-              final monthKey = groupedDeposits.keys.elementAt(groupIndex);
-              final monthDeposits = groupedDeposits[monthKey]!;
+      return Column(
+        children: [
+          _buildFilterBar(),
+          Expanded(
+            child: RefreshIndicator(
+              color: CustomColor.secondaryColor,
+              onRefresh: () async {
+                await userController.historyWithdrawAndDeposit();
+              },
+              child: Scrollbar(
+                controller: _depositScrollController,
+                thumbVisibility: true,
+                thickness: 4.0,
+                radius: const Radius.circular(10),
+                child: ListView.builder(
+                  controller: _depositScrollController,
+                  primary: false,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  itemCount: groupedDeposits.length,
+                  itemBuilder: (context, groupIndex) {
+                    final monthKey = groupedDeposits.keys.elementAt(groupIndex);
+                    final monthDeposits = groupedDeposits[monthKey]!;
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1364,8 +2257,11 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
             },
           ),
         ),
-      );
-    });
+              ),
+            ),
+          ],
+        );
+      });
   }
 
   Widget buildWithdrawHistory(BuildContext context, Size size) {
@@ -1515,6 +2411,62 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
               .toList() ??
           [];
 
+      // Apply filters to withdrawals
+      final filteredWithdrawals = _applyFilters(withdrawals);
+
+      if (filteredWithdrawals.isEmpty && withdrawals.isNotEmpty) {
+        // Show no results message when filters return empty but original data exists
+        return Column(
+          children: [
+            _buildFilterBar(),
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Iconsax.search_status_1_outline,
+                        size: 80,
+                        color: CustomColor.secondaryColor.withOpacity(0.5),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        "No Results Found",
+                        style: GoogleFonts.inter(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: theme.textTheme.bodyLarge?.color,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        "Try adjusting your filter criteria\nto see more results",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: _clearAllFilters,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: CustomColor.secondaryColor,
+                          foregroundColor: Colors.black,
+                        ),
+                        child: const Text('Clear Filters'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      }
+
       if (withdrawals.isEmpty) {
         return Center(
           child: SingleChildScrollView(
@@ -1638,9 +2590,9 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
         );
       }
 
-      // Group by month
+      // Group by month (using filtered withdrawals)
       Map<String, List<dynamic>> groupedWithdrawals = {};
-      for (var withdrawal in withdrawals) {
+      for (var withdrawal in filteredWithdrawals) {
         try {
           final dateTime = DateTime.parse(withdrawal.datetime);
           final monthKey = "${_getMonthName(dateTime.month)} ${dateTime.year}";
@@ -1657,24 +2609,28 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
         }
       }
 
-      return RefreshIndicator(
-        color: CustomColor.secondaryColor,
-        onRefresh: () async {
-          await userController.historyWithdrawAndDeposit();
-        },
-        child: Scrollbar(
-          controller: _withdrawalScrollController,
-          thumbVisibility: true,
-          thickness: 4.0,
-          radius: const Radius.circular(10),
-          child: ListView.builder(
-            controller: _withdrawalScrollController,
-            primary: false,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            itemCount: groupedWithdrawals.length,
-            itemBuilder: (context, groupIndex) {
-              final monthKey = groupedWithdrawals.keys.elementAt(groupIndex);
-              final monthWithdrawals = groupedWithdrawals[monthKey]!;
+      return Column(
+        children: [
+          _buildFilterBar(),
+          Expanded(
+            child: RefreshIndicator(
+              color: CustomColor.secondaryColor,
+              onRefresh: () async {
+                await userController.historyWithdrawAndDeposit();
+              },
+              child: Scrollbar(
+                controller: _withdrawalScrollController,
+                thumbVisibility: true,
+                thickness: 4.0,
+                radius: const Radius.circular(10),
+                child: ListView.builder(
+                  controller: _withdrawalScrollController,
+                  primary: false,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  itemCount: groupedWithdrawals.length,
+                  itemBuilder: (context, groupIndex) {
+                    final monthKey = groupedWithdrawals.keys.elementAt(groupIndex);
+                    final monthWithdrawals = groupedWithdrawals[monthKey]!;
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1925,8 +2881,11 @@ class _DepositWithdrawalHistoryState extends State<DepositWithdrawalHistory> {
             },
           ),
         ),
-      );
-    });
+              ),
+            ),
+          ],
+        );
+      });
   }
 
   String _getMonthName(int month) {

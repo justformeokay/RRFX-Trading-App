@@ -688,17 +688,35 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Checkbox (hanya muncul saat edit mode)
+                    // Checkbox indicator (hanya muncul saat edit mode)
                     if (isInEditMode)
                       Padding(
                         padding: const EdgeInsets.only(right: 12.0),
-                        child: SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: Checkbox(
-                            value: isSelected,
-                            onChanged: (_) => controller.toggleSelection(model.symbol),
-                            activeColor: CustomColor.secondaryColor,
+                        child: GestureDetector(
+                          onTap: () => controller.toggleSelection(model.symbol),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: isSelected 
+                                ? CustomColor.secondaryColor 
+                                : Colors.transparent,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: isSelected 
+                                  ? CustomColor.secondaryColor 
+                                  : (Get.isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400),
+                                width: 2,
+                              ),
+                            ),
+                            child: isSelected
+                              ? const Icon(
+                                  Icons.check_rounded,
+                                  size: 18,
+                                  color: Colors.white,
+                                )
+                              : null,
                           ),
                         ),
                       ),

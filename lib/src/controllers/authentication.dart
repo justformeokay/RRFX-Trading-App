@@ -27,10 +27,12 @@ class AuthController extends GetxController {
   final GetStorage box = GetStorage();
   RxBool isLoadingOTP = false.obs;
   RxString responseMessage = "".obs;
+  RxInt otpResendCountdown = 0.obs;
   RxString statusAccount = "".obs;
   Rxn<CountryCodeModel> countryCodeModel = Rxn<CountryCodeModel>();
   Rxn<PersonalModels> personalModel = Rxn<PersonalModels>();
-
+  // OTP Countdown Timer
+  Timer? _otpCountdownTimer;
   // UTM Parameters storage
   final Rxn<Map<String, String>> _utmParameters = Rxn<Map<String, String>>();
   // HomeController getter - ensures controller exists before use
@@ -73,6 +75,34 @@ class AuthController extends GetxController {
     _utmParameters.value = null;
     box.remove('utm_parameters');
     Get.log("📊 [AUTH] UTM parameters cleared");
+  }
+
+  /// Start OTP resend countdown timer
+  void startOtpCountdown(int seconds) {
+    _cancelOtpCountdown();
+    otpResendCountdown.value = seconds;
+    Get.log("⏱️ [AUTH] Starting OTP countdown: $seconds seconds");
+    
+    _otpCountdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (otpResendCountdown.value > 0) {
+        otpResendCountdown.value--;
+      } else {
+        _cancelOtpCountdown();
+        Get.log("✅ [AUTH] OTP countdown finished");
+      }
+    });
+  }
+
+  /// Cancel OTP countdown timer
+  void _cancelOtpCountdown() {
+    _otpCountdownTimer?.cancel();
+    _otpCountdownTimer = null;
+  }
+
+  @override
+  void onClose() {
+    _cancelOtpCountdown();
+    super.onClose();
   }
 
   @override
@@ -185,6 +215,14 @@ class AuthController extends GetxController {
       statusAccount(status.toLowerCase());
       final accessToken = result['response']?['access_token'];
       final refreshToken = result['response']?['refresh_token'];
+      final countdown = result['response']?['otp_expired_in'] ?? 0;
+      otpResendCountdown.value = countdown;
+      
+      // Start countdown timer if OTP expiry is set
+      if (countdown > 0) {
+        startOtpCountdown(countdown);
+        Get.log("⏱️ [AUTH] OTP countdown started: $countdown seconds");
+      }
 
       Get.log("✅ [AUTH] Login successful");
       Get.log("🔐 [AUTH] Account status: $status");
@@ -628,22 +666,58 @@ class AuthController extends GetxController {
     }
   }
 
-  // Create Demo Trading API
-  Future<bool> resendOTP() async {
+  // Resend OTP via selected channel (email or whatsapp)
+  Future<bool> resendOTP({String type = 'email'}) async {
     try {
       isLoading(true);
+      Get.log("📤 [AUTH] Resending OTP via: $type");
+      
       Map<String, dynamic> result = await authService.post("auth/resend-otp", {
-        'device': jsonEncode(deviceInfo),
+        'type': type,
       });
+      
+      Get.log("📥 [AUTH] Resend OTP raw response: $result");
+      
       isLoading(false);
-      responseMessage(result['message']);
+      
+      // Safely get message
+      final message = result['message']?.toString() ?? 'No message';
+      responseMessage.value = message;
+      
       if (result['status'] == true) {
+        Get.log("✅ [AUTH] Resend OTP successful via: $type");
+        
+        // Extract countdown from response with better error handling
+        try {
+          final response = result['response'];
+          Get.log("📊 [AUTH] Response data type: ${response.runtimeType}");
+          Get.log("📊 [AUTH] Response data: $response");
+          
+          int countdown = 0;
+          if (response is Map) {
+            countdown = (response['otp_expired_in'] as num?)?.toInt() ?? 0;
+          }
+          
+          Get.log("⏲️ [AUTH] Extracted countdown: $countdown seconds");
+          
+          if (countdown > 0) {
+            otpResendCountdown.value = countdown;
+            startOtpCountdown(countdown);
+          }
+        } catch (e) {
+          Get.log("⚠️ [AUTH] Error extracting countdown: $e");
+          // Continue without countdown - not critical
+        }
+        
         return true;
       }
+      Get.log("❌ [AUTH] Resend OTP failed: $message");
       return false;
-    } catch (e) {
+    } catch (e, stackTrace) {
       isLoading(false);
-      responseMessage(e.toString());
+      Get.log("❌ [AUTH] Resend OTP error: $e");
+      Get.log("📋 [AUTH] Stack trace: $stackTrace");
+      responseMessage.value = e.toString();
       return false;
     }
   }

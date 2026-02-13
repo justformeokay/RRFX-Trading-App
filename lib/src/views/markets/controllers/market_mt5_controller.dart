@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
@@ -32,6 +33,13 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
   final RxBool hasConnectionError = false.obs;
   final RxBool isReconnecting = false.obs;
   late WebSocketChannel _channel;
+  
+  // Auto-retry parameters
+  Timer? _retryTimer;
+  int _retryAttempt = 0;
+  static const int _maxRetryAttempts = 10;
+  static const int _initialRetryDelaySeconds = 2;
+  static const int _maxRetryDelaySeconds = 60;
 
   @override
   void onInit() {
@@ -49,11 +57,54 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
   @override
   void onClose() {
     WidgetsBinding.instance.removeObserver(this);
+    // Cancel retry timer
+    _cancelRetryTimer();
     // Save data sebelum close
     _saveCacheData();
     _saveArchivedMarkets();
     _channel.sink.close();
     super.onClose();
+  }
+  
+  /// Cancel any pending retry timer
+  void _cancelRetryTimer() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
+  }
+  
+  /// Calculate retry delay with exponential backoff
+  int _getRetryDelay() {
+    // Exponential backoff: 2, 4, 8, 16, 32, 60, 60, 60...
+    final delay = _initialRetryDelaySeconds * (1 << _retryAttempt.clamp(0, 5));
+    return delay.clamp(_initialRetryDelaySeconds, _maxRetryDelaySeconds);
+  }
+  
+  /// Schedule auto-retry with exponential backoff
+  void _scheduleAutoRetry() {
+    // Don't retry if we've exceeded max attempts
+    if (_retryAttempt >= _maxRetryAttempts) {
+      print('⚠️ Max retry attempts ($_maxRetryAttempts) reached. Stopping auto-retry.');
+      return;
+    }
+    
+    // Cancel any existing timer
+    _cancelRetryTimer();
+    
+    final delaySeconds = _getRetryDelay();
+    print('🔄 Auto-retry scheduled in ${delaySeconds}s (attempt ${_retryAttempt + 1}/$_maxRetryAttempts)');
+    
+    _retryTimer = Timer(Duration(seconds: delaySeconds), () {
+      if (!isConnected.value && !isReconnecting.value) {
+        _retryAttempt++;
+        connectWebSocket();
+      }
+    });
+  }
+  
+  /// Reset retry counter (called on successful connection)
+  void _resetRetryCounter() {
+    _retryAttempt = 0;
+    _cancelRetryTimer();
   }
 
   @override
@@ -184,7 +235,9 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
           if (!isConnected.value) {
             isConnected.value = true;
             isReconnecting.value = false;
-            print('WebSocket TERSAMBUNG ke $_wsUrl');
+            // Reset retry counter on successful connection
+            _resetRetryCounter();
+            print('✅ WebSocket TERSAMBUNG ke $_wsUrl');
           }
           
           _handleNewData(data.toString());
@@ -195,13 +248,15 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
           }
         },
         onError: (error) {
-          print('WebSocket Error: $error');
+          print('❌ WebSocket Error: $error');
           isConnected.value = false;
           hasConnectionError.value = true;
           isReconnecting.value = false;
+          // Schedule auto-retry on error
+          _scheduleAutoRetry();
         },
         onDone: () {
-          print('WebSocket TERPUTUS');
+          print('⚡ WebSocket TERPUTUS');
           isConnected.value = false;
           isReconnecting.value = false;
           
@@ -209,6 +264,8 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
           if (!hasConnectionError.value) {
             hasConnectionError.value = true;
           }
+          // Schedule auto-retry on disconnect
+          _scheduleAutoRetry();
         },
         cancelOnError: false, // Jangan cancel stream saat error
       );

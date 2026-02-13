@@ -202,6 +202,9 @@ class _IndexV2State extends State<IndexV2> {
         // Get demo account reference
         final accountController = Get.find<AccountController>();
         
+        // Close the warning dialog first
+        Get.back();
+        
         // Show success dialog and refresh account data
         ModernAlertDialog.success(
           title: 'Berhasil',
@@ -435,8 +438,8 @@ class _IndexV2State extends State<IndexV2> {
                                   children: [
                                     // === Balance Section ===
                                     Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment:CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         Row(
                                           children: [
@@ -548,15 +551,15 @@ class _IndexV2State extends State<IndexV2> {
                                                 Get.textTheme.bodySmall?.color,
                                           ),
                                         ),
-                                        Text(
-                                          "Free Margin (%): ${controller.selectedAccount.value?.marginFreePercent ?? 0}%",
-                                          style: GoogleFonts.inter(
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: 12,
-                                            color:
-                                                Get.textTheme.bodySmall?.color,
-                                          ),
-                                        ),
+                                        // Text(
+                                        //   "Free Margin (%): ${controller.selectedAccount.value?.marginFreePercent ?? 0}%",
+                                        //   style: GoogleFonts.inter(
+                                        //     fontWeight: FontWeight.w500,
+                                        //     fontSize: 12,
+                                        //     color:
+                                        //         Get.textTheme.bodySmall?.color,
+                                        //   ),
+                                        // ),
                                       ],
                                     ),
 

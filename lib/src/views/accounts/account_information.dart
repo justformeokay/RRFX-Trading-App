@@ -40,6 +40,13 @@ class _AccountInformationState extends State<AccountInformation> {
             setState(() {
               selectedAccount = result[i];
             });
+            // Debug logging - only called once in initState
+            print("✅ Account loaded!");
+            print("   - Login: ${selectedAccount?.login}");
+            print("   - Rate: ${selectedAccount?.rate} (Type: ${selectedAccount?.rate.runtimeType})");
+            print("   - Currency: ${selectedAccount?.currency}");
+            print("   - Balance: ${selectedAccount?.balance}");
+            print("   - Leverage: 1:${selectedAccount?.leverage}");
             break; 
           }
         }
@@ -78,6 +85,24 @@ class _AccountInformationState extends State<AccountInformation> {
         ),
       ),
     );
+  }
+
+  // Helper method to format rate - handles both numeric and non-numeric values
+  String _formatRate(dynamic rate, String? currency) {
+    if (rate == null || rate.toString().isEmpty) {
+      return "-";
+    }
+    
+    // Check if rate is numeric
+    final numericRate = double.tryParse(rate.toString());
+    
+    // If rate is numeric (not "Floating", "Fixed", etc), format as currency
+    if (numericRate != null) {
+      return NumberFormatter.formatCurrency(numericRate, currency: currency ?? 'IDR');
+    }
+    
+    // If rate is non-numeric string (like "Floating", "Fixed"), display as-is
+    return rate.toString().toUpperCase();
   }
 
   Widget _buildAccountCard(BuildContext context) {
@@ -135,10 +160,11 @@ class _AccountInformationState extends State<AccountInformation> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                "RATE ${selectedAccount?.rate != null ? NumberFormatter.formatCurrency(selectedAccount!.rate, currency: selectedAccount!.currency!) : ""}",
+                "RATE ${_formatRate(selectedAccount?.rate, selectedAccount?.currency)}",
                 style: TextStyle(
                   color: CustomColor.secondaryColor,
                   fontWeight: FontWeight.bold,
+                  fontSize: 10
                 ),
               ),
             ),

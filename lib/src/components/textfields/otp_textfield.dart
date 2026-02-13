@@ -9,9 +9,11 @@ class OTPTextField extends StatefulWidget {
   final String? labelText;
   final String? fieldName;
   final bool? readOnly;
+  final int? maxLength; // ⭐ NEW
+  final int? minLength; // ⭐ NEW
   final bool requiredField; // ⭐ NEW
   final TextEditingController? controller;
-  const OTPTextField({super.key, this.hintText, this.labelText, this.controller, this.readOnly, this.fieldName, this.requiredField = false});
+  const OTPTextField({super.key, this.hintText, this.labelText, this.controller, this.readOnly, this.fieldName, this.requiredField = false, this.maxLength, this.minLength});
 
   @override
   State<OTPTextField> createState() => _OTPTextFieldState();
@@ -33,6 +35,9 @@ class _OTPTextFieldState extends State<OTPTextField> {
         () => isLoading.value ? const SizedBox() : TextFormField(
           readOnly: widget.readOnly ?? false,
           controller: widget.controller,
+          maxLength: widget.maxLength, // ⭐ NEW
+          minLines: 1,
+          maxLines: 1,
           autovalidateMode: AutovalidateMode.onUserInteraction,
           autofillHints: const [AutofillHints.oneTimeCode],
           keyboardAppearance: Brightness.dark,
