@@ -55,6 +55,7 @@ class AccountDetailModel {
   
   // Deposit & Withdrawal limits
   final String? minDeposit;
+  final String? maxDeposit;
   final String? minTopup;
   final String? minWithdrawal;
   final String? maxWithdrawal;
@@ -76,6 +77,7 @@ class AccountDetailModel {
     this.equity,
     this.margin,
     this.minDeposit,
+    this.maxDeposit,
     this.minTopup,
     this.minWithdrawal,
     this.maxWithdrawal,
@@ -99,6 +101,7 @@ class AccountDetailModel {
       equity: json['equity'] as String?,
       margin: json['margin'] as String?,
       minDeposit: json['min_deposit'] as String?,
+      maxDeposit: json['max_deposit'] as String?,
       minTopup: json['min_topup'] as String?,
       minWithdrawal: json['min_withdrawal'] as String?,
       maxWithdrawal: json['max_withdrawal'] as String?,
@@ -121,6 +124,7 @@ class AccountDetailModel {
       'pnl': pnl,
       'equity': equity,
       'min_deposit': minDeposit,
+      'max_deposit': maxDeposit,
       'min_topup': minTopup,
       'min_withdrawal': minWithdrawal,
       'max_withdrawal': maxWithdrawal,

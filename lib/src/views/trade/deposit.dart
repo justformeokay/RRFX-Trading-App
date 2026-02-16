@@ -45,6 +45,7 @@ class _DepositState extends State<Deposit> {
   RxString currencyCodeSelected = "".obs;
   RxString accountCurrencySelected = "".obs;
   RxString minDepositSelected = "0".obs;
+  RxString maxDepositSelected = "0".obs;
   RxList akunTradingList = [].obs;
   final _formKey = GlobalKey<FormState>();
   TextEditingController myBankCabang = TextEditingController();
@@ -85,6 +86,7 @@ class _DepositState extends State<Deposit> {
             selectedTradingID(acc.id);
             accountCurrencySelected(acc.currency ?? "");
             minDepositSelected(acc.minDeposit ?? "0");
+            maxDepositSelected(acc.maxDeposit ?? "0");
           }
         }
       });
@@ -178,6 +180,16 @@ class _DepositState extends State<Deposit> {
                       AppSnackbar.error("Jumlah deposit minimal adalah $minDepositFormatted");
                       return;
                     }
+                    
+                    // Validasi maksimal deposit
+                    double maxDeposit = double.tryParse(maxDepositSelected.value) ?? 0;
+                    if(maxDeposit > 0 && depositAmount > maxDeposit){
+                      String maxDepositFormatted = accountCurrencySelected.value == "IDR" 
+                          ? NumberFormattersService.formatRupiah(maxDeposit.toInt())
+                          : NumberFormattersService.formatUSD(maxDeposit);
+                      AppSnackbar.error("Jumlah deposit maksimal adalah $maxDepositFormatted");
+                      return;
+                    }
 
                     isLoading(true);
                     String keyDeposit = generateFixedId("deposit");
@@ -262,6 +274,7 @@ class _DepositState extends State<Deposit> {
                                 selectedTradingLogin("");
                                 accountCurrencySelected("");
                                 minDepositSelected("0");
+                                maxDepositSelected("0");
                                 myAmount.text = "";
                                 finalDepositAmount("0");
                               },
@@ -333,6 +346,7 @@ class _DepositState extends State<Deposit> {
                                             selectedTradingLogin(account.login);
                                             accountCurrencySelected(account.currency ?? "");
                                             minDepositSelected(account.minDeposit ?? "0");
+                                            maxDepositSelected(account.maxDeposit ?? "0");
                                             myAmount.text = "";
                                             finalDepositAmount("0");
                                             Get.back();
@@ -371,17 +385,23 @@ class _DepositState extends State<Deposit> {
                           return const SizedBox();
                         }
                         
-                        // Get min deposit value for hint
+                        // Get min and max deposit value for hint
                         double minDeposit = double.tryParse(minDepositSelected.value) ?? 0;
+                        double maxDeposit = double.tryParse(maxDepositSelected.value) ?? 0;
                         String minDepositHint = accountCurrencySelected.value == "IDR" 
                             ? "Min. ${NumberFormattersService.formatRupiah(minDeposit.toInt())}" 
                             : "Min. ${NumberFormattersService.formatUSD(minDeposit)}";
+                        String maxDepositHint = maxDeposit > 0 
+                            ? (accountCurrencySelected.value == "IDR" 
+                                ? " - Max. ${NumberFormattersService.formatRupiah(maxDeposit.toInt())}" 
+                                : " - Max. ${NumberFormattersService.formatUSD(maxDeposit)}")
+                            : "";
                         
                         return NumberTextfieldNew(
                           requiredField: true,
                           controller: myAmount,
                           fieldName: "Jumlah Deposit",
-                          hintText: accountCurrencySelected.value == "IDR" ? "Masukkan nominal (Rp) - $minDepositHint" : "Masukkan nominal (\$) - $minDepositHint",
+                          hintText: accountCurrencySelected.value == "IDR" ? "Masukkan nominal (Rp) - $minDepositHint$maxDepositHint" : "Masukkan nominal (\$) - $minDepositHint$maxDepositHint",
                           labelText: accountCurrencySelected.value == "IDR" ? "Jumlah Deposit (Rp)" : "Jumlah Deposit (\$)",
                           onChanged: (value) {
                             String clean = value.replaceAll(RegExp(r'[^0-9]'), "");
