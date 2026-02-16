@@ -52,6 +52,12 @@ class AccountDetailModel {
 
   String? equity;
   String? margin;
+  
+  // Deposit & Withdrawal limits
+  final String? minDeposit;
+  final String? minTopup;
+  final String? minWithdrawal;
+  final String? maxWithdrawal;
   // Tambahkan properti lain yang relevan di sini
 
   AccountDetailModel({
@@ -69,6 +75,10 @@ class AccountDetailModel {
     this.pnl,
     this.equity,
     this.margin,
+    this.minDeposit,
+    this.minTopup,
+    this.minWithdrawal,
+    this.maxWithdrawal,
   });
   
 
@@ -88,7 +98,10 @@ class AccountDetailModel {
       pnl: json['pnl'] as String?,
       equity: json['equity'] as String?,
       margin: json['margin'] as String?,
-      // Inisialisasi properti lain dari API response
+      minDeposit: json['min_deposit'] as String?,
+      minTopup: json['min_topup'] as String?,
+      minWithdrawal: json['min_withdrawal'] as String?,
+      maxWithdrawal: json['max_withdrawal'] as String?,
     );
   }
   
@@ -106,7 +119,11 @@ class AccountDetailModel {
       'total_deposit_usd': totalDepositUsd,
       'total_withdrawal_usd': totalWithdrawalUsd,
       'pnl': pnl,
-      'equity': equity
+      'equity': equity,
+      'min_deposit': minDeposit,
+      'min_topup': minTopup,
+      'min_withdrawal': minWithdrawal,
+      'max_withdrawal': maxWithdrawal,
     };
   }
 }
