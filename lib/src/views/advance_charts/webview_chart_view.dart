@@ -117,7 +117,8 @@ class _WebViewChartViewState extends State<WebViewChartView> {
     final login = widget.login ?? accountController.selectedAccount.value?.login ?? '';
     final theme = Get.isDarkMode ? 'dark' : 'light';
 
-    final baseUrl = 'https://chart-rrfx.techcrm.dev/chart.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
+    // final baseUrl = 'https://chart-rrfx.techcrm.dev/chart.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
+    final baseUrl = 'https://webchart-rrfx.techcrm.dev/?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
 
     // Untuk iOS, tambahkan parameter khusus (skip untuk web)
     if (!kIsWeb && Platform.isIOS) {
@@ -163,23 +164,24 @@ class _WebViewChartViewState extends State<WebViewChartView> {
     final size = MediaQuery.of(context).size;
     final theme = Theme.of(context);
 
-    // Check if user has demo accounts - if not, show create demo page
-    if (accountController.demoAccounts.isEmpty) {
-      return GestureDetector(
-        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        child: Scaffold(
-          backgroundColor: isDark ? Colors.black : Colors.white,
-          appBar: AppBar(
-            leadingWidth: size.width * 0.25,
-            title: Text(
-              'Demo Chart',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+    // Check if user has demo accounts - reactive with Obx
+    return Obx(() {
+      if (accountController.demoAccounts.isEmpty) {
+        return GestureDetector(
+          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+          child: Scaffold(
+            backgroundColor: isDark ? Colors.black : Colors.white,
+            appBar: AppBar(
+              leadingWidth: size.width * 0.25,
+              title: Text(
+                'Demo Chart',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+              ),
             ),
+            body: _buildNoDemoAccountState(theme, isDark),
           ),
-          body: _buildNoDemoAccountState(theme, isDark),
-        ),
-      );
-    }
+        );
+      }
 
     // Show error if no connection
     if (!_hasConnection) {
@@ -631,6 +633,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                 : null,
             ),
       ));
+    });
   }
 
   @override
