@@ -289,6 +289,7 @@ class UtilitiesWidget {
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
         return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
             borderRadius: const BorderRadius.only(
@@ -311,8 +312,9 @@ class UtilitiesWidget {
               const SizedBox(height: 20),
               Text(
                 "Pilih Sumber ${title ?? "Foto"}",
+                textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
-                  fontSize: 20,
+                  fontSize: 15,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).textTheme.bodyLarge?.color,
                 ),
@@ -321,7 +323,7 @@ class UtilitiesWidget {
               Text(
                 "Pilih metode untuk mengambil gambar",
                 style: GoogleFonts.inter(
-                  fontSize: 14,
+                  fontSize: 12,
                   color: Colors.grey.shade600,
                 ),
               ),
