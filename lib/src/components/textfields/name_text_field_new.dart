@@ -34,7 +34,7 @@ class NameTextFieldNewVersion extends StatefulWidget {
 }
 
 class _NameTextFieldNewVersionState extends State<NameTextFieldNewVersion> {
-  final RegExp nameRegex = RegExp(r"^[a-zA-Z .'-]+$");
+  final RegExp nameRegex = RegExp(r"^[a-zA-Z ]+$");
   RxBool isName = false.obs;
   RxBool isLoading = false.obs;
 
@@ -95,7 +95,7 @@ class _NameTextFieldNewVersionState extends State<NameTextFieldNewVersion> {
                       return "Mohon isikan ${widget.fieldName}";
                     }
                     if (!nameRegex.hasMatch(value)) {
-                      return "Hanya boleh mengandung huruf, spasi, tanda hubung, titik, dan apostrof.";
+                      return "Hanya boleh mengandung huruf dan spasi.";
                     }
                   }
                   return null;
@@ -166,7 +166,20 @@ class _NameTextFieldNewVersionState extends State<NameTextFieldNewVersion> {
                   ),
                 ),
 
-                onChanged: (value) => _updateValidationStatus(value),
+                onChanged: (value) {
+                  // Filter: hanya boleh huruf dan spasi
+                  String filtered = value.replaceAll(RegExp(r'[^a-zA-Z ]'), '');
+                  
+                  // Update controller jika ada perubahan
+                  if (filtered != value) {
+                    widget.controller?.value = TextEditingValue(
+                      text: filtered,
+                      selection: TextSelection.collapsed(offset: filtered.length),
+                    );
+                  }
+                  
+                  _updateValidationStatus(filtered);
+                },
               ),
       ),
     );

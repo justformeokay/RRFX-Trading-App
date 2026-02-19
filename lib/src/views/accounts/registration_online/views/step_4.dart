@@ -399,7 +399,6 @@ void initState() {
                           useValidator: false,
                           iconData: Clarity.number_list_line,
                           controller: rt,
-                          requiredField: true,
                           readOnly: false,
                           labelText: "RT",
                           fieldName: "RT",
@@ -411,7 +410,6 @@ void initState() {
                       Expanded(
                         child: NumberTextField(
                           useValidator: false,
-                          requiredField: true,
                           iconData: Clarity.number_list_line,
                           controller: rw,
                           readOnly: false,
