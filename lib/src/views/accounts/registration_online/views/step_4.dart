@@ -628,8 +628,6 @@ void initState() {
             if (kecamatan.text.isEmpty) emptyFields.add({'field': 'Kecamatan', 'icon': '🏘️'});
             if (desa.text.isEmpty) emptyFields.add({'field': 'Desa', 'icon': '🌾'});
             if (kodePos.text.isEmpty) emptyFields.add({'field': 'Kode Pos', 'icon': '📬'});
-            if (rt.text.isEmpty) emptyFields.add({'field': 'RT', 'icon': '🔢'});
-            if (rw.text.isEmpty) emptyFields.add({'field': 'RW', 'icon': '🔢'});
             if (tipeIdentitas.text.isEmpty || tipeIdentitas.text == "-") emptyFields.add({'field': 'Tipe Identitas', 'icon': '🆔'});
             if (noIdentitas.text.isEmpty) emptyFields.add({'field': 'Nomor Identitas', 'icon': '📋'});
 
