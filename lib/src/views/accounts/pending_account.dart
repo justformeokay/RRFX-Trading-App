@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:intl/intl.dart';
-import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/controllers/home.dart';
 import 'package:rrfx/src/views/accounts/deposit_new_account.dart';
@@ -51,6 +50,24 @@ class _PendingAccountState extends State<PendingAccount> {
     }
   }
 
+  /// Get status message berdasarkan status
+  String _getStatusMessage(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'waiting':
+        return 'Akun Anda sedang dalam proses verifikasi oleh admin. Harap tunggu konfirmasi lebih lanjut.';
+      case 'register':
+        return 'Proses registrasi akun Anda masih berlangsung. Tim admin kami sedang memeriksa data Anda.';
+      case 'waiting deposit':
+        return 'Akun Anda sedang menunggu konfirmasi deposit dari admin. Harap bersabar.';
+      case 'good fund':
+        return 'Selamat! Pendaftaran Akun Real anda telah dikonfirmasi dan akan siap digunakan.';
+      case 'active':
+        return 'Akun Anda telah aktif dan siap untuk bertrading. Selamat datang!';
+      default:
+        return 'Silakan hubungi admin untuk informasi lebih lanjut.';
+    }
+  }
+
   /// Get status icon berdasarkan status
   IconData _getStatusIcon(String? status) {
     switch (status?.toLowerCase()) {
@@ -70,6 +87,176 @@ class _PendingAccountState extends State<PendingAccount> {
       default:
         return Iconsax.info_circle_outline;
     }
+  }
+
+  /// Show informative popup
+  void _showStatusInfoPopup(BuildContext context, dynamic pending, Color statusColor) {
+    final status = pending.status ?? "";
+    final message = _getStatusMessage(status);
+    final statusIcon = _getStatusIcon(status);
+
+    Get.dialog(
+      barrierDismissible: true,
+      Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Center(
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+              CurvedAnimation(parent: ModalRoute.of(context)!.animation!, curve: Curves.elasticOut),
+            ),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: statusColor.withOpacity(0.3),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Status Icon
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [
+                          statusColor.withOpacity(0.2),
+                          statusColor.withOpacity(0.1),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Icon(
+                      statusIcon,
+                      color: statusColor,
+                      size: 48,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Title
+                  Text(
+                    pending.status ?? "Status",
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).textTheme.titleLarge?.color,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Message
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      height: 1.6,
+                      color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Account Details
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: statusColor.withOpacity(0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildDetailRow(
+                          context,
+                          label: 'Account Type',
+                          value: pending.type ?? "-",
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDetailRow(
+                          context,
+                          label: 'Product',
+                          value: pending.product ?? "-",
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDetailRow(
+                          context,
+                          label: 'Currency',
+                          value: pending.currency ?? "-",
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Close Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Get.back(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: statusColor,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Mengerti',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Helper widget untuk menampilkan detail row
+  Widget _buildDetailRow(BuildContext context, {required String label, required String value}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+          ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).textTheme.bodyLarge?.color,
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -143,31 +330,21 @@ class _PendingAccountState extends State<PendingAccount> {
           case "Regol belum selesai":
             Get.to(() => CreateMT5PasswordPage());
             break;
-          case "Waiting":
-            CustomScaffoldMessanger.showAppSnackBar(context,
-                message:
-                    "Akun masih dalam proses verifikasi oleh admin, tidak dapat melakukan perubahan data");
-            break;
           case "Ditolak":
             Get.to(() => CreateMT5PasswordPage());
-            break;
-          case "Register":
-            CustomScaffoldMessanger.showAppSnackBar(context,
-                message:
-                    "Akun masih dalam proses verifikasi oleh admin, tidak dapat melakukan perubahan data");
             break;
           case "Deposit New Account":
             Get.to(() => const DepositNewAccount());
             break;
+          case "Waiting":
+          case "Register":
           case "Waiting Deposit":
-            CustomScaffoldMessanger.showAppSnackBar(context,
-                message: "Akun Anda sedang menunggu konfirmasi dari admin.");
-            break;
           case "Good Fund":
-            break;
           case "Active":
+            _showStatusInfoPopup(context, pending, statusColor);
             break;
           default:
+            _showStatusInfoPopup(context, pending, statusColor);
             break;
         }
       },

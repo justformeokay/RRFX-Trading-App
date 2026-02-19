@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 
 extension RawValue on TextEditingController {
-  String get raw => text.replaceAll(RegExp(r'[^0-9]'), '');
+  String get raw => text.replaceAll(RegExp(r'[^0-9+]'), '');
 }
 
 class NumberTextField extends StatefulWidget {
@@ -116,7 +116,7 @@ class _NumberTextFieldState extends State<NumberTextField> {
               }
 
               String raw =
-                  value?.replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+                  value?.replaceAll(RegExp(r'[^0-9+]'), '') ?? '';
 
               if (raw.isEmpty) {
                 return "Mohon isikan ${widget.fieldName} yang benar";
@@ -204,7 +204,8 @@ class _NumberTextFieldState extends State<NumberTextField> {
 
 
           onChanged: (value) {
-            String raw = value.replaceAll(RegExp(r'[^0-9]'), '');
+            // Allow digits and plus sign only
+            String raw = value.replaceAll(RegExp(r'[^0-9+]'), '');
 
             if (raw.isEmpty) {
               isNumber(false);
@@ -213,17 +214,28 @@ class _NumberTextFieldState extends State<NumberTextField> {
             }
 
             if (widget.withCurrencyFormatter == true) {
-              final formatted = _formatCurrency(raw);
+              // Remove + sign before formatting currency
+              final numericOnly = raw.replaceAll(RegExp(r'[^0-9]'), '');
+              final formatted = _formatCurrency(numericOnly);
 
               widget.controller?.value = TextEditingValue(
                 text: formatted,
                 selection:
                     TextSelection.collapsed(offset: formatted.length),
               );
+            } else {
+              // Update text with filtered value (keep + and digits)
+              widget.controller?.value = TextEditingValue(
+                text: raw,
+                selection:
+                    TextSelection.collapsed(offset: raw.length),
+              );
             }
 
+            // Check length without the + symbol for validation
+            final numericLength = raw.replaceAll(RegExp(r'[^0-9]'), '').length;
             if (widget.minLength == null ||
-                raw.length >= widget.minLength!) {
+                numericLength >= widget.minLength!) {
               isNumber(true);
             } else {
               isNumber(false);
