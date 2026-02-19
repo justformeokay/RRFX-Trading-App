@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:icons_plus/icons_plus.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/views/accounts/registration_online/repository/regol_repository.dart';
@@ -16,6 +19,7 @@ class _CreateMT5PasswordPageState extends State<CreateMT5PasswordPage> {
   RegolRepository regolRepository = Get.put(RegolRepository());
   final TextEditingController passC = TextEditingController();
   final TextEditingController confirmC = TextEditingController();
+  final GetStorage _localStorage = GetStorage();
 
   // Reactive states
   final RxBool showPass = false.obs;
@@ -61,6 +65,176 @@ class _CreateMT5PasswordPageState extends State<CreateMT5PasswordPage> {
       confirmTouched.value = true; // Mark as touched when user starts typing
       confirmMatch.value = confirmC.text == passC.text;
     });
+
+    // Check saved password and show dialog if exists
+    Future.delayed(Duration.zero, () {
+      _checkAndRestoreSavedPassword();
+    });
+  }
+
+  /// Check if there's a saved password in local storage
+  Future<void> _checkAndRestoreSavedPassword() async {
+    final savedPassword = _localStorage.read('mt5_password');
+    if (savedPassword != null && savedPassword.isNotEmpty) {
+      _showPasswordRestoreDialog(savedPassword);
+    }
+  }
+
+  /// Show dialog to ask user about using saved password
+  void _showPasswordRestoreDialog(String savedPassword) {
+    Get.dialog(
+      barrierDismissible: false,
+      Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+            CurvedAnimation(
+              parent: ModalRoute.of(context)!.animation!,
+              curve: Curves.elasticOut,
+            ),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: CustomColor.secondaryColor.withOpacity(0.3),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icon
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        CustomColor.secondaryColor.withOpacity(0.2),
+                        CustomColor.secondaryColor.withOpacity(0.1),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: Icon(
+                    Iconsax.lock_outline,
+                    color: CustomColor.secondaryColor,
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Title
+                Text(
+                  "Gunakan Password Sebelumnya?",
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).textTheme.titleLarge?.color,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+
+                // Message
+                Text(
+                  "Kami menemukan password yang pernah Anda buat sebelumnya. Apakah Anda ingin menggunakannya kembali?",
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    height: 1.6,
+                    color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+
+                // Buttons
+                Row(
+                  children: [
+                    // Button: Create New
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Get.back();
+                          // Clear fields to let user create new password
+                          passC.clear();
+                          confirmC.clear();
+                        },
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: BorderSide(
+                            color: CustomColor.secondaryColor.withOpacity(0.5),
+                            width: 1.5,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          "Buat Baru",
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: CustomColor.secondaryColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // Button: Use Saved
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Get.back();
+                          _fillPasswordFields(savedPassword);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: CustomColor.secondaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 3.0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          "Gunakan Password Lama",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Fill password fields with saved password
+  void _fillPasswordFields(String password) {
+    passC.text = password;
+    confirmC.text = password;
+  }
+
+  /// Save password to local storage
+  Future<void> _savePasswordToStorage(String password) async {
+    await _localStorage.write('mt5_password', password);
   }
 
   @override
@@ -258,6 +432,10 @@ class _CreateMT5PasswordPageState extends State<CreateMT5PasswordPage> {
                         : () async {
                             loading.value = true;
                             await Future.delayed(const Duration(seconds: 2));
+                            
+                            // Save password to local storage
+                            await _savePasswordToStorage(passC.text);
+                            
                             loading.value = false;
                             AppSnackbar.success("Password MT5 berhasil dibuat.");
                             regolRepository.passwordMeta5 = passC.text;

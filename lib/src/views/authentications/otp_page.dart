@@ -52,32 +52,32 @@ class _OtpPageState extends State<OtpPage> {
     return GestureDetector(
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       child: Scaffold(
-        appBar: AppBar(
-          elevation: 0,
-          forceMaterialTransparency: true,
-          leadingWidth: 200,
-          leading: Row(
-            children: [
-              IconButton(
-                icon: Icon(
-                  CupertinoIcons.back,
-                  color: Theme.of(context).textTheme.titleLarge?.color,
-                ),
-                onPressed: () => Get.offAll(() => MainpageWithoutLogin()),
-              ),
-              Text("Kembali Login", style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).textTheme.titleLarge?.color,
-              )),
-            ],
-          ),
-          systemOverlayStyle: SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-            statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-          ),
-        ),
+        // appBar: AppBar(
+        //   elevation: 0,
+        //   forceMaterialTransparency: true,
+        //   leadingWidth: 200,
+        //   leading: Row(
+        //     children: [
+        //       IconButton(
+        //         icon: Icon(
+        //           CupertinoIcons.back,
+        //           color: Theme.of(context).textTheme.titleLarge?.color,
+        //         ),
+        //         onPressed: () => Get.offAll(() => MainpageWithoutLogin()),
+        //       ),
+        //       Text("Kembali Login", style: GoogleFonts.inter(
+        //         fontSize: 14,
+        //         fontWeight: FontWeight.w600,
+        //         color: Theme.of(context).textTheme.titleLarge?.color,
+        //       )),
+        //     ],
+        //   ),
+        //   systemOverlayStyle: SystemUiOverlayStyle(
+        //     statusBarColor: Colors.transparent,
+        //     statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        //     statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+        //   ),
+        // ),
         body: SafeArea(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -111,7 +111,7 @@ class _OtpPageState extends State<OtpPage> {
                       () {
                         final email = maskEmail(homeController.profileModel.value?.email ?? 'example@email.com');
                         return Text(
-                          "Kode OTP telah dikirim ke alamat email $email. Jika Anda tidak menerima kode OTP, pilih cara dibawah untuk menerima kode OTP dan verifikasi akun Anda",
+                          "Kode OTP telah dikirim ke $otpChannel anda. Jika Anda tidak menerima kode OTP, pilih cara dibawah untuk menerima kode OTP dan verifikasi akun Anda",
                           style: TextStyle(
                             color: CustomColor.textThemeLightSoftColor,
                             fontSize: 15,
@@ -120,53 +120,62 @@ class _OtpPageState extends State<OtpPage> {
                         );
                       }
                     ),
-                    const SizedBox(height: 32.0),
 
                     // ===== CHANNEL SELECTOR =====
-                    Text(
-                      "Pilih Metode Pengiriman",
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).textTheme.titleLarge?.color,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Obx(() => Row(
-                      children: [
-                        // Email Option
-                        Expanded(
-                          child: _buildChannelButton(
-                            context: context,
-                            icon: Iconsax.direct_inbox_outline,
-                            activeIcon: Iconsax.direct_inbox_bold,
-                            title: "Email",
-                            value: "email",
-                            isSelected: otpChannel.value == "email",
-                            onTap: () {
-                              otpChannel.value = "email";
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // WhatsApp Option
-                        Expanded(
-                          child: _buildChannelButton(
-                            context: context,
-                            icon: Bootstrap.whatsapp,
-                            activeIcon: Bootstrap.whatsapp,
-                            title: "WhatsApp",
-                            value: "whatsapp",
-                            isSelected: otpChannel.value == "whatsapp",
-                            onTap: () {
-                              otpChannel.value = "whatsapp";
-                            },
-                          ),
-                        ),
-                      ],
-                    )),
-
-                    const SizedBox(height: 28.0),
+                    Obx(() {
+                      if (authController.otpResendCountdown.value <= 0) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Pilih Metode Pengiriman",
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).textTheme.titleLarge?.color,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                // Email Option
+                                Expanded(
+                                  child: _buildChannelButton(
+                                    context: context,
+                                    icon: Iconsax.direct_inbox_outline,
+                                    activeIcon: Iconsax.direct_inbox_bold,
+                                    title: "Email",
+                                    value: "email",
+                                    isSelected: otpChannel.value == "email",
+                                    onTap: () {
+                                      otpChannel.value = "email";
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                // WhatsApp Option
+                                Expanded(
+                                  child: _buildChannelButton(
+                                    context: context,
+                                    icon: Bootstrap.whatsapp,
+                                    activeIcon: Bootstrap.whatsapp,
+                                    title: "WhatsApp",
+                                    value: "whatsapp",
+                                    isSelected: otpChannel.value == "whatsapp",
+                                    onTap: () {
+                                      otpChannel.value = "whatsapp";
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 28.0),
+                          ],
+                        );
+                      } else {
+                        return const SizedBox(height: 28.0);
+                      }
+                    }),
 
                     // ===== DESTINATION INFO =====
                     Obx(() {
@@ -175,6 +184,9 @@ class _OtpPageState extends State<OtpPage> {
                           ? "Kami akan mengirim kode OTP ke:\n$email"
                           : "Kami akan mengirim kode OTP ke:\nNomor WhatsApp Anda";
 
+                      if(authController.otpResendCountdown.value > 0) {
+                        return const SizedBox();
+                      }
                       return AnimatedOpacity(
                         opacity: 1.0,
                         duration: const Duration(milliseconds: 300),
@@ -242,7 +254,7 @@ class _OtpPageState extends State<OtpPage> {
 
                     // ===== RESEND TIMER =====
                     Obx(() => ResendOtpText(
-                      isResendAvailable: authController.otpResendCountdown.value <= 0,
+                      isResendAvailable: authController.otpResendCountdown.value < 1,
                       secondsRemaining: authController.otpResendCountdown.value,
                       onResend: () {
                         Get.log("🔄 [OTP_PAGE] User clicked Resend OTP");
@@ -253,11 +265,13 @@ class _OtpPageState extends State<OtpPage> {
                           Get.log("💬 [OTP_PAGE] Response message: ${authController.responseMessage.value}");
                           
                           if (result) {
-                            Get.log("✅ [OTP_PAGE] Resend OTP SUCCESS - Showing success dialog");
+                            Get.log("✅ [OTP_PAGE] Resend OTP SUCCESS - Starting countdown for 5 minutes");
+                            // Start countdown for 5 minutes (300 seconds)
+                            authController.startOtpCountdown(300);
                             _showModernResendSuccessDialog(
                               context,
                               otpChannel.value,
-                              authController.otpResendCountdown.value,
+                              300, // Pass 300 seconds (5 minutes)
                             );
                           } else {
                             Get.log("❌ [OTP_PAGE] Resend OTP FAILED - Showing error");

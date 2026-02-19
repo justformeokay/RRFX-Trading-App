@@ -1305,8 +1305,14 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
       debugPrint('📥 Cancel response: $response');
 
       if (response['status'] == true) {
-        // Play success sound
-        _audioPlayer.play(AssetSource('sounds/applepay.mp3'));
+        // Play success sound with error handling
+        try {
+          debugPrint('🔊 [Cancel] Playing success sound...');
+          await _audioPlayer.play(AssetSource('sounds/applepay.mp3'));
+          debugPrint('✅ [Cancel] Sound played successfully');
+        } catch (audioError) {
+          debugPrint('❌ [Cancel] Audio error: $audioError');
+        }
         
         AppSnackbar.success(
           response['message'] ?? 'Pending order cancelled successfully',
@@ -1369,9 +1375,19 @@ class _EditPositionDialogState extends State<_EditPositionDialog> {
 
   static Future<void> _playSuccessSound() async {
     try {
+      debugPrint('🔊 [Edit] Playing success sound...');
       await _staticAudioPlayer.play(AssetSource('sounds/applepay.mp3'));
+      debugPrint('✅ [Edit] Sound played successfully');
     } catch (e) {
-      debugPrint('❌ Audio play error: $e');
+      debugPrint('❌ [Edit] Audio play error: $e');
+      // Try fallback path
+      try {
+        debugPrint('🔄 [Edit] Trying fallback path: assets/sounds/applepay.mp3');
+        await _staticAudioPlayer.play(AssetSource('assets/sounds/applepay.mp3'));
+        debugPrint('✅ [Edit] Fallback sound played successfully');
+      } catch (fallbackError) {
+        debugPrint('❌ [Edit] Fallback also failed: $fallbackError');
+      }
     }
   }
 

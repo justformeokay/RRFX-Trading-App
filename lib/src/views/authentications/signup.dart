@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
@@ -17,6 +18,7 @@ import 'package:rrfx/src/components/utilities/utilities.dart';
 import 'package:rrfx/src/components/widgets/build_version_indicator.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
 import 'package:rrfx/src/views/authentications/signin.dart';
+import 'package:rrfx/src/views/authentications/otp_page.dart';
 
 class Signup extends StatefulWidget {
   const Signup({super.key});
@@ -41,6 +43,7 @@ class _SignupState extends State<Signup> {
   TextEditingController fullNameController = TextEditingController();
   AuthController authController = Get.find();
   String? referalCode;
+  final GetStorage _localStorage = GetStorage();
 
   bool _validateEmail(String email) {
     final regex = RegExp(r'^[A-Za-z0-9._+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$');
@@ -409,17 +412,59 @@ class _SignupState extends State<Signup> {
                                               name: fullNameController.text,
                                               ibCode: finalReferralCode,
                                             )
-                                            .then((result) {
+                                            .then((result) async {
                                               if (result) {
-                                                CustomScaffoldMessanger.showAppSnackBar(
-                                                  context,
+                                                // Save email and password to local storage
+                                                await _localStorage.write(
+                                                  'signup_email',
+                                                  emailController.text.toLowerCase(),
+                                                );
+                                                await _localStorage.write(
+                                                  'signup_password',
+                                                  passwordController.text,
+                                                );
+
+                                                // Show modern success dialog
+                                                ModernAlertDialog.show(
+                                                  type: AlertType.success,
+                                                  title: "Registrasi Berhasil!",
                                                   message:
                                                       authController
                                                           .responseMessage
                                                           .value,
-                                                  type: SnackBarType.success,
+                                                  buttonText: "Lanjutkan",
+                                                  onPressed: () {
+                                                    Navigator.of(context).pop();
+                                                  },
                                                 );
-                                                Get.off(() => const SignIn());
+
+                                                // Perform automatic login
+                                                try {
+                                                  await authController.login(
+                                                    context,
+                                                    email:
+                                                        emailController.text
+                                                            .toLowerCase(),
+                                                    password:
+                                                        passwordController.text,
+                                                  );
+                                                  // If login successful, navigate to OtpPage
+                                                  if (authController
+                                                          .statusAccount
+                                                          .value ==
+                                                      'otp') {
+                                                    Get.off(
+                                                      () => const OtpPage(),
+                                                    );
+                                                  }
+                                                } catch (e) {
+                                                  Get.log(
+                                                    '❌ [Signup] Auto-login failed: $e',
+                                                  );
+                                                  Get.off(
+                                                    () => const SignIn(),
+                                                  );
+                                                }
                                               } else {
                                                 // Tentukan title dan type berdasarkan pesan error
                                                 String title =
@@ -479,8 +524,7 @@ class _SignupState extends State<Signup> {
                   ),
                 ),
               ),
-            ),
-          ),
+            ))
         ],
       ),
     );

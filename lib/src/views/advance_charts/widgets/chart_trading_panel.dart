@@ -1110,7 +1110,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Stop Loss (Pts)',
+                                    'Stop Loss (Points)',
                                     textAlign: TextAlign.center,
                                     style: GoogleFonts.inter(
                                       fontSize: 11,
@@ -1189,7 +1189,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Take Profit (Pts)',
+                                    'Take Profit (Points)',
                                     textAlign: TextAlign.center,
                                     style: GoogleFonts.inter(
                                       fontSize: 11,

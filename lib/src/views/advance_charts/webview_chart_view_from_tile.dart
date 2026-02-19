@@ -71,7 +71,8 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
     final login = widget.login.toString();
     final theme = Get.isDarkMode ? 'dark' : 'light';
 
-    final baseUrl = 'https://chart-rrfx.techcrm.dev/chart.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
+    // final baseUrl = 'https://chart-rrfx.techcrm.dev/chart.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
+    final baseUrl = 'https://webchart-rrfx.techcrm.dev/?symbol=$symbol&server=$server&login=$login&theme=$theme';
     
     // Untuk iOS, tambahkan parameter khusus (skip untuk web)
     if (!kIsWeb && Platform.isIOS) {
