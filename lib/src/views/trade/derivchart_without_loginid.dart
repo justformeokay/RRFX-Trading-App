@@ -85,7 +85,8 @@ class _TradingChartViewState extends State<TradingChartView> {
     }
     final theme = Get.isDarkMode ? 'dark' : 'light';
     
-    return 'https://chart-rrfx.techcrm.dev/chart.php?symbol=$symbol&server=demo&theme=$theme';
+    // return 'https://chart-rrfx.techcrm.dev/chart.php?symbol=$symbol&server=demo&theme=$theme';
+    return 'https://webchart-rrfx.techcrm.dev/?symbol=$symbol&server=demo&theme=$theme';
   }
 
   @override

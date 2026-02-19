@@ -901,6 +901,41 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                             const SizedBox(height: 6),
                             Row(
                               children: [
+                                // Decrement Button
+                                GestureDetector(
+                                  onTap: _decrementEntryPrice,
+                                  onLongPressStart: (_) {
+                                    // Start continuous decrement
+                                    _decrementEntryPrice();
+                                  },
+                                  child: Container(
+                                    width: 36,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          isDark
+                                              ? Colors.grey.shade800
+                                              : Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color:
+                                            isDark
+                                                ? Colors.grey.shade700
+                                                : Colors.grey.shade300,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      Icons.remove,
+                                      size: 18,
+                                      color:
+                                          isDark
+                                              ? Colors.white70
+                                              : Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
                                 Expanded(
                                   flex: 2,
                                   child: Container(
@@ -961,7 +996,42 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 10),
+                                const SizedBox(width: 6),
+                                // Increment Button
+                                GestureDetector(
+                                  onTap: _incrementEntryPrice,
+                                  onLongPressStart: (_) {
+                                    // Start continuous increment
+                                    _incrementEntryPrice();
+                                  },
+                                  child: Container(
+                                    width: 36,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          isDark
+                                              ? Colors.grey.shade800
+                                              : Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color:
+                                            isDark
+                                                ? Colors.grey.shade700
+                                                : Colors.grey.shade300,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      Icons.add,
+                                      size: 18,
+                                      color:
+                                          isDark
+                                              ? Colors.white70
+                                              : Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
 
                                 // Current Price Button
                                 if (widget.currentPrice != null)
@@ -1857,6 +1927,42 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   String _formatPrice(double price, String symbol) {
     final digits = _getDigitsForSymbol(symbol);
     return price.toStringAsFixed(digits);
+  }
+
+  /// Get increment value based on symbol decimal places
+  double _getIncrementForSymbol(String symbol) {
+    final digits = _getDigitsForSymbol(symbol);
+    switch (digits) {
+      case 2:
+        return 1.0; // Gold, Indices
+      case 3:
+        return 0.1; // Silver, JPY pairs
+      case 5:
+      default:
+        return 0.0001; // Forex pairs
+    }
+  }
+
+  /// Increment entry price
+  void _incrementEntryPrice() {
+    final currentText = _entryPriceController.text;
+    final currentValue = double.tryParse(currentText) ?? 0.0;
+    final increment = _getIncrementForSymbol(widget.symbol);
+    final newValue = currentValue + increment;
+    _entryPriceController.text = _formatPrice(newValue, widget.symbol);
+    HapticFeedback.lightImpact();
+  }
+
+  /// Decrement entry price
+  void _decrementEntryPrice() {
+    final currentText = _entryPriceController.text;
+    final currentValue = double.tryParse(currentText) ?? 0.0;
+    final increment = _getIncrementForSymbol(widget.symbol);
+    final newValue = currentValue - increment;
+    if (newValue >= 0) {
+      _entryPriceController.text = _formatPrice(newValue, widget.symbol);
+      HapticFeedback.lightImpact();
+    }
   }
 
   /// Validate entry price based on order type

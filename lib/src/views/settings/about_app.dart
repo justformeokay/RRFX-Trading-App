@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -277,6 +278,7 @@ class _AboutAppState extends State<AboutApp> {
                           value: "cs@rrfx.co.id",
                           isClickable: true,
                           onTap: () {
+                            Clipboard.setData(const ClipboardData(text: "cs@rrfx.co.id"));
                             CustomScaffoldMessanger.showAppSnackBar(
                               context,
                               message: "Email disalin: cs@rrfx.co.id",
@@ -291,6 +293,7 @@ class _AboutAppState extends State<AboutApp> {
                           value: "021-50322008",
                           isClickable: true,
                           onTap: () {
+                            Clipboard.setData(const ClipboardData(text: "021-50322008"));
                             CustomScaffoldMessanger.showAppSnackBar(
                               context,
                               message: "Nomor disalin: 021-50322008",

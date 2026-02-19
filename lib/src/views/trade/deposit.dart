@@ -4,12 +4,12 @@ import 'package:icons_plus/icons_plus.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/alerts/default.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
-import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
 import 'package:rrfx/src/components/appbars/default.dart';
 import 'package:rrfx/src/components/bottomsheets/material_bottom_sheets.dart';
 import 'package:rrfx/src/components/buttons/outlined_button.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/containers/utilities.dart';
+import 'package:rrfx/src/components/loaders/animated_field_loader.dart';
 import 'package:rrfx/src/components/textfields/name_textfield.dart';
 import 'package:rrfx/src/components/textfields/number_textfield_new.dart';
 import 'package:rrfx/src/components/textfields/void_textfield.dart';
@@ -43,8 +43,10 @@ class _DepositState extends State<Deposit> {
   RxString finalDepositAmount = "0".obs;
   RxBool isLoading = false.obs;
   RxString currencyCodeSelected = "".obs;
+  RxString accountCurrencySelected = "".obs;
+  RxString minDepositSelected = "0".obs;
+  RxString maxDepositSelected = "0".obs;
   RxList akunTradingList = [].obs;
-  RxBool isMaxLimitDialogShowing = false.obs; // Prevent popup looping
   final _formKey = GlobalKey<FormState>();
   TextEditingController myBankCabang = TextEditingController();
   TextEditingController myBankName = TextEditingController();
@@ -82,6 +84,9 @@ class _DepositState extends State<Deposit> {
             selectedTradingLogin(acc.login);
             myAccountTrading.text = "${acc.login} - ${acc.accountCurrency} ${acc.balance}";
             selectedTradingID(acc.id);
+            accountCurrencySelected(acc.currency ?? "");
+            minDepositSelected(acc.minDeposit ?? "0");
+            maxDepositSelected(acc.maxDeposit ?? "0");
           }
         }
       });
@@ -164,6 +169,27 @@ class _DepositState extends State<Deposit> {
                       AppSnackbar.error("Jumlah deposit tidak boleh kosong atau nol.");
                       return;
                     }
+                    
+                    // Validasi minimal deposit
+                    double minDeposit = double.tryParse(minDepositSelected.value) ?? 0;
+                    double depositAmount = double.tryParse(finalDepositAmount.value) ?? 0;
+                    if(depositAmount < minDeposit){
+                      String minDepositFormatted = accountCurrencySelected.value == "IDR" 
+                          ? NumberFormattersService.formatRupiah(minDeposit.toInt())
+                          : NumberFormattersService.formatUSD(minDeposit);
+                      AppSnackbar.error("Jumlah deposit minimal adalah $minDepositFormatted");
+                      return;
+                    }
+                    
+                    // Validasi maksimal deposit
+                    double maxDeposit = double.tryParse(maxDepositSelected.value) ?? 0;
+                    if(maxDeposit > 0 && depositAmount > maxDeposit){
+                      String maxDepositFormatted = accountCurrencySelected.value == "IDR" 
+                          ? NumberFormattersService.formatRupiah(maxDeposit.toInt())
+                          : NumberFormattersService.formatUSD(maxDeposit);
+                      AppSnackbar.error("Jumlah deposit maksimal adalah $maxDepositFormatted");
+                      return;
+                    }
 
                     isLoading(true);
                     String keyDeposit = generateFixedId("deposit");
@@ -171,7 +197,7 @@ class _DepositState extends State<Deposit> {
                     if(_formKey.currentState!.validate()){
 
                       /// ✔ FIX UTAMA ADA DI SINI
-                      if (currencyCodeSelected.value == "IDR") {
+                      if (accountCurrencySelected.value == "IDR") {
                         final int amount = NumberFormatter.parseRupiahToInt(myAmount.text);
                         finalDepositAmount.value = amount.toString();
                       } else {
@@ -241,9 +267,14 @@ class _DepositState extends State<Deposit> {
                                 bankAdminName.text = settingController.adminBankModel.value?.response?[i].bankName ?? "";
                                 bankAdminCurrency.text = settingController.adminBankModel.value?.response?[i].currency ?? "0";
                                 currencyCodeSelected(settingController.adminBankModel.value?.response?[i].currency ?? "");
+                                
+                                // Reset Akun Trading dan Jumlah Deposit
                                 myAccountTrading.text = "";
                                 selectedTradingID("");
                                 selectedTradingLogin("");
+                                accountCurrencySelected("");
+                                minDepositSelected("0");
+                                maxDepositSelected("0");
                                 myAmount.text = "";
                                 finalDepositAmount("0");
                               },
@@ -281,97 +312,108 @@ class _DepositState extends State<Deposit> {
                       NameTextField(requiredField: true, controller: myBankNumber, fieldName: "Nomor Rekening", hintText: "Nomor Rekening", labelText: "Nomor Rekening", readOnly: true, useValidator: false),
                       Obx(
                         () {
-                          return VoidTextField(requiredField: true, readOnly: widget.idLogin == null ? false : true, controller: myAccountTrading, fieldName: "Akun Trading", hintText: "Akun Trading", labelText: "Akun Trading", iconData: Iconsax.wallet_2_bold, onPressed: isLoading.value ? null : () async {
-                            isLoading(true);
-                            accountController.fetchAccountInfo().then((result){
-                              isLoading(false);
-                              if(!accountController.hasAccounts){
-                                AppSnackbar.error("Akun trading tidak ditemukan. Silakan pilih akun yang valid.");
-                                isLoading(false);
-                                return;
-                              }
-                              if(widget.idLogin == null){
-                                CustomMaterialBottomSheets.defaultBottomSheet(context, title: "Pilih Akun Trading ${currencyCodeSelected.value} Anda", size: size, children: List.generate(accountController.realAccounts.length, (i){
-                                  final account = accountController.realAccounts[i];
-                                  if(account.currency != currencyCodeSelected.value){
-                                    return const SizedBox();
-                                  }
-                                  return ListTile(
-                                    subtitle: Text("Kurs ${account.currency} - ${account.login ?? "-"}", style: GoogleFonts.inter(fontWeight: FontWeight.w400)),
-                                    title: Text("${account.namaTipeAkun ?? "-"} (${account.accountCurrency} ${account.balance})", style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-                                    onTap: (){
-                                      myAccountTrading.text = "${account.login} - ${account.accountCurrency} ${account.balance}";
-                                      selectedTradingID(account.id);
-                                      selectedTradingLogin(account.login);
-                                      Get.back();
-                                    },
-                                    leading: Icon(Iconsax.wallet_2_bold, color: CustomColor.secondaryColor),
-                                  );
-                                }));
-                              }
-                            });
-                          });
+                          return Stack(
+                            children: [
+                              VoidTextField(
+                                requiredField: true, 
+                                readOnly: widget.idLogin == null ? false : true, 
+                                controller: myAccountTrading, 
+                                fieldName: "Akun Trading", 
+                                hintText: "Akun Trading", 
+                                labelText: "Akun Trading", 
+                                iconData: Iconsax.wallet_2_bold, 
+                                onPressed: isLoading.value ? null : () async {
+                                  isLoading(true);
+                                  accountController.fetchAccountInfo().then((result){
+                                    isLoading(false);
+                                    if(!accountController.hasAccounts){
+                                      AppSnackbar.error("Akun trading tidak ditemukan. Silakan pilih akun yang valid.");
+                                      isLoading(false);
+                                      return;
+                                    }
+                                    if(widget.idLogin == null){
+                                      CustomMaterialBottomSheets.defaultBottomSheet(context, title: "Pilih Akun Trading ${currencyCodeSelected.value} Anda", size: size, children: List.generate(accountController.realAccounts.length, (i){
+                                        final account = accountController.realAccounts[i];
+                                        if(account.currency != currencyCodeSelected.value){
+                                          return const SizedBox();
+                                        }
+                                        return ListTile(
+                                          subtitle: Text("Kurs ${account.currency} - ${account.login ?? "-"}", style: GoogleFonts.inter(fontWeight: FontWeight.w400)),
+                                          title: Text("${account.namaTipeAkun ?? "-"} (${account.accountCurrency} ${account.balance})", style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                                          onTap: (){
+                                            myAccountTrading.text = "${account.login} - ${account.accountCurrency} ${account.balance}";
+                                            selectedTradingID(account.id);
+                                            selectedTradingLogin(account.login);
+                                            accountCurrencySelected(account.currency ?? "");
+                                            minDepositSelected(account.minDeposit ?? "0");
+                                            maxDepositSelected(account.maxDeposit ?? "0");
+                                            myAmount.text = "";
+                                            finalDepositAmount("0");
+                                            Get.back();
+                                          },
+                                          leading: Icon(Iconsax.wallet_2_bold, color: CustomColor.secondaryColor),
+                                        );
+                                      }));
+                                    }
+                                  });
+                                }
+                              ),
+                              if(isLoading.value)
+                                Positioned(
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 0,
+                                  child: AnimatedFieldLoader(
+                                    loadingText: 'Mengambil Data Akun...',
+                                    isDark: isDark,
+                                    spinnerColor: CustomColor.secondaryColor,
+                                    textColor: CustomColor.secondaryColor,
+                                  ),
+                                ),
+                            ],
+                          );
                         } 
                       ),
 
-                      // TextField untuk jumlah deposit, jika selectedCurrencyCode adalah IDR, tampilkan format Rupiah, jika USD tampilkan format Dollar
+                      // TextField untuk jumlah deposit, berdasarkan currency akun trading yang dipilih
                       Obx(() {
-                        if(currencyCodeSelected.value.isEmpty){
+                        if(accountCurrencySelected.value.isEmpty){
                           return const SizedBox();
                         }
-                        if(currencyCodeSelected.value != "IDR" && currencyCodeSelected.value != "USD"){
+                        if(accountCurrencySelected.value != "IDR" && accountCurrencySelected.value != "USD"){
                           return const SizedBox();
                         }
+                        
+                        // Get min and max deposit value for hint
+                        double minDeposit = double.tryParse(minDepositSelected.value) ?? 0;
+                        double maxDeposit = double.tryParse(maxDepositSelected.value) ?? 0;
+                        String minDepositHint = accountCurrencySelected.value == "IDR" 
+                            ? "Min. ${NumberFormattersService.formatRupiah(minDeposit.toInt())}" 
+                            : "Min. ${NumberFormattersService.formatUSD(minDeposit)}";
+                        String maxDepositHint = maxDeposit > 0 
+                            ? (accountCurrencySelected.value == "IDR" 
+                                ? " - Max. ${NumberFormattersService.formatRupiah(maxDeposit.toInt())}" 
+                                : " - Max. ${NumberFormattersService.formatUSD(maxDeposit)}")
+                            : "";
+                        
                         return NumberTextfieldNew(
                           requiredField: true,
                           controller: myAmount,
                           fieldName: "Jumlah Deposit",
-                          hintText: bankAdminCurrency.text == "IDR" ? "Masukkan nominal (Rp)" : "Masukkan nominal (\$)",
-                          labelText: bankAdminCurrency.text == "IDR" ? "Jumlah Deposit (Rp)" : "Jumlah Deposit (\$)",
+                          hintText: accountCurrencySelected.value == "IDR" ? "Masukkan nominal (Rp) - $minDepositHint$maxDepositHint" : "Masukkan nominal (\$) - $minDepositHint$maxDepositHint",
+                          labelText: accountCurrencySelected.value == "IDR" ? "Jumlah Deposit (Rp)" : "Jumlah Deposit (\$)",
                           onChanged: (value) {
                             String clean = value.replaceAll(RegExp(r'[^0-9]'), "");
 
                             if (clean.isEmpty) {
                               myAmount.text = "";
                               finalDepositAmount.value = "";
-                              isMaxLimitDialogShowing.value = false; // Reset flag
                               return;
                             }
 
-                            if (currencyCodeSelected.value == "IDR") {
-                              // ---- Maximum limit: 100 juta rupiah ----
-                              const int maxRupiah = 100000000;
+                            if (accountCurrencySelected.value == "IDR") {
                               int amount = int.parse(clean);
-                              
-                              if (amount > maxRupiah) {
-                                // Set to max value if exceeds limit
-                                myAmount.text = NumberFormattersService.formatRupiah(maxRupiah);
-                                finalDepositAmount.value = maxRupiah.toString();
-                                
-                                // Show warning only once (prevent looping popups)
-                                if (!isMaxLimitDialogShowing.value) {
-                                  isMaxLimitDialogShowing.value = true;
-                                  
-                                  ModernAlertDialog.warning(
-                                    title: "Batas Maksimal Deposit",
-                                    message: "Jumlah deposit tidak boleh melebihi Rp100.000.000. Sistem telah menetapkan jumlah ke batas maksimal.",
-                                    buttonText: "OK",
-                                    onPressed: () {
-                                      isMaxLimitDialogShowing.value = false; // Allow next popup if user tries again
-                                      Get.back();
-                                    },
-                                  );
-                                }
-                                
-                                // Restore cursor position
-                                myAmount.selection = TextSelection.fromPosition(
-                                  TextPosition(offset: myAmount.text.length),
-                                );
-                                return;
-                              } else {
-                                // Reset flag ketika input valid
-                                isMaxLimitDialogShowing.value = false;
-                              }
 
                               // ---- Format ke tampilan ----
                               myAmount.text = NumberFormattersService.formatRupiah(amount);
@@ -389,9 +431,6 @@ class _DepositState extends State<Deposit> {
                               // ---- Simpan nilai final yang BENAR (string) ----
                               finalDepositAmount.value = val.toString(); 
                               // contoh: 0.2, 20.0, 150.55
-                              
-                              // Reset flag
-                              isMaxLimitDialogShowing.value = false;
                             }
 
                             // menjaga cursor tetap di akhir

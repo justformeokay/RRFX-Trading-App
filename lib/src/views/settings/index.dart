@@ -2,7 +2,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
@@ -853,7 +852,13 @@ class _SettingsState extends State<Settings> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            Get.to(() => _DeleteAccountWebView());
+            CustomAlert.alertDialogCustomInfo(
+              message: "Fitur ini masih dalam tahap pengembangan. Terima kasih atas kesabaran Anda!",
+              title: "Coming Soon",
+              onTap: () {
+                Navigator.of(context).pop();
+              },
+            );
           },
           borderRadius: BorderRadius.circular(16),
           child: Padding(
@@ -1025,39 +1030,4 @@ class _MenuItemData {
     this.enabled = true,
     this.trailing,
   });
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// DELETE ACCOUNT WEBVIEW
-// ════════════════════════════════════════════════════════════════════════════
-class _DeleteAccountWebView extends StatefulWidget {
-  @override
-  State<_DeleteAccountWebView> createState() => _DeleteAccountWebViewState();
-}
-
-class _DeleteAccountWebViewState extends State<_DeleteAccountWebView> {
-  late WebViewController _webViewController;
-
-  @override
-  void initState() {
-    super.initState();
-    _webViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..loadRequest(
-        Uri.parse('https://app.rrfx.co.id/delete-account'),
-      );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Delete Account'),
-        centerTitle: true,
-        elevation: 0,
-        forceMaterialTransparency: true,
-      ),
-      body: WebViewWidget(controller: _webViewController),
-    );
-  }
 }

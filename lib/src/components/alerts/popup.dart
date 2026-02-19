@@ -982,11 +982,12 @@ void showMt5PasswordPopup(
           insetPadding: const EdgeInsets.symmetric(horizontal: 26),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                 
-                /// TITLE
+                  /// TITLE
                 Text(
                   "Ganti Password MT5",
                   style: GoogleFonts.inter(
@@ -1198,6 +1199,7 @@ void showMt5PasswordPopup(
                   ],
                 ),
               ],
+            ),
             ),
           ),
         ),
