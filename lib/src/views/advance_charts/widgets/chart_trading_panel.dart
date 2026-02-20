@@ -55,8 +55,44 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
   // Pending order fields
   final TextEditingController _entryPriceController = TextEditingController();
-  final TextEditingController _stopLossController = TextEditingController();
-  final TextEditingController _takeProfitController = TextEditingController();
+  // SL/TP: 4 controller terpisah untuk Points dan Prices
+  final TextEditingController _slPointsController = TextEditingController();
+  final TextEditingController _slPriceController = TextEditingController();
+  final TextEditingController _tpPointsController = TextEditingController();
+  final TextEditingController _tpPriceController = TextEditingController();
+  // Flag untuk mencegah recursive sync
+  bool _isSyncingSl = false;
+  bool _isSyncingTp = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Listener: saat SL Points berubah → update SL Prices
+    _slPointsController.addListener(() {
+      _syncSlPriceFromPoints(_slPointsController.text);
+    });
+    // Listener: saat SL Prices berubah → update SL Points
+    _slPriceController.addListener(() {
+      _syncSlPointsFromPrice(_slPriceController.text);
+    });
+    // Listener: saat TP Points berubah → update TP Prices
+    _tpPointsController.addListener(() {
+      _syncTpPriceFromPoints(_tpPointsController.text);
+    });
+    // Listener: saat TP Prices berubah → update TP Points
+    _tpPriceController.addListener(() {
+      _syncTpPointsFromPrice(_tpPriceController.text);
+    });
+    // Listener: saat Entry Price berubah → recalculate Prices dari Points yang sudah ada
+    _entryPriceController.addListener(() {
+      if (_slPointsController.text.isNotEmpty) {
+        _syncSlPriceFromPoints(_slPointsController.text);
+      }
+      if (_tpPointsController.text.isNotEmpty) {
+        _syncTpPriceFromPoints(_tpPointsController.text);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -64,8 +100,10 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     _decrementTimer?.cancel();
     _audioPlayer.dispose();
     _entryPriceController.dispose();
-    _stopLossController.dispose();
-    _takeProfitController.dispose();
+    _slPointsController.dispose();
+    _slPriceController.dispose();
+    _tpPointsController.dispose();
+    _tpPriceController.dispose();
     if (_overlayEntry != null) {
       try {
         _overlayEntry?.remove();
@@ -1140,7 +1178,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                       ),
                                     ),
                                     child: TextField(
-                                      controller: _stopLossController,
+                                      controller: _slPointsController,
                                       textAlign: TextAlign.center,
                                       textAlignVertical:
                                           TextAlignVertical.center,
@@ -1219,7 +1257,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                       ),
                                     ),
                                     child: TextField(
-                                      controller: _takeProfitController,
+                                      controller: _tpPointsController,
                                       textAlign: TextAlign.center,
                                       textAlignVertical: TextAlignVertical.center,
                                       keyboardType:
@@ -1309,7 +1347,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                           ),
                                         ),
                                         child: TextField(
-                                          controller: _stopLossController,
+                                          controller: _slPriceController,
                                           textAlign: TextAlign.center,
                                           textAlignVertical:
                                               TextAlignVertical.center,
@@ -1327,6 +1365,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                           ),
                                           decoration: InputDecoration(
                                             hintText: 'e.g., ${_formatPrice(price - 0.005, widget.symbol)}',
+
                                             hintStyle: GoogleFonts.inter(
                                               fontSize: 11,
                                               color:
@@ -1388,7 +1427,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                           ),
                                         ),
                                         child: TextField(
-                                          controller: _takeProfitController,
+                                          controller: _tpPriceController,
                                           textAlign: TextAlign.center,
                                           textAlignVertical:
                                               TextAlignVertical.center,
@@ -1406,6 +1445,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                           ),
                                           decoration: InputDecoration(
                                             hintText: 'e.g., ${_formatPrice(price + 0.005, widget.symbol)}',
+
                                             hintStyle: GoogleFonts.inter(
                                               fontSize: 11,
                                               color:
@@ -1868,37 +1908,49 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       }
     }
 
-    // Parse optional SL and TP (now in points, need to convert to price)
-    final slPoints = double.tryParse(
-      _stopLossController.text.replaceAll(',', ''),
-    );
-    final tpPoints = double.tryParse(
-      _takeProfitController.text.replaceAll(',', ''),
-    );
+    // API menerima SL/TP dalam bentuk POINTS (integer), bukan prices
+    // Prioritas: ambil dari _slPointsController, jika kosong maka konversi dari _slPriceController
+    int? slPoints;
+    int? tpPoints;
 
-    // Convert points to price based on entry price and direction
-    // For buy orders: SL = entryPrice - (slPoints * point), TP = entryPrice + (tpPoints * point)
-    // For sell orders: SL = entryPrice + (slPoints * point), TP = entryPrice - (tpPoints * point)
-    // point value = 0.0001 for most pairs (0.01 for JPY pairs)
-    final pointValue =
-        capturedSymbol.toUpperCase().contains('JPY') ? 0.01 : 0.0001;
+    final slPointsText = _slPointsController.text.replaceAll(',', '');
+    final tpPointsText = _tpPointsController.text.replaceAll(',', '');
+    final slPriceText = _slPriceController.text.replaceAll(',', '');
+    final tpPriceText = _tpPriceController.text.replaceAll(',', '');
 
-    double? sl;
-    double? tp;
-
-    if (slPoints != null && slPoints > 0) {
-      if (direction == 'buy') {
-        sl = entryPrice - (slPoints * pointValue);
-      } else {
-        sl = entryPrice + (slPoints * pointValue);
+    // SL Points
+    if (slPointsText.isNotEmpty) {
+      slPoints = double.tryParse(slPointsText)?.round();
+    } else if (slPriceText.isNotEmpty) {
+      // Konversi dari price ke points
+      final slPrice = double.tryParse(slPriceText);
+      if (slPrice != null) {
+        final pointValue = _getPointValue(capturedSymbol);
+        final isBuy = direction == 'buy';
+        final pointsCalc = isBuy
+            ? (entryPrice - slPrice) / pointValue
+            : (slPrice - entryPrice) / pointValue;
+        if (pointsCalc > 0) {
+          slPoints = pointsCalc.round();
+        }
       }
     }
 
-    if (tpPoints != null && tpPoints > 0) {
-      if (direction == 'buy') {
-        tp = entryPrice + (tpPoints * pointValue);
-      } else {
-        tp = entryPrice - (tpPoints * pointValue);
+    // TP Points
+    if (tpPointsText.isNotEmpty) {
+      tpPoints = double.tryParse(tpPointsText)?.round();
+    } else if (tpPriceText.isNotEmpty) {
+      // Konversi dari price ke points
+      final tpPrice = double.tryParse(tpPriceText);
+      if (tpPrice != null) {
+        final pointValue = _getPointValue(capturedSymbol);
+        final isBuy = direction == 'buy';
+        final pointsCalc = isBuy
+            ? (tpPrice - entryPrice) / pointValue
+            : (entryPrice - tpPrice) / pointValue;
+        if (pointsCalc > 0) {
+          tpPoints = pointsCalc.round();
+        }
       }
     }
 
@@ -1937,8 +1989,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       'lot': lot,
       'symbol': capturedSymbol,  // Gunakan captured symbol
       'price': entryPrice,
-      'sl': sl,
-      'tp': tp,
+      'sl': slPoints,
+      'tp': tpPoints,
       'status': 'loading',
       'openPrice': null,
     });
@@ -1946,15 +1998,12 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     // Show overlay if not already showing
     _showQueueOverlay();
 
+    // print('🔄 Processing pending order: $operation');
+    // print('📊 Entry Price: $entryPrice');
+    // print('📊 SL Points: ${slPoints ?? "Not set"}');
+    // print('📊 TP Points: ${tpPoints ?? "Not set"}');
+    // Get.snackbar("Data", "Entry Price: $entryPrice, SL: ${slPoints ?? "Not set"}, TP: ${tpPoints ?? "Not set"}", backgroundColor: Colors.white);
     try {
-      print('🔄 Processing pending order: $operation');
-      print('📊 Entry Price: $entryPrice');
-      print(
-        '📊 SL Points: ${slPoints ?? "Not set"} → Price: ${sl ?? "Not set"}',
-      );
-      print(
-        '📊 TP Points: ${tpPoints ?? "Not set"} → Price: ${tp ?? "Not set"}',
-      );
 
       final response = await executionController.executePendingOrder(
         login: widget.login,
@@ -1962,8 +2011,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
         operation: operation,
         price: entryPrice,
         volume: lot,
-        sl: sl,
-        tp: tp,
+        sl: slPoints,
+        tp: tpPoints,
       );
 
       print('✅ Pending order response: $response');
@@ -1985,8 +2034,10 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
       // Clear input fields
       _entryPriceController.clear();
-      _stopLossController.clear();
-      _takeProfitController.clear();
+      _slPointsController.clear();
+      _slPriceController.clear();
+      _tpPointsController.clear();
+      _tpPriceController.clear();
 
       // Remove after delay
       await Future.delayed(const Duration(milliseconds: 1500));
@@ -2024,6 +2075,124 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       await Future.delayed(const Duration(milliseconds: 1000));
       _executionQueue.removeWhere((e) => e['id'] == id);
     }
+  }
+
+  /// Nilai 1 point berdasarkan jumlah desimal instrumen
+  double _getPointValue(String symbol) {
+    final digits = _getDigitsForSymbol(symbol);
+    double v = 1.0;
+    for (int i = 0; i < digits; i++) {
+      v /= 10.0;
+    }
+    return v;
+  }
+
+  /// Sync SL Prices dari SL Points
+  void _syncSlPriceFromPoints(String value) {
+    if (_isSyncingSl) return;
+    final points = double.tryParse(value);
+    if (points == null || points <= 0) {
+      _isSyncingSl = true;
+      _slPriceController.clear();
+      _isSyncingSl = false;
+      return;
+    }
+    final entryPrice = double.tryParse(
+      _entryPriceController.text.replaceAll(',', ''),
+    );
+    if (entryPrice == null || entryPrice <= 0) return;
+    final pointValue = _getPointValue(widget.symbol);
+    final isBuy = _executionType.value.toLowerCase().contains('buy');
+    final slPrice = isBuy
+        ? entryPrice - (points * pointValue)
+        : entryPrice + (points * pointValue);
+    _isSyncingSl = true;
+    _slPriceController.text = _formatPrice(slPrice, widget.symbol);
+    _isSyncingSl = false;
+  }
+
+  /// Sync SL Points dari SL Prices
+  void _syncSlPointsFromPrice(String value) {
+    if (_isSyncingSl) return;
+    final slPrice = double.tryParse(value.replaceAll(',', ''));
+    if (slPrice == null) {
+      _isSyncingSl = true;
+      _slPointsController.clear();
+      _isSyncingSl = false;
+      return;
+    }
+    final entryPrice = double.tryParse(
+      _entryPriceController.text.replaceAll(',', ''),
+    );
+    if (entryPrice == null || entryPrice <= 0) return;
+    final pointValue = _getPointValue(widget.symbol);
+    final isBuy = _executionType.value.toLowerCase().contains('buy');
+    final points = isBuy
+        ? (entryPrice - slPrice) / pointValue
+        : (slPrice - entryPrice) / pointValue;
+    if (points < 0) {
+      _isSyncingSl = true;
+      _slPointsController.clear();
+      _isSyncingSl = false;
+      return;
+    }
+    _isSyncingSl = true;
+    _slPointsController.text = points.round().toString();
+    _isSyncingSl = false;
+  }
+
+  /// Sync TP Prices dari TP Points
+  void _syncTpPriceFromPoints(String value) {
+    if (_isSyncingTp) return;
+    final points = double.tryParse(value);
+    if (points == null || points <= 0) {
+      _isSyncingTp = true;
+      _tpPriceController.clear();
+      _isSyncingTp = false;
+      return;
+    }
+    final entryPrice = double.tryParse(
+      _entryPriceController.text.replaceAll(',', ''),
+    );
+    if (entryPrice == null || entryPrice <= 0) return;
+    final pointValue = _getPointValue(widget.symbol);
+    final isBuy = _executionType.value.toLowerCase().contains('buy');
+    final tpPrice = isBuy
+        ? entryPrice + (points * pointValue)
+        : entryPrice - (points * pointValue);
+    _isSyncingTp = true;
+    _tpPriceController.text = _formatPrice(tpPrice, widget.symbol);
+    _isSyncingTp = false;
+  }
+
+  /// Sync TP Points dari TP Prices
+  void _syncTpPointsFromPrice(String value) {
+    if (_isSyncingTp) return;
+    final tpPrice = double.tryParse(value.replaceAll(',', ''));
+    if (tpPrice == null) {
+      _isSyncingTp = true;
+      _tpPointsController.clear();
+      _isSyncingTp = false;
+      return;
+    }
+    final entryPrice = double.tryParse(
+      _entryPriceController.text.replaceAll(',', ''),
+    );
+    if (entryPrice == null || entryPrice <= 0) return;
+    final pointValue = _getPointValue(widget.symbol);
+    final isBuy = _executionType.value.toLowerCase().contains('buy');
+    final points = isBuy
+        ? (tpPrice - entryPrice) / pointValue
+        : (entryPrice - tpPrice) / pointValue;
+    if (points < 0) {
+      _isSyncingTp = true;
+      _tpPointsController.clear();
+      _isSyncingTp = false;
+      return;
+    }
+    _isSyncingTp = true;
+    _tpPointsController.text = points.round().toString();
+    _isSyncingTp = false;
   }
 
   /// Get stop level (minimal distance from current price) based on symbol type

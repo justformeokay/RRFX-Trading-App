@@ -730,19 +730,54 @@ class AuthController extends GetxController {
   }) async {
     try {
       isLoading(true);
-      Map<String, dynamic> result = await authService.post("verif/step-1", {
+      
+      // DEBUG: Print data yang akan dikirim
+      print('\n═══════════════════════════════════════════════════');
+      print('📤 [VERIFICATION] Sending data to API (verif/step-1)');
+      print('───────────────────────────────────────────────────');
+      print('Gender: $gender (Type: ${gender.runtimeType})');
+      print('Address: $address (Type: ${address.runtimeType})');
+      print('Country: $country (Type: ${country.runtimeType})');
+      print('Country (isUpperCase): ${country == country?.toUpperCase()}');
+      print('Country (length): ${country?.length}');
+      print('Device: ${jsonEncode(deviceInfo)}');
+      print('═══════════════════════════════════════════════════\n');
+      
+      Map<String, dynamic> requestBody = {
         'gender': gender,
         'address': address,
         'country': country,
         'device': jsonEncode(deviceInfo),
-      });
+      };
+      
+      print('📋 Request Body: $requestBody');
+      
+      Map<String, dynamic> result = await authService.post("verif/step-1", requestBody);
+      
+      // DEBUG: Print API response
+      print('\n═══════════════════════════════════════════════════');
+      print('📥 [VERIFICATION] API Response:');
+      print('───────────────────────────────────────────────────');
+      print('Status: ${result['status']}');
+      print('Message: ${result['message']}');
+      print('Full Response: $result');
+      print('═══════════════════════════════════════════════════\n');
+      
       isLoading(false);
       responseMessage(result['message']);
       if (result['status'] == true) {
+        print('✅ [VERIFICATION] Verification successful');
         return true;
       }
+      print('❌ [VERIFICATION] Verification failed');
       return false;
     } catch (e) {
+      print('\n═══════════════════════════════════════════════════');
+      print('❌ [VERIFICATION] Exception occurred:');
+      print('───────────────────────────────────────────────────');
+      print('Error: $e');
+      print('Error Type: ${e.runtimeType}');
+      print('═══════════════════════════════════════════════════\n');
       isLoading(false);
       responseMessage(e.toString());
       return false;

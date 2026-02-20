@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:get/get.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
+import 'package:rrfx/src/views/webview/external_webview_page.dart';
+import 'package:rrfx/src/views/authentications/signin.dart';
 
 class DeepLinkService {
   final AppLinks _appLinks = AppLinks();
@@ -32,6 +34,13 @@ class DeepLinkService {
     // Prevent duplicate handling of same URI
     if (_lastProcessedUri == uri) {
       print('⚠️ [DeepLink] Duplicate URI detected, ignoring');
+      return;
+    }
+    
+    // 🔹 CHECK: Apakah URL ini perlu dibuka di WebView (bukan handle di app)
+    if (_shouldOpenInWebView(uri)) {
+      print('🌐 [DeepLink] Opening in WebView: $uri');
+      _openInWebView(uri.toString());
       return;
     }
     
@@ -99,6 +108,63 @@ class DeepLinkService {
     } else {
       _isProcessingLink = false;
     }
+  }
+  
+  
+  /// Cek apakah URL perlu dibuka di WebView (bukan handle langsung di app)
+  /// Routes yang exclude dari app deeplink:
+  /// - /reset/* (reset password)
+  bool _shouldOpenInWebView(Uri uri) {
+    final path = uri.path.toLowerCase();
+    
+    // List of paths yang harus dibuka di WebView
+    const webViewPaths = [
+      '/reset',      // Reset password
+      '/verify',     // Email verification (optional)
+      '/confirm',    // Confirmation (optional)
+    ];
+    
+    for (final webViewPath in webViewPaths) {
+      if (path.startsWith(webViewPath)) {
+        print('🔍 [DeepLink] Path "$path" matched WebView pattern "$webViewPath"');
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  /// Buka URL di WebView page (navigasi ke Login → WebView)
+  void _openInWebView(String url) {
+    print('🌐 [DeepLink] Opening WebView for: $url');
+    
+    // Tentukan title berdasarkan path
+    String title = 'RRFX';
+    if (url.contains('/reset')) {
+      title = 'Reset Password';
+    } else if (url.contains('/verify')) {
+      title = 'Verifikasi Email';
+    } else if (url.contains('/confirm')) {
+      title = 'Konfirmasi';
+    }
+    
+    // Navigasi ke Login page dulu, lalu ke WebView
+    Future.delayed(const Duration(milliseconds: 300), () {
+      // Navigasi langsung ke WebView dengan SignIn sebagai base
+      Get.offAll(() => const SignIn());
+      
+      // Setelah login page loaded, push WebView page
+      Future.delayed(const Duration(milliseconds: 500), () {
+        Get.to(
+          () => ExternalWebViewPage(
+            url: url,
+            title: title,
+          ),
+          transition: Transition.rightToLeft,
+        );
+        print('✅ [DeepLink] Navigated to WebView: $url');
+      });
+    });
   }
   
   /// Extract UTM parameters dari URI

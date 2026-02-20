@@ -169,8 +169,8 @@ class ChartExecutionController extends GetxController {
     required String operation,
     required double price,
     double? volume,
-    double? sl,
-    double? tp,
+    int? sl,
+    int? tp,
     int maxRetries = 3,
   }) async {
     if (isExecuting.value) {
@@ -271,8 +271,8 @@ class ChartExecutionController extends GetxController {
     required String symbol,
     required double price,
     double? volume,
-    double? sl,
-    double? tp,
+    int? sl,
+    int? tp,
   }) async {
     return executePendingOrder(
       login: login,
@@ -291,8 +291,8 @@ class ChartExecutionController extends GetxController {
     required String symbol,
     required double price,
     double? volume,
-    double? sl,
-    double? tp,
+    int? sl,
+    int? tp,
   }) async {
     return executePendingOrder(
       login: login,
@@ -311,8 +311,8 @@ class ChartExecutionController extends GetxController {
     required String symbol,
     required double price,
     double? volume,
-    double? sl,
-    double? tp,
+    int? sl,
+    int? tp,
   }) async {
     return executePendingOrder(
       login: login,
@@ -331,8 +331,8 @@ class ChartExecutionController extends GetxController {
     required String symbol,
     required double price,
     double? volume,
-    double? sl,
-    double? tp,
+    int? sl,
+    int? tp,
   }) async {
     return executePendingOrder(
       login: login,

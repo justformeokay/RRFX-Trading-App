@@ -165,7 +165,7 @@ class _PasscodeSuccessDialogContentState
                   // Success Badge
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
+                      horizontal: 10,
                       vertical: 12,
                     ),
                     decoration: BoxDecoration(
@@ -178,6 +178,7 @@ class _PasscodeSuccessDialogContentState
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           Icons.shield_rounded,
@@ -185,12 +186,15 @@ class _PasscodeSuccessDialogContentState
                           color: Colors.green,
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          "Akun Anda sudah aman",
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.green,
+                        Flexible(
+                          child: Text(
+                            "Akun Anda sudah aman",
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.green,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],

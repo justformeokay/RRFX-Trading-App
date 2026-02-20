@@ -750,7 +750,18 @@ class _VerificationAccountPageState extends State<VerificationAccountPage> {
                         : () async {
                           SharedPreferences prefs = await SharedPreferences.getInstance();
                           if (_formKey.currentState!.validate()) {
-                            print("Country: ${selectedCountry.value}, Code: ${selectedCountryCode.value}");
+                            // DEBUG: Print form data sebelum submit
+                            print('\n═══════════════════════════════════════════════════');
+                            print('📋 [VERIFICATION_PAGE] Form Data:');
+                            print('───────────────────────────────────────────────────');
+                            print('Selected Country Name: ${selectedCountry.value}');
+                            print('Selected Country Code: ${selectedCountryCode.value}');
+                            print('Country Code (isUpperCase): ${selectedCountryCode.value == selectedCountryCode.value.toUpperCase()}');
+                            print('Country Code (length): ${selectedCountryCode.value.length}');
+                            print('Gender: ${genderController.text}');
+                            print('Address: ${alamatLengkapController.text}');
+                            print('═══════════════════════════════════════════════════\n');
+                            
                             await authController.verificationAccount(
                                   gender: genderController.text,
                                   address: alamatLengkapController.text,
