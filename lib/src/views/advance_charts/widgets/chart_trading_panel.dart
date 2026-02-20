@@ -1474,6 +1474,86 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                             );
                           } 
                         ),
+
+                        const SizedBox(height: 16),
+
+                        // Execute Button
+                        Builder(
+                          builder: (context) {
+                            final isBuy =
+                                _executionType.value == 'Buy Limit' ||
+                                _executionType.value == 'Buy Stop';
+                            final buttonColor =
+                                isBuy
+                                    ? Colors.green.shade500
+                                    : Colors.red.shade500;
+                            final buttonLabel =
+                                _executionType.value == 'Buy Limit'
+                                    ? 'BUY LIMIT'
+                                    : _executionType.value == 'Buy Stop'
+                                    ? 'BUY STOP'
+                                    : _executionType.value == 'Sell Limit'
+                                    ? 'SELL LIMIT'
+                                    : 'SELL STOP';
+
+                            return GestureDetector(
+                              onTap: () {
+                                Get.back();
+                                Future.delayed(
+                                  const Duration(milliseconds: 150),
+                                  () => _executePendingOrder(
+                                    isBuy ? 'buy' : 'sell',
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                height: 46,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      buttonColor,
+                                      buttonColor.withOpacity(0.85),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: buttonColor.withOpacity(0.4),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        isBuy
+                                            ? Iconsax.arrow_up_2_bold
+                                            : Iconsax.arrow_down_2_bold,
+                                        size: 16,
+                                        color: Colors.white,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        buttonLabel,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                          letterSpacing: 1.2,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -2274,9 +2354,9 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     final digits = _getDigitsForSymbol(symbol);
     switch (digits) {
       case 2:
-        return 1.0; // Gold, Indices
+        return 0.01; // Gold, Indices
       case 3:
-        return 0.1; // Silver, JPY pairs
+        return 0.001; // Silver, JPY pairs
       case 5:
       default:
         return 0.0001; // Forex pairs
