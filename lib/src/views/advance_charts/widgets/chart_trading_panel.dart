@@ -787,20 +787,21 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
     _isPendingDialogOpen = true;
     
-    // Auto-fill entry price dengan current price saat dialog dibuka
+    // Selalu clear Entry Price dan isi ulang dengan current price saat dialog dibuka
     final currentPrice = widget.currentPrice?.value;
-    if (currentPrice != null && currentPrice > 0 && _entryPriceController.text.isEmpty) {
+    _entryPriceController.clear();
+    if (currentPrice != null && currentPrice > 0) {
       _entryPriceController.text = _formatPrice(currentPrice, widget.symbol);
     }
 
-    // Inisialisasi SL/TP Price ke 0000.00 (format ATM dengan leading zeros) jika kosong
+    // Reinisialisasi SL/TP Price ke 0000.00 (format ATM dengan leading zeros) setiap kali dialog dibuka
     final zeroPrice = _formatPriceWithLeadingZeros(0.0, widget.symbol, referencePrice: currentPrice);
-    if (_slPriceController.text.isEmpty) {
-      _slPriceController.text = zeroPrice;
-    }
-    if (_tpPriceController.text.isEmpty) {
-      _tpPriceController.text = zeroPrice;
-    }
+    _slPriceController.text = zeroPrice;
+    _tpPriceController.text = zeroPrice;
+    
+    // Clear SL/TP Points controllers agar kosong seperti awal
+    _slPointsController.clear();
+    _tpPointsController.clear();
 
     showDialog(
       context: context,
