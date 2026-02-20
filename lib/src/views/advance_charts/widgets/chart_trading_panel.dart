@@ -1011,6 +1011,11 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                           const TextInputType.numberWithOptions(
                                             decimal: true,
                                           ),
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.allow(
+                                          RegExp(r'[0-9.]'),
+                                        ),
+                                      ],
                                       style: GoogleFonts.inter(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
@@ -1195,6 +1200,9 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                           const TextInputType.numberWithOptions(
                                             decimal: true,
                                           ),
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                      ],
                                       style: GoogleFonts.inter(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
@@ -1273,6 +1281,9 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                           const TextInputType.numberWithOptions(
                                             decimal: true,
                                           ),
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                      ],
                                       style: GoogleFonts.inter(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
