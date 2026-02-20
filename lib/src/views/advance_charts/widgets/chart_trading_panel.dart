@@ -793,6 +793,15 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       _entryPriceController.text = _formatPrice(currentPrice, widget.symbol);
     }
 
+    // Inisialisasi SL/TP Price ke 0000.00 (format ATM dengan leading zeros) jika kosong
+    final zeroPrice = _formatPriceWithLeadingZeros(0.0, widget.symbol, referencePrice: currentPrice);
+    if (_slPriceController.text.isEmpty) {
+      _slPriceController.text = zeroPrice;
+    }
+    if (_tpPriceController.text.isEmpty) {
+      _tpPriceController.text = zeroPrice;
+    }
+
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -1351,10 +1360,14 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                           textAlign: TextAlign.center,
                                           textAlignVertical:
                                               TextAlignVertical.center,
-                                          keyboardType:
-                                              const TextInputType.numberWithOptions(
-                                                decimal: true,
-                                              ),
+                                          keyboardType: TextInputType.number,
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter.digitsOnly,
+                                            PriceShiftInputFormatter(
+                                              decimalPlaces: _getDigitsForSymbol(widget.symbol),
+                                              integerDigits: price > 0 ? price.truncate().toString().length : 4,
+                                            ),
+                                          ],
                                           style: GoogleFonts.inter(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
@@ -1431,10 +1444,14 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                           textAlign: TextAlign.center,
                                           textAlignVertical:
                                               TextAlignVertical.center,
-                                          keyboardType:
-                                              const TextInputType.numberWithOptions(
-                                                decimal: true,
-                                              ),
+                                          keyboardType: TextInputType.number,
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter.digitsOnly,
+                                            PriceShiftInputFormatter(
+                                              decimalPlaces: _getDigitsForSymbol(widget.symbol),
+                                              integerDigits: price > 0 ? price.truncate().toString().length : 4,
+                                            ),
+                                          ],
                                           style: GoogleFonts.inter(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
@@ -2004,7 +2021,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     } else if (slPriceText.isNotEmpty) {
       // Konversi dari price ke points
       final slPrice = double.tryParse(slPriceText);
-      if (slPrice != null) {
+      if (slPrice != null && slPrice > 0) {
         final pointValue = _getPointValue(capturedSymbol);
         final isBuy = direction == 'buy';
         final pointsCalc = isBuy
@@ -2022,7 +2039,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     } else if (tpPriceText.isNotEmpty) {
       // Konversi dari price ke points
       final tpPrice = double.tryParse(tpPriceText);
-      if (tpPrice != null) {
+      if (tpPrice != null && tpPrice > 0) {
         final pointValue = _getPointValue(capturedSymbol);
         final isBuy = direction == 'buy';
         final pointsCalc = isBuy
@@ -2115,9 +2132,12 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       // Clear input fields
       _entryPriceController.clear();
       _slPointsController.clear();
-      _slPriceController.clear();
       _tpPointsController.clear();
-      _tpPriceController.clear();
+      // Reset harga ke 0000.00 sesuai format ATM dengan leading zeros
+      final currentPriceRef = widget.currentPrice?.value;
+      final zeroPrice = _formatPriceWithLeadingZeros(0.0, widget.symbol, referencePrice: currentPriceRef);
+      _slPriceController.text = zeroPrice;
+      _tpPriceController.text = zeroPrice;
 
       // Remove after delay
       await Future.delayed(const Duration(milliseconds: 1500));
@@ -2195,7 +2215,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   void _syncSlPointsFromPrice(String value) {
     if (_isSyncingSl) return;
     final slPrice = double.tryParse(value.replaceAll(',', ''));
-    if (slPrice == null) {
+    if (slPrice == null || slPrice <= 0) {
       _isSyncingSl = true;
       _slPointsController.clear();
       _isSyncingSl = false;
@@ -2249,7 +2269,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   void _syncTpPointsFromPrice(String value) {
     if (_isSyncingTp) return;
     final tpPrice = double.tryParse(value.replaceAll(',', ''));
-    if (tpPrice == null) {
+    if (tpPrice == null || tpPrice <= 0) {
       _isSyncingTp = true;
       _tpPointsController.clear();
       _isSyncingTp = false;
@@ -2349,6 +2369,26 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     return price.toStringAsFixed(digits);
   }
 
+  /// Format price with leading zeros (ATM style: 0000.00)
+  /// referencePrice digunakan untuk menentukan jumlah digit integer
+  String _formatPriceWithLeadingZeros(double price, String symbol, {double? referencePrice}) {
+    final digits = _getDigitsForSymbol(symbol);
+    
+    // Hitung jumlah digit integer berdasarkan referencePrice atau current price
+    int integerDigits = 4; // default
+    if (referencePrice != null && referencePrice > 0) {
+      // Hitung berapa digit integer dari reference price
+      integerDigits = referencePrice.truncate().toString().length;
+    }
+    
+    String formatted = price.toStringAsFixed(digits);
+    List<String> parts = formatted.split('.');
+    String intPart = parts[0].padLeft(integerDigits, '0');
+    String decPart = parts.length > 1 ? parts[1] : ''.padRight(digits, '0');
+    
+    return '$intPart.$decPart';
+  }
+
   /// Get increment value based on symbol decimal places
   double _getIncrementForSymbol(String symbol) {
     final digits = _getDigitsForSymbol(symbol);
@@ -2359,7 +2399,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
         return 0.001; // Silver, JPY pairs
       case 5:
       default:
-        return 0.0001; // Forex pairs
+        return 0.00001; // Forex pairs
     }
   }
 
@@ -2471,5 +2511,66 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     }
 
     return {'isValid': true, 'message': ''};
+  }
+}
+
+/// Custom TextInputFormatter untuk input style ATM/Calculator
+/// Digit masuk dari kanan dan bergeser ke kiri
+/// Contoh (2 desimal): 0000.00 -> 0000.05 -> 0000.50 -> 0005.02 -> ...
+class PriceShiftInputFormatter extends TextInputFormatter {
+  final int decimalPlaces;
+  final int integerDigits;
+
+  PriceShiftInputFormatter({
+    required this.decimalPlaces,
+    this.integerDigits = 4, // Default 4 digit integer
+  });
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    // Ambil hanya digit dari input baru
+    String digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    // Jika kosong, kembalikan format zero
+    if (digits.isEmpty) {
+      final zero = _formatNumber(0);
+      return TextEditingValue(
+        text: zero,
+        selection: TextSelection.collapsed(offset: zero.length),
+      );
+    }
+
+    // Parse sebagai integer untuk shift calculation
+    int value = int.tryParse(digits) ?? 0;
+
+    // Format dengan desimal yang benar
+    String formatted = _formatNumber(value);
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+
+  String _formatNumber(int value) {
+    // Konversi ke double dengan pembagian berdasarkan desimal
+    double divisor = 1.0;
+    for (int i = 0; i < decimalPlaces; i++) {
+      divisor *= 10;
+    }
+    double result = value / divisor;
+
+    // Format dengan leading zeros
+    String formatted = result.toStringAsFixed(decimalPlaces);
+
+    // Pad integer part dengan leading zeros
+    List<String> parts = formatted.split('.');
+    String intPart = parts[0].padLeft(integerDigits, '0');
+    String decPart = parts.length > 1 ? parts[1] : ''.padRight(decimalPlaces, '0');
+
+    return '$intPart.$decPart';
   }
 }
