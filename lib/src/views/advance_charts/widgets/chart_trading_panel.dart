@@ -1221,8 +1221,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                     child: TextField(
                                       controller: _takeProfitController,
                                       textAlign: TextAlign.center,
-                                      textAlignVertical:
-                                          TextAlignVertical.center,
+                                      textAlignVertical: TextAlignVertical.center,
                                       keyboardType:
                                           const TextInputType.numberWithOptions(
                                             decimal: true,
@@ -1262,6 +1261,178 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 8),
+                        Center(child: Text("Atau")),
+                        const SizedBox(height: 8),
+                        // SL & TP by Prices
+                        Obx(
+                          () {
+                            final price = widget.currentPrice?.value;
+                            if (price == null) {
+                              return const SizedBox.shrink();
+                            }
+                            return Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Stop Loss (Prices)',
+                                        textAlign: TextAlign.center,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color:
+                                              isDark
+                                                  ? Colors.white
+                                                  : Colors.black87,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Container(
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          color:
+                                              isDark
+                                                  ? Colors.grey.shade800
+                                                      .withOpacity(0.6)
+                                                  : Colors.white.withOpacity(0.8),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color:
+                                                isDark
+                                                    ? Colors.grey.shade700
+                                                    : Colors.grey.shade200,
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        child: TextField(
+                                          controller: _stopLossController,
+                                          textAlign: TextAlign.center,
+                                          textAlignVertical:
+                                              TextAlignVertical.center,
+                                          keyboardType:
+                                              const TextInputType.numberWithOptions(
+                                                decimal: true,
+                                              ),
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color:
+                                                isDark
+                                                    ? Colors.white
+                                                    : Colors.black87,
+                                          ),
+                                          decoration: InputDecoration(
+                                            hintText: 'e.g., ${_formatPrice(price - 0.005, widget.symbol)}',
+                                            hintStyle: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              color:
+                                                  isDark
+                                                      ? Colors.grey.shade500
+                                                      : Colors.grey.shade400,
+                                            ),
+                                            border: InputBorder.none,
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 12,
+                                                  vertical: 8,
+                                                ),
+                                            prefixIcon: Icon(
+                                              Iconsax.shield_cross_bold,
+                                              size: 16,
+                                              color: Colors.red.shade400,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                            
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Take Profit (Prices)',
+                                        textAlign: TextAlign.center,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color:
+                                              isDark
+                                                  ? Colors.white
+                                                  : Colors.black87,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Container(
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          color:
+                                              isDark
+                                                  ? Colors.grey.shade800
+                                                      .withOpacity(0.6)
+                                                  : Colors.white.withOpacity(0.8),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color:
+                                                isDark
+                                                    ? Colors.grey.shade700
+                                                    : Colors.grey.shade200,
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        child: TextField(
+                                          controller: _takeProfitController,
+                                          textAlign: TextAlign.center,
+                                          textAlignVertical:
+                                              TextAlignVertical.center,
+                                          keyboardType:
+                                              const TextInputType.numberWithOptions(
+                                                decimal: true,
+                                              ),
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color:
+                                                isDark
+                                                    ? Colors.white
+                                                    : Colors.black87,
+                                          ),
+                                          decoration: InputDecoration(
+                                            hintText: 'e.g., ${_formatPrice(price + 0.005, widget.symbol)}',
+                                            hintStyle: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              color:
+                                                  isDark
+                                                      ? Colors.grey.shade500
+                                                      : Colors.grey.shade400,
+                                            ),
+                                            border: InputBorder.none,
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 12,
+                                                  vertical: 8,
+                                                ),
+                                            prefixIcon: Icon(
+                                              Iconsax.medal_star_bold,
+                                              size: 16,
+                                              color: Colors.green.shade400,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          } 
                         ),
                       ],
                     ),

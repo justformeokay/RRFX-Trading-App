@@ -14,6 +14,7 @@ class NameTextFieldNewVersion extends StatefulWidget {
   final bool requiredField;
   final IconData? iconData;
   final int? maxLength;
+  final bool? useStringOnly;
 
   const NameTextFieldNewVersion({
     super.key,
@@ -26,6 +27,7 @@ class NameTextFieldNewVersion extends StatefulWidget {
     this.iconData,
     this.maxLength,
     this.requiredField = false,
+    this.useStringOnly,
   });
 
   @override
@@ -34,7 +36,8 @@ class NameTextFieldNewVersion extends StatefulWidget {
 }
 
 class _NameTextFieldNewVersionState extends State<NameTextFieldNewVersion> {
-  final RegExp nameRegex = RegExp(r"^[a-zA-Z ]+$");
+  final RegExp stringOnlyRegex = RegExp(r"^[a-zA-Z ]+$");
+  final RegExp stringAndNumberRegex = RegExp(r"^[a-zA-Z0-9 ]+$");
   RxBool isName = false.obs;
   RxBool isLoading = false.obs;
 
@@ -50,7 +53,9 @@ class _NameTextFieldNewVersionState extends State<NameTextFieldNewVersion> {
 
   void _updateValidationStatus(String value) {
     if (widget.useValidator == true) {
-      if (value.length > 2 && nameRegex.hasMatch(value)) {
+      final useStringOnly = widget.useStringOnly ?? false;
+      final regex = useStringOnly ? stringOnlyRegex : stringAndNumberRegex;
+      if (value.length > 2 && regex.hasMatch(value)) {
         isName(true);
       } else {
         isName(false);
@@ -94,8 +99,13 @@ class _NameTextFieldNewVersionState extends State<NameTextFieldNewVersion> {
                     if (value == null || value.isEmpty) {
                       return "Mohon isikan ${widget.fieldName}";
                     }
-                    if (!nameRegex.hasMatch(value)) {
-                      return "Hanya boleh mengandung huruf dan spasi.";
+                    final useStringOnly = widget.useStringOnly ?? false;
+                    final regex = useStringOnly ? stringOnlyRegex : stringAndNumberRegex;
+                    if (!regex.hasMatch(value)) {
+                      final errorMsg = useStringOnly
+                          ? "Hanya boleh mengandung huruf dan spasi."
+                          : "Hanya boleh mengandung huruf, angka, dan spasi.";
+                      return errorMsg;
                     }
                   }
                   return null;
@@ -167,8 +177,10 @@ class _NameTextFieldNewVersionState extends State<NameTextFieldNewVersion> {
                 ),
 
                 onChanged: (value) {
-                  // Filter: hanya boleh huruf dan spasi
-                  String filtered = value.replaceAll(RegExp(r'[^a-zA-Z ]'), '');
+                  // Filter berdasarkan useStringOnly
+                  final useStringOnly = widget.useStringOnly ?? false;
+                  final pattern = useStringOnly ? r'[^a-zA-Z ]' : r'[^a-zA-Z0-9 ]';
+                  String filtered = value.replaceAll(RegExp(pattern), '');
                   
                   // Update controller jika ada perubahan
                   if (filtered != value) {
