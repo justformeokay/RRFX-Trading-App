@@ -11,8 +11,27 @@ class DeepLinkService {
   bool _isProcessingLink = false; // Flag untuk prevent duplicate navigation
   Uri? _lastProcessedUri; // Track last processed URI
 
+  /// Static pending WebView URL for cold-start deeplinks.
+  /// Splash screen checks this before navigating.
+  static String? pendingWebViewUrl;
+  static String? pendingWebViewTitle;
+
+  /// True selama app baru pertama kali start (cold start).
+  /// Selama fresh start, semua WebView deeplinks akan di-store
+  /// sebagai pending, bukan langsung navigate.
+  static bool _isFreshStart = true;
+
   // UBAH: dari void menjadi Future<void>
   Future<void> init() async {
+    // Mark sebagai fresh start
+    _isFreshStart = true;
+    
+    // Setelah 5 detik, app sudah bukan fresh start lagi
+    Future.delayed(const Duration(seconds: 5), () {
+      _isFreshStart = false;
+      print('⏰ [DeepLink] Fresh start period ended');
+    });
+
     // 🔹 Listen untuk link yang masuk saat app sedang terbuka (background/foreground)
     _sub = _appLinks.uriLinkStream.listen(_handleIncomingUri);
 
@@ -37,13 +56,6 @@ class DeepLinkService {
       return;
     }
     
-    // 🔹 CHECK: Apakah URL ini perlu dibuka di WebView (bukan handle di app)
-    if (_shouldOpenInWebView(uri)) {
-      print('🌐 [DeepLink] Opening in WebView: $uri');
-      _openInWebView(uri.toString());
-      return;
-    }
-    
     // Prevent concurrent processing
     if (_isProcessingLink) {
       print('⚠️ [DeepLink] Already processing a link, ignoring');
@@ -52,6 +64,26 @@ class DeepLinkService {
     
     _isProcessingLink = true;
     _lastProcessedUri = uri;
+    
+    // 🔹 CHECK: Apakah URL ini perlu dibuka di WebView (bukan handle di app)
+    if (_shouldOpenInWebView(uri)) {
+      print('🌐 [DeepLink] Opening in WebView: $uri');
+      
+      if (isInitial || _isFreshStart) {
+        // Cold start / fresh start: jangan navigate sekarang, simpan URL
+        // dan biarkan Splashscreen yang handle navigasinya setelah app siap
+        _storePendingWebView(uri.toString());
+        print('📌 [DeepLink] Stored pending WebView URL (initial=$isInitial, freshStart=$_isFreshStart)');
+        _isProcessingLink = false;
+      } else {
+        // App sudah terbuka dan bukan fresh start: navigate langsung
+        _openInWebView(uri.toString());
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          _isProcessingLink = false;
+        });
+      }
+      return;
+    }
     
     // 📊 Extract UTM parameters dari URL
     final utmParams = _extractUtmParameters(uri);
@@ -134,19 +166,43 @@ class DeepLinkService {
     return false;
   }
   
+  /// Tentukan title berdasarkan URL path
+  static String _getTitleForUrl(String url) {
+    if (url.contains('/reset')) return 'Reset Password';
+    if (url.contains('/verify')) return 'Verifikasi Email';
+    if (url.contains('/confirm')) return 'Konfirmasi';
+    return 'RRFX';
+  }
+
+  /// Simpan URL untuk cold-start → Splashscreen akan handle navigasinya
+  void _storePendingWebView(String url) {
+    pendingWebViewUrl = url;
+    pendingWebViewTitle = _getTitleForUrl(url);
+    print('📌 [DeepLink] Pending WebView stored: $url (title: $pendingWebViewTitle)');
+  }
+
+  /// Cek apakah ada pending WebView URL dari cold-start deeplink
+  static bool get hasPendingWebView => pendingWebViewUrl != null;
+
+  /// Consume pending WebView URL (returns and clears it)
+  static Map<String, String>? consumePendingWebView() {
+    if (pendingWebViewUrl == null) return null;
+    final result = {
+      'url': pendingWebViewUrl!,
+      'title': pendingWebViewTitle ?? 'RRFX',
+    };
+    pendingWebViewUrl = null;
+    pendingWebViewTitle = null;
+    print('✅ [DeepLink] Consumed pending WebView: ${result['url']}');
+    return result;
+  }
+
   /// Buka URL di WebView page (navigasi ke Login → WebView)
+  /// Digunakan saat app sudah terbuka (bukan cold start)
   void _openInWebView(String url) {
     print('🌐 [DeepLink] Opening WebView for: $url');
     
-    // Tentukan title berdasarkan path
-    String title = 'RRFX';
-    if (url.contains('/reset')) {
-      title = 'Reset Password';
-    } else if (url.contains('/verify')) {
-      title = 'Verifikasi Email';
-    } else if (url.contains('/confirm')) {
-      title = 'Konfirmasi';
-    }
+    final title = _getTitleForUrl(url);
     
     // Navigasi ke Login page dulu, lalu ke WebView
     Future.delayed(const Duration(milliseconds: 300), () {

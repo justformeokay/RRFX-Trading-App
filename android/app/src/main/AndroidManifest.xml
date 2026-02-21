@@ -63,13 +63,12 @@
             </intent-filter>
 
             <!-- Deeplink untuk app.rrfx.co.id -->
+            <!-- Hanya handle /signup path, /reset dll buka di external browser -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="http" />
-                <data android:scheme="https" />
-                <data android:host="app.rrfx.co.id" />
+                <data android:scheme="https" android:host="app.rrfx.co.id" android:pathPrefix="/signup" />
             </intent-filter>
         </activity>
 

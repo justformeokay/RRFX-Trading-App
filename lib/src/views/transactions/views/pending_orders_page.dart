@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -1058,7 +1059,7 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
         Text(
           value,
           style: GoogleFonts.inter(
-            fontSize: 12,
+            fontSize: 10,
             fontWeight: FontWeight.w600,
             color: valueColor ?? (isDark ? Colors.white : Colors.black87),
           ),
@@ -1070,7 +1071,10 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
   String _formatDateTime(DateTime? dt) {
     if (dt == null) return '—';
     try {
-      return DateFormat('dd/MM/yy HH:mm').format(dt);
+      // Subtract 7 hours for timezone offset to match Meta display
+      final adjustedTime = dt.subtract(const Duration(hours: 7));
+      // Format as Meta-style: YYYY.MM.DD HH:mm:ss
+      return DateFormat('yyyy.MM.dd HH:mm:ss').format(adjustedTime);
     } catch (_) {
       return '—';
     }
@@ -1361,8 +1365,13 @@ class _EditPositionDialog extends StatefulWidget {
 class _EditPositionDialogState extends State<_EditPositionDialog> {
   late TextEditingController tpController;
   late TextEditingController slController;
+  late TextEditingController tpPriceController;
+  late TextEditingController slPriceController;
   late TextEditingController volumeController;
   late TextEditingController priceController;
+
+  bool _isSyncingSl = false;
+  bool _isSyncingTp = false;
 
   final isSaving = RxBool(false);
   final tpError = RxString('');
@@ -1391,19 +1400,157 @@ class _EditPositionDialogState extends State<_EditPositionDialog> {
     }
   }
 
+  int _getDigitsForSymbol(String symbol) {
+    final s = symbol.toUpperCase();
+    if (s.contains('XAU') || s.contains('GOLD')) return 2;
+    if (s.contains('XAG') || s.contains('SILVER')) return 3;
+    if (s.contains('JPY')) return 3;
+    if (s.contains('US30') || s.contains('NAS') || s.contains('SPX') ||
+        s.contains('DAX') || s.contains('UK100')) return 2;
+    return 5;
+  }
+
+  double _getPointValue(String symbol) {
+    final digits = _getDigitsForSymbol(symbol);
+    double v = 1.0;
+    for (int i = 0; i < digits; i++) {
+      v /= 10.0;
+    }
+    return v;
+  }
+
+  String _formatPrice(double price, String symbol) {
+    return price.toStringAsFixed(_getDigitsForSymbol(symbol));
+  }
+
+  String _formatPriceWithLeadingZeros(double price, String symbol, {double? referencePrice}) {
+    final digits = _getDigitsForSymbol(symbol);
+    int intDigits = 4;
+    if (referencePrice != null && referencePrice > 0) {
+      intDigits = referencePrice.truncate().toString().length;
+    }
+    String formatted = price.toStringAsFixed(digits);
+    List<String> parts = formatted.split('.');
+    String intPart = parts[0].padLeft(intDigits, '0');
+    String decPart = parts.length > 1 ? parts[1] : ''.padRight(digits, '0');
+    return '$intPart.$decPart';
+  }
+
+  void _syncSlPriceFromPoints(String value) {
+    if (_isSyncingSl) return;
+    final points = double.tryParse(value);
+    if (points == null || points <= 0) {
+      _isSyncingSl = true;
+      slPriceController.text = _formatPriceWithLeadingZeros(
+        0.0, widget.order.symbol, referencePrice: widget.order.priceCurrent);
+      _isSyncingSl = false;
+      return;
+    }
+    final entryPrice = widget.order.priceOrder;
+    if (entryPrice <= 0) return;
+    final pointValue = _getPointValue(widget.order.symbol);
+    final isBuy = widget.order.orderType.toLowerCase().contains('buy');
+    final slPrice = isBuy ? entryPrice - (points * pointValue) : entryPrice + (points * pointValue);
+    _isSyncingSl = true;
+    slPriceController.text = _formatPrice(slPrice, widget.order.symbol);
+    _isSyncingSl = false;
+  }
+
+  void _syncSlPointsFromPrice(String value) {
+    if (_isSyncingSl) return;
+    final slPrice = double.tryParse(value.replaceAll(',', ''));
+    if (slPrice == null || slPrice <= 0) {
+      _isSyncingSl = true;
+      slController.clear();
+      _isSyncingSl = false;
+      return;
+    }
+    final entryPrice = widget.order.priceOrder;
+    if (entryPrice <= 0) return;
+    final pointValue = _getPointValue(widget.order.symbol);
+    final isBuy = widget.order.orderType.toLowerCase().contains('buy');
+    final points = isBuy ? (entryPrice - slPrice) / pointValue : (slPrice - entryPrice) / pointValue;
+    if (points < 0) {
+      _isSyncingSl = true;
+      slController.clear();
+      _isSyncingSl = false;
+      return;
+    }
+    _isSyncingSl = true;
+    slController.text = points.round().toString();
+    _isSyncingSl = false;
+  }
+
+  void _syncTpPriceFromPoints(String value) {
+    if (_isSyncingTp) return;
+    final points = double.tryParse(value);
+    if (points == null || points <= 0) {
+      _isSyncingTp = true;
+      tpPriceController.text = _formatPriceWithLeadingZeros(
+        0.0, widget.order.symbol, referencePrice: widget.order.priceCurrent);
+      _isSyncingTp = false;
+      return;
+    }
+    final entryPrice = widget.order.priceOrder;
+    if (entryPrice <= 0) return;
+    final pointValue = _getPointValue(widget.order.symbol);
+    final isBuy = widget.order.orderType.toLowerCase().contains('buy');
+    final tpPrice = isBuy ? entryPrice + (points * pointValue) : entryPrice - (points * pointValue);
+    _isSyncingTp = true;
+    tpPriceController.text = _formatPrice(tpPrice, widget.order.symbol);
+    _isSyncingTp = false;
+  }
+
+  void _syncTpPointsFromPrice(String value) {
+    if (_isSyncingTp) return;
+    final tpPrice = double.tryParse(value.replaceAll(',', ''));
+    if (tpPrice == null || tpPrice <= 0) {
+      _isSyncingTp = true;
+      tpController.clear();
+      _isSyncingTp = false;
+      return;
+    }
+    final entryPrice = widget.order.priceOrder;
+    if (entryPrice <= 0) return;
+    final pointValue = _getPointValue(widget.order.symbol);
+    final isBuy = widget.order.orderType.toLowerCase().contains('buy');
+    final points = isBuy ? (tpPrice - entryPrice) / pointValue : (entryPrice - tpPrice) / pointValue;
+    if (points < 0) {
+      _isSyncingTp = true;
+      tpController.clear();
+      _isSyncingTp = false;
+      return;
+    }
+    _isSyncingTp = true;
+    tpController.text = points.round().toString();
+    _isSyncingTp = false;
+  }
+
   @override
   void initState() {
     super.initState();
     tpController = TextEditingController(text: '');
     slController = TextEditingController(text: '');
+    final zeroPrice = _formatPriceWithLeadingZeros(
+      0.0, widget.order.symbol, referencePrice: widget.order.priceCurrent);
+    tpPriceController = TextEditingController(text: zeroPrice);
+    slPriceController = TextEditingController(text: zeroPrice);
     volumeController = TextEditingController(text: widget.order.volume.toString());
     priceController = TextEditingController(text: widget.order.priceOrder.toString());
+
+    // Bidirectional sync listeners
+    slController.addListener(() => _syncSlPriceFromPoints(slController.text));
+    tpController.addListener(() => _syncTpPriceFromPoints(tpController.text));
+    slPriceController.addListener(() => _syncSlPointsFromPrice(slPriceController.text));
+    tpPriceController.addListener(() => _syncTpPointsFromPrice(tpPriceController.text));
   }
 
   @override
   void dispose() {
     tpController.dispose();
     slController.dispose();
+    tpPriceController.dispose();
+    slPriceController.dispose();
     volumeController.dispose();
     priceController.dispose();
     super.dispose();
@@ -1868,6 +2015,153 @@ class _EditPositionDialogState extends State<_EditPositionDialog> {
                 ],
               ),
 
+              const SizedBox(height: 12),
+
+              // "Atau" separator
+              Center(
+                child: Text(
+                  'Atau',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // SL/TP Prices Row
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Stop Loss (Prices)',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.grey.shade800.withOpacity(0.3)
+                                : Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.grey.shade700
+                                  : Colors.grey.shade300,
+                            ),
+                          ),
+                          child: TextField(
+                            controller: slPriceController,
+                            textAlign: TextAlign.center,
+                            keyboardType: TextInputType.number,
+                            enabled: !isSaving.value,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              _PriceShiftInputFormatter(
+                                decimalPlaces: _getDigitsForSymbol(order.symbol),
+                                integerDigits: order.priceCurrent > 0
+                                    ? order.priceCurrent.truncate().toString().length
+                                    : 4,
+                              ),
+                            ],
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 10),
+                              prefixIcon: Icon(
+                                Iconsax.shield_cross_bold,
+                                size: 16,
+                                color: Colors.red.shade400,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Take Profit (Prices)',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.grey.shade800.withOpacity(0.3)
+                                : Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.grey.shade700
+                                  : Colors.grey.shade300,
+                            ),
+                          ),
+                          child: TextField(
+                            controller: tpPriceController,
+                            textAlign: TextAlign.center,
+                            keyboardType: TextInputType.number,
+                            enabled: !isSaving.value,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              _PriceShiftInputFormatter(
+                                decimalPlaces: _getDigitsForSymbol(order.symbol),
+                                integerDigits: order.priceCurrent > 0
+                                    ? order.priceCurrent.truncate().toString().length
+                                    : 4,
+                              ),
+                            ],
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 10),
+                              prefixIcon: Icon(
+                                Iconsax.medal_star_bold,
+                                size: 16,
+                                color: Colors.green.shade400,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
               const SizedBox(height: 24),
 
               // Buttons
@@ -2107,5 +2401,55 @@ class _EditPositionDialogState extends State<_EditPositionDialog> {
     } finally {
       isSaving.value = false;
     }
+  }
+}
+
+/// ATM-style input formatter for price fields in pending order edit dialog
+class _PriceShiftInputFormatter extends TextInputFormatter {
+  final int decimalPlaces;
+  final int integerDigits;
+
+  _PriceShiftInputFormatter({
+    required this.decimalPlaces,
+    this.integerDigits = 4,
+  });
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    String digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digits.isEmpty) {
+      final zero = _formatNumber(0);
+      return TextEditingValue(
+        text: zero,
+        selection: TextSelection.collapsed(offset: zero.length),
+      );
+    }
+
+    int value = int.tryParse(digits) ?? 0;
+    String formatted = _formatNumber(value);
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+
+  String _formatNumber(int value) {
+    double divisor = 1.0;
+    for (int i = 0; i < decimalPlaces; i++) {
+      divisor *= 10;
+    }
+    double result = value / divisor;
+
+    String formatted = result.toStringAsFixed(decimalPlaces);
+    List<String> parts = formatted.split('.');
+    String intPart = parts[0].padLeft(integerDigits, '0');
+    String decPart = parts.length > 1 ? parts[1] : ''.padRight(decimalPlaces, '0');
+
+    return '$intPart.$decPart';
   }
 }

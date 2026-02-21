@@ -5,6 +5,9 @@
       {
         "appID": "WYH8WFU7T5.com.rrfx.app",
         "paths": [
+          "NOT /reset/*",
+          "NOT /verify/*",
+          "NOT /confirm/*",
           "*"
         ]
       }

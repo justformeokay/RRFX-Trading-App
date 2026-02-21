@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
+import 'package:rrfx/src/service/deeplink_service.dart';
 import 'package:rrfx/src/service/in_app_update_service.dart';
 import 'package:rrfx/src/views/authentications/locked_page.dart';
 import 'package:rrfx/src/views/authentications/setup_passcode_page.dart';
+import 'package:rrfx/src/views/authentications/signin.dart';
 import 'package:rrfx/src/views/authentications/verify_passcode_page.dart';
 import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
+import 'package:rrfx/src/views/webview/external_webview_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rrfx/src/controllers/two_factory_auth.dart';
 import 'package:get/get.dart';
@@ -50,14 +53,27 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
     try {
       print('🚀 [SPLASH] Starting app flow...');
       
+      // ⏳ Tunggu sebentar agar deeplink (baik getInitialLink maupun uriLinkStream)
+      // sempat di-proses dan disimpan ke pendingWebViewUrl
+      await Future.delayed(const Duration(milliseconds: 800));
+      
+      // 🔗 Check if there's a pending WebView deeplink from cold start
+      if (_navigateToPendingWebView()) return;
+
       // ✅ Check for in-app updates from Play Store (no timeout needed)
       print('📱 [SPLASH] Checking for app updates...');
       await InAppUpdateService().checkForUpdate();
       
       print('✅ [SPLASH] Update check completed, proceeding with app flow...');
+      
+      // 🔗 Check again setelah async operation
+      if (_navigateToPendingWebView()) return;
 
       bool loggedIn = await getLoggedIn();
     
+    // 🔗 Check again setelah login check
+    if (_navigateToPendingWebView()) return;
+
     // ✅ If user is logged in, fetch profile and check passcode from API response
     if (loggedIn) {
       Get.log("📡 [SPLASH] User logged in - Fetching profile from API...");
@@ -137,6 +153,32 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
   Future<bool> getLoggedIn() async {
     SharedPreferences preferences = await SharedPreferences.getInstance();
     return preferences.getBool('loggedIn') ?? false;
+  }
+
+  /// Check apakah ada pending WebView deeplink, jika ada langsung navigate
+  /// Returns true jika ada pending dan sudah di-navigate (caller harus return)
+  bool _navigateToPendingWebView() {
+    if (DeepLinkService.hasPendingWebView) {
+      print('🔗 [SPLASH] Pending WebView deeplink detected, redirecting...');
+      final pending = DeepLinkService.consumePendingWebView();
+      if (pending != null) {
+        _finishTransition(() {
+          Get.offAll(() => const SignIn());
+          Future.delayed(const Duration(milliseconds: 500), () {
+            Get.to(
+              () => ExternalWebViewPage(
+                url: pending['url']!,
+                title: pending['title'],
+              ),
+              transition: Transition.rightToLeft,
+            );
+            print('✅ [SPLASH] Navigated to WebView from cold-start deeplink');
+          });
+        });
+        return true;
+      }
+    }
+    return false;
   }
 
   Future<void> _finishTransition(VoidCallback onComplete) async {

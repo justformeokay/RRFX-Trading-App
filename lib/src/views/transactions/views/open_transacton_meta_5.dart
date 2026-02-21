@@ -655,8 +655,8 @@ class _PositionTile extends StatelessWidget {
                       Expanded(
                         child: Text(
                           "#${positionId ?? "-"}",
-                          style: GoogleFonts.oswald(
-                            fontSize: 13.0,
+                          style: GoogleFonts.poppins(
+                            fontSize: 11.0,
                             fontWeight: FontWeight.w700,
                             color: Get.theme.textTheme.bodySmall?.color,
                           ),
@@ -667,18 +667,18 @@ class _PositionTile extends StatelessWidget {
                           children: [
                             Text(
                               "Open: ",
-                              style: GoogleFonts.oswald(
-                                fontSize: 13.0,
+                              style: GoogleFonts.poppins(
+                                fontSize: 11.0,
                                 fontWeight: FontWeight.w700,
                                 color: Get.theme.textTheme.bodySmall?.color,
                               ),
                             ),
                             Expanded(
                               child: Text(
-                                openTime ?? "-",
+                                _formatOpenTime(openTime),
                                 textAlign: TextAlign.right,
-                                style: GoogleFonts.oswald(
-                                  fontSize: 13.0,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.0,
                                   fontWeight: FontWeight.w700,
                                   color: Get.theme.textTheme.bodySmall?.color,
                                 ),
@@ -700,8 +700,8 @@ class _PositionTile extends StatelessWidget {
                           children: [
                             Text(
                               "S / L: ",
-                              style: GoogleFonts.oswald(
-                                fontSize: 13.0,
+                              style: GoogleFonts.poppins(
+                                fontSize: 11.0,
                                 fontWeight: FontWeight.w700,
                                 color: Get.theme.textTheme.bodySmall?.color,
                               ),
@@ -711,8 +711,8 @@ class _PositionTile extends StatelessWidget {
                                 (stopLoss != null && stopLoss != "0")
                                     ? stopLoss!
                                     : "–",
-                                style: GoogleFonts.oswald(
-                                  fontSize: 13.0,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.0,
                                   fontWeight: FontWeight.w700,
                                   color: Get.theme.textTheme.bodySmall?.color,
                                 ),
@@ -726,8 +726,8 @@ class _PositionTile extends StatelessWidget {
                           children: [
                             Text(
                               "Swap: ",
-                              style: GoogleFonts.oswald(
-                                fontSize: 13.0,
+                              style: GoogleFonts.poppins(
+                                fontSize: 11.0,
                                 fontWeight: FontWeight.w700,
                                 color: Get.theme.textTheme.bodySmall?.color,
                               ),
@@ -736,8 +736,8 @@ class _PositionTile extends StatelessWidget {
                               child: Text(
                                 swap ?? "0.00",
                                 textAlign: TextAlign.right,
-                                style: GoogleFonts.oswald(
-                                  fontSize: 13.0,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.0,
                                   fontWeight: FontWeight.w700,
                                   color: Get.theme.textTheme.bodySmall?.color,
                                 ),
@@ -756,8 +756,8 @@ class _PositionTile extends StatelessWidget {
                     children: [
                       Text(
                         "T / P: ",
-                        style: GoogleFonts.oswald(
-                          fontSize: 13.0,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.0,
                           fontWeight: FontWeight.w700,
                           color: Get.theme.textTheme.bodySmall?.color,
                         ),
@@ -766,8 +766,8 @@ class _PositionTile extends StatelessWidget {
                         (takeProfit != null && takeProfit != "0")
                             ? takeProfit!
                             : "–",
-                        style: GoogleFonts.oswald(
-                          fontSize: 13.0,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.0,
                           fontWeight: FontWeight.w700,
                           color: Get.theme.textTheme.bodySmall?.color,
                         ),
@@ -785,6 +785,25 @@ class _PositionTile extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Format openTime to Meta-style format (YYYY.MM.DD HH:mm:ss) with -7 hours offset
+  String _formatOpenTime(String? timeStr) {
+    if (timeStr == null || timeStr.isEmpty) return '-';
+    
+    try {
+      // Parse the DateTime from the string
+      // Assuming format is "2026-02-20 17:51:52" or ISO format
+      DateTime dateTime = DateTime.parse(timeStr);
+      
+      // Subtract 7 hours for timezone offset
+      dateTime = dateTime.subtract(const Duration(hours: 7));
+      
+      // Format as YYYY.MM.DD HH:mm:ss (Meta-style)
+      return DateFormat('yyyy.MM.dd HH:mm:ss').format(dateTime);
+    } catch (e) {
+      return timeStr; // Return original if parsing fails
+    }
   }
 
   void _onClosePosition(BuildContext context) async {

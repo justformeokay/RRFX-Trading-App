@@ -241,8 +241,8 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                     positionId: "${order.ticket}",
                     swap: "${order.swap}",
                     stopLoss: "${order.stopLoss}",
-                    openTime: "${order.openTime}",
-                    closeTime: "${order.closeTime}",
+                    openTime: _formatTime("${order.openTime}"),
+                    closeTime: _formatTime("${order.closeTime}"),
                     takeProfit: "${order.takeProfit}",
                     profit: order.profit != null ? "${order.profit}" : "0.00",
                     symbol: "${order.symbol}",
@@ -773,6 +773,24 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
     return value.toStringAsFixed(2);
   }
 
+  /// Format time to Meta-style format (YYYY.MM.DD HH:mm:ss) with -7 hours offset
+  String _formatTime(String? timeStr) {
+    if (timeStr == null || timeStr.isEmpty) return '-';
+    
+    try {
+      // Parse the DateTime from the string
+      DateTime dateTime = DateTime.parse(timeStr);
+      
+      // Subtract 7 hours for timezone offset
+      dateTime = dateTime.subtract(const Duration(hours: 7));
+      
+      // Format as YYYY.MM.DD HH:mm:ss (Meta-style)
+      return DateFormat('yyyy.MM.dd HH:mm:ss').format(dateTime);
+    } catch (e) {
+      return timeStr; // Return original if parsing fails
+    }
+  }
+
   // Calculate total swap and commission from filtered orders
   Map<String, double> _calculateTotals(List<dynamic> orders) {
     double totalSwap = 0.0;
@@ -1053,31 +1071,30 @@ class _PositionTile extends StatelessWidget {
 
         subtitle: Text(
           "${openPrice ?? '0.00000'} → ${closePrice == "null" || closePrice == null || closePrice == "" ? '0' : closePrice}",
-          style: GoogleFonts.oswald(
-            fontSize: 13.0,
+          style: GoogleFonts.poppins(
+            fontSize: 10.0,
             fontWeight: FontWeight.w700,
             color: Get.theme.textTheme.bodySmall?.color,
           ),
         ),
-
         trailing: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              "$closeTime",
-              style: GoogleFonts.oswald(
+              closeTime ?? '-',
+              style: GoogleFonts.poppins(
                 color: Get.theme.textTheme.bodySmall?.color,
                 fontWeight: FontWeight.w600,
-                fontSize: 11.0,
+                fontSize: 10.0,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               profitText,
-              style: GoogleFonts.oswald(
+              style: GoogleFonts.poppins(
                 color: profitColor,
                 fontWeight: FontWeight.w600,
-                fontSize: 13.0,
+                fontSize: 10.0,
               ),
             ),
           ],
@@ -1117,8 +1134,8 @@ class _PositionTile extends StatelessWidget {
                         children: [
                           Text(
                             "Open: ",
-                            style: GoogleFonts.oswald(
-                              fontSize: 13.0,
+                            style: GoogleFonts.poppins(
+                              fontSize: 10.0,
                               fontWeight: FontWeight.w700,
                               color: Get.theme.textTheme.bodySmall?.color,
                             ),
@@ -1127,8 +1144,8 @@ class _PositionTile extends StatelessWidget {
                             child: Text(
                               openTime ?? "-",
                               textAlign: TextAlign.right,
-                              style: GoogleFonts.oswald(
-                                fontSize: 13.0,
+                              style: GoogleFonts.poppins(
+                                fontSize: 10.0,
                                 fontWeight: FontWeight.w700,
                                 color: Get.theme.textTheme.bodySmall?.color,
                               ),
@@ -1150,8 +1167,8 @@ class _PositionTile extends StatelessWidget {
                         children: [
                           Text(
                             "S / L: ",
-                            style: GoogleFonts.oswald(
-                              fontSize: 13.0,
+                            style: GoogleFonts.poppins(
+                              fontSize: 10.0,
                               fontWeight: FontWeight.w700,
                               color: Get.theme.textTheme.bodySmall?.color,
                             ),
@@ -1161,8 +1178,8 @@ class _PositionTile extends StatelessWidget {
                               (stopLoss != null && stopLoss != "0")
                                   ? stopLoss!
                                   : "–",
-                              style: GoogleFonts.oswald(
-                                fontSize: 13.0,
+                              style: GoogleFonts.poppins(
+                                fontSize: 10.0,
                                 fontWeight: FontWeight.w700,
                                 color: Get.theme.textTheme.bodySmall?.color,
                               ),
@@ -1176,8 +1193,8 @@ class _PositionTile extends StatelessWidget {
                         children: [
                           Text(
                             "Swap: ",
-                            style: GoogleFonts.oswald(
-                              fontSize: 13.0,
+                            style: GoogleFonts.poppins(
+                              fontSize: 10.0,
                               fontWeight: FontWeight.w700,
                               color: Get.theme.textTheme.bodySmall?.color,
                             ),
@@ -1186,8 +1203,8 @@ class _PositionTile extends StatelessWidget {
                             child: Text(
                               swap ?? "0.00",
                               textAlign: TextAlign.right,
-                              style: GoogleFonts.oswald(
-                                fontSize: 13.0,
+                              style: GoogleFonts.poppins(
+                                fontSize: 10.0,
                                 fontWeight: FontWeight.w700,
                                 color: Get.theme.textTheme.bodySmall?.color,
                               ),
@@ -1209,8 +1226,8 @@ class _PositionTile extends StatelessWidget {
                         children: [
                           Text(
                             "T / P: ",
-                            style: GoogleFonts.oswald(
-                              fontSize: 13.0,
+                            style: GoogleFonts.poppins(
+                              fontSize: 10.0,
                               fontWeight: FontWeight.w700,
                               color: Get.theme.textTheme.bodySmall?.color,
                             ),
@@ -1219,8 +1236,8 @@ class _PositionTile extends StatelessWidget {
                             (takeProfit != null && takeProfit != "0")
                                 ? takeProfit!
                                 : "–",
-                            style: GoogleFonts.oswald(
-                              fontSize: 13.0,
+                            style: GoogleFonts.poppins(
+                              fontSize: 10.0,
                               fontWeight: FontWeight.w700,
                               color: Get.theme.textTheme.bodySmall?.color,
                             ),
@@ -1233,8 +1250,8 @@ class _PositionTile extends StatelessWidget {
                         children: [
                           Text(
                             "Commission: ",
-                            style: GoogleFonts.oswald(
-                              fontSize: 13.0,
+                            style: GoogleFonts.poppins(
+                              fontSize: 10.0,
                               fontWeight: FontWeight.w700,
                               color: Get.theme.textTheme.bodySmall?.color,
                             ),
@@ -1243,8 +1260,8 @@ class _PositionTile extends StatelessWidget {
                             child: Text(
                               commission ?? "-",
                               textAlign: TextAlign.right,
-                              style: GoogleFonts.oswald(
-                                fontSize: 13.0,
+                              style: GoogleFonts.poppins(
+                                fontSize: 10.0,
                                 fontWeight: FontWeight.w700,
                                 color: Get.theme.textTheme.bodySmall?.color,
                               ),

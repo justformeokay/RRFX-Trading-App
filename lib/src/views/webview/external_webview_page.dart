@@ -113,6 +113,16 @@ class _ExternalWebViewPageState extends State<ExternalWebViewPage> {
               useShouldOverrideUrlLoading: true,
               mediaPlaybackRequiresUserGesture: false,
             ),
+            shouldOverrideUrlLoading: (controller, navigationAction) async {
+              // Prevent system from intercepting URLs that match app deeplink
+              // and re-triggering the deeplink handler (which causes auto-back bug)
+              final url = navigationAction.request.url;
+              if (url != null && url.host.contains('rrfx.co.id')) {
+                print('🔒 [ExternalWebView] Keeping navigation inside WebView: $url');
+                return NavigationActionPolicy.ALLOW;
+              }
+              return NavigationActionPolicy.ALLOW;
+            },
             onWebViewCreated: (controller) {
               _webViewController = controller;
               print('✅ [ExternalWebView] WebView created');
