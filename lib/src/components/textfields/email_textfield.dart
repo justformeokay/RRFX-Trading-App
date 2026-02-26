@@ -37,7 +37,7 @@ class _EmailTextFieldState extends State<EmailTextField> {
   RxBool isLoading = false.obs;
 
   bool _validateEmail(String value) {
-    final regex = RegExp(r'^[\w\.\-]+@([\w\-]+\.)+[a-zA-Z]{2,}$');
+    final regex = RegExp(r'^[a-zA-Z0-9\.\+\-_]+@[a-zA-Z0-9\.\-]+\.[a-zA-Z]{2,}$');
     return regex.hasMatch(value.trim());
   }
 
@@ -63,7 +63,7 @@ class _EmailTextFieldState extends State<EmailTextField> {
         return TextFormField(
           readOnly: isReadOnly,
           controller: widget.controller,
-          keyboardType: TextInputType.emailAddress,
+          keyboardType: TextInputType.text,
           cursorColor: CustomColor.secondaryColor,
           autovalidateMode: AutovalidateMode.onUserInteraction,
           autofillHints: const [AutofillHints.email],

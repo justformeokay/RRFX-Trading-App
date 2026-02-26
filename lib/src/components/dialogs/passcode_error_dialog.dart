@@ -206,7 +206,7 @@ class _PasscodeErrorDialogContentState
                         Expanded(
                           child: Text(
                             widget.isLocked
-                                ? "Coba lagi dalam ${widget.lockTimeRemaining! ~/ 60}:${(widget.lockTimeRemaining! % 60).toString().padLeft(2, '0')} detik"
+                                ? "Coba lagi dalam ${widget.lockTimeRemaining! ~/ 60}:${(widget.lockTimeRemaining! % 60).toString().padLeft(2, '0')} menit"
                                 : "Sisa ${widget.remainingAttempts} percobaan",
                             style: GoogleFonts.inter(
                               fontSize: 13,

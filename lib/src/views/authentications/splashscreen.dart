@@ -112,6 +112,18 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
 
       Get.log("✅ [SPLASH] Profile fetched successfully");
 
+      // ✅ Cek apakah akun terkunci dari API response
+      final isLocked = profileData.isLocked ?? false;
+      Get.log("🔒 [SPLASH] Account locked status from API: $isLocked");
+      
+      if (isLocked) {
+        // 🔒 Akun terkunci, redirect ke LockedPage
+        Get.log("🔒 [SPLASH] Account is locked (from API) - Redirecting to LockedPage");
+        _finishTransition(() {
+          Get.offAll(() => const LockedPage());
+        });
+        return;
+      }
       
       // ✅ Cek passcode dari API response (bukan dari local storage)
       final hasPasscode = profileData.passcode ?? true;

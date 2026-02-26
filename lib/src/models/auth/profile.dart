@@ -15,6 +15,7 @@ class ProfileModel {
     required this.urlPhoto,
     required this.status,
     required this.ver,
+    required this.isLocked,
     required this.passcode
   });
 
@@ -33,6 +34,7 @@ class ProfileModel {
   late final String? urlPhoto;
   late final String? status;
   late final String? ver;
+  late final bool? isLocked;
   late final bool? passcode;
 
   ProfileModel.fromJson(Map<String, dynamic> json) {
@@ -51,6 +53,7 @@ class ProfileModel {
     urlPhoto = json['url_photo'];
     status = json['status'];
     ver = json['ver'];
+    isLocked = json['is_locked'];
     passcode = json['passcode'];
   }
 
@@ -71,6 +74,7 @@ class ProfileModel {
       'url_photo': urlPhoto,
       'status': status,
       'ver': ver,
+      'is_locked': isLocked,
       'passcode': passcode,
     };
   }

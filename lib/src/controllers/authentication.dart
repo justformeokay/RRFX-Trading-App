@@ -267,6 +267,7 @@ class AuthController extends GetxController {
               "✅ [AUTH] Passcode exists on server - Going to VerifyPasscodePage",
             );
             Get.offAll(() => const VerifyPasscodePage());
+            // Get.offAll(() => const VerificationAccountPage());
           } else {
             Get.log(
               "🔐 [AUTH] Passcode not set up on server - Going to SetupPasscodePage",

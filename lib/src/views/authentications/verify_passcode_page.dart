@@ -355,7 +355,7 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
                           ),
                           SizedBox(height: 4),
                           Text(
-                            "Coba lagi dalam ${controller.lockTimeRemaining.value ~/ 60}:${(controller.lockTimeRemaining.value % 60).toString().padLeft(2, '0')} detik",
+                            "Coba lagi dalam ${controller.lockTimeRemaining.value ~/ 60}:${(controller.lockTimeRemaining.value % 60).toString().padLeft(2, '0')} menit",
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               color: CustomColor.textThemeLightSoftColor,

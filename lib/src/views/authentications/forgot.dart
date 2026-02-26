@@ -38,7 +38,7 @@ class _ForgotState extends State<Forgot> {
 
   void _validateEmail() {
     final email = emailController.text.trim();
-    final regex = RegExp(r'^[\w\.\-]+@([\w\-]+\.)+[a-zA-Z]{2,}$');
+    final regex = RegExp(r'^[a-zA-Z0-9\.\+\-_]+@[a-zA-Z0-9\.\-]+\.[a-zA-Z]{2,}$');
     isEmailValid.value = email.isNotEmpty && regex.hasMatch(email);
   }
 

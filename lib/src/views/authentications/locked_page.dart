@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/views/authentications/forgot.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LockedPage extends StatefulWidget {
   const LockedPage({super.key});
@@ -233,7 +234,9 @@ class _LockedPageState extends State<LockedPage> with TickerProviderStateMixin {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: () {
+                      onPressed: () async {
+                        SharedPreferences prefs = await SharedPreferences.getInstance();
+                        await prefs.clear();
                         Get.offAllNamed('/signin');
                       },
                       child: Text(

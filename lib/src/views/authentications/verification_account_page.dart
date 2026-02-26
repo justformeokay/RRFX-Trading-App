@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart' hide Response;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
@@ -62,6 +63,10 @@ class _VerificationAccountPageState extends State<VerificationAccountPage> {
 
   String originalPhoneNumber = "";
   RxBool isDataReady = false.obs;
+
+  /// 🔙 Back button tracking
+  int _backPressCount = 0;
+  Timer? _backPressTimer;
 
   @override
   void initState() {
@@ -192,8 +197,166 @@ class _VerificationAccountPageState extends State<VerificationAccountPage> {
     }
   }
 
+  /// 🔙 Handle back button press
+  void _handleBackPress() {
+    print('🔙 [VERIFICATION] Back pressed. Count: $_backPressCount');
+    _backPressCount++;
+
+    if (_backPressCount == 1) {
+      // First back press - cancel previous timer and start new one
+      _backPressTimer?.cancel();
+      _backPressTimer = Timer(const Duration(seconds: 3), () {
+        _backPressCount = 0;
+        print('🔙 [VERIFICATION] Back press counter reset');
+      });
+      // Don't allow back on first press
+      print('🔙 [VERIFICATION] First back press blocked');
+    } else if (_backPressCount >= 2) {
+      // Second back press - show exit dialog
+      _backPressTimer?.cancel();
+      _backPressCount = 0;
+      _showExitDialog();
+    }
+  }
+
+  /// 🚪 Show modern exit confirmation dialog
+  void _showExitDialog() {
+    final isDark = Theme.of(Get.context!).brightness == Brightness.dark;
+
+    showDialog(
+      context: Get.context!,
+      barrierDismissible: false,
+      builder: (BuildContext context) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.grey.shade900 : Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon dengan background gradient
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      CustomColor.secondaryColor.withOpacity(0.2),
+                      CustomColor.secondaryColor.withOpacity(0.1),
+                    ],
+                  ),
+                ),
+                child: Icon(
+                  Icons.exit_to_app_rounded,
+                  size: 40,
+                  color: CustomColor.secondaryColor,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Title
+              Text(
+                'Keluar Aplikasi?',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+
+              // Subtitle
+              Text(
+                'Apakah Anda yakin ingin menutup aplikasi ini?',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 28),
+
+              // Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: isDark
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade100,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Batal',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color:
+                              isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        // Close app
+                        print('🚀 [VERIFICATION] Exiting app');
+                        SystemNavigator.pop();
+                      },
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: CustomColor.secondaryColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Keluar',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
+    _backPressTimer?.cancel();
     fullNameController.dispose();
     emailController.dispose();
     kodePosController.dispose();
@@ -209,48 +372,55 @@ class _VerificationAccountPageState extends State<VerificationAccountPage> {
     final size = MediaQuery.of(context).size;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-      child: Scaffold(
-        backgroundColor: isDark ? null : Colors.grey[50],
-        appBar: AppBar(
-          elevation: 0,
-          forceMaterialTransparency: true,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBackPress();
+        }
+      },
+      child: GestureDetector(
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        child: Scaffold(
           backgroundColor: isDark ? null : Colors.grey[50],
-          leadingWidth: 56,
-          leading: Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: Center(
-              child: InkWell(
-                onTap: () => Navigator.pop(context),
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color:
-                        isDark ? Colors.white.withOpacity(0.1) : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow:
-                        isDark
-                            ? null
-                            : [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                  ),
-                  child: Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    size: 16,
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
+        // appBar: AppBar(
+        //   elevation: 0,
+        //   forceMaterialTransparency: true,
+        //   backgroundColor: isDark ? null : Colors.grey[50],
+        //   leadingWidth: 56,
+        //   leading: Padding(
+        //     padding: const EdgeInsets.only(left: 8),
+        //     child: Center(
+        //       child: InkWell(
+        //         onTap: () => Navigator.pop(context),
+        //         borderRadius: BorderRadius.circular(10),
+        //         child: Container(
+        //           padding: const EdgeInsets.all(6),
+        //           decoration: BoxDecoration(
+        //             color:
+        //                 isDark ? Colors.white.withOpacity(0.1) : Colors.white,
+        //             borderRadius: BorderRadius.circular(10),
+        //             boxShadow:
+        //                 isDark
+        //                     ? null
+        //                     : [
+        //                       BoxShadow(
+        //                         color: Colors.black.withOpacity(0.04),
+        //                         blurRadius: 8,
+        //                         offset: const Offset(0, 2),
+        //                       ),
+        //                     ],
+        //           ),
+        //           child: Icon(
+        //             Icons.arrow_back_ios_new_rounded,
+        //             size: 16,
+        //             color: isDark ? Colors.white : Colors.black87,
+        //           ),
+        //         ),
+        //       ),
+        //     ),
+        //   ),
+        // ),
         body: Obx(() {
           // Loading state
           if (!isDataReady.value) {
@@ -308,6 +478,7 @@ class _VerificationAccountPageState extends State<VerificationAccountPage> {
               child: Column(
                 children: [
                   // Header Section with gradient
+                  const SizedBox(height: 40),
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -796,6 +967,7 @@ class _VerificationAccountPageState extends State<VerificationAccountPage> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

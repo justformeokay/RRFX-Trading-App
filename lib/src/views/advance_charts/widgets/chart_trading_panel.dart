@@ -8,6 +8,7 @@ import 'package:icons_plus/icons_plus.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
+import 'package:rrfx/src/components/colors/default.dart';
 import '../controllers/chart_execution_controller.dart';
 
 class ChartTradingPanel extends StatefulWidget {
@@ -1156,180 +1157,185 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                         const SizedBox(height: 14),
 
                         // SL & TP Section
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Stop Loss (Points)',
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color:
-                                          isDark
-                                              ? Colors.white
-                                              : Colors.black87,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Container(
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color:
-                                          isDark
-                                              ? Colors.grey.shade800
-                                                  .withOpacity(0.6)
-                                              : Colors.white.withOpacity(0.8),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color:
-                                            isDark
-                                                ? Colors.grey.shade700
-                                                : Colors.grey.shade200,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    child: TextField(
-                                      controller: _slPointsController,
-                                      textAlign: TextAlign.center,
-                                      textAlignVertical:
-                                          TextAlignVertical.center,
-                                      keyboardType:
-                                          const TextInputType.numberWithOptions(
-                                            decimal: true,
-                                          ),
-                                      inputFormatters: [
-                                        FilteringTextInputFormatter.digitsOnly,
-                                      ],
-                                      style: GoogleFonts.inter(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color:
-                                            isDark
-                                                ? Colors.white
-                                                : Colors.black87,
-                                      ),
-                                      decoration: InputDecoration(
-                                        hintText: 'e.g., 50',
-                                        hintStyle: GoogleFonts.inter(
-                                          fontSize: 11,
-                                          color:
-                                              isDark
-                                                  ? Colors.grey.shade500
-                                                  : Colors.grey.shade400,
-                                        ),
-                                        border: InputBorder.none,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 8,
-                                            ),
-                                        prefixIcon: Icon(
-                                          Iconsax.shield_cross_bold,
-                                          size: 16,
-                                          color: Colors.red.shade400,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 10),
+                        // Row(
+                        //   children: [
+                        //     Expanded(
+                        //       child: Column(
+                        //         crossAxisAlignment: CrossAxisAlignment.start,
+                        //         children: [
+                        //           Text(
+                        //             'Stop Loss (Points)',
+                        //             textAlign: TextAlign.center,
+                        //             style: GoogleFonts.inter(
+                        //               fontSize: 11,
+                        //               fontWeight: FontWeight.w700,
+                        //               color:
+                        //                   isDark
+                        //                       ? Colors.white
+                        //                       : Colors.black87,
+                        //             ),
+                        //           ),
+                        //           const SizedBox(height: 6),
+                        //           Container(
+                        //             height: 40,
+                        //             decoration: BoxDecoration(
+                        //               color:
+                        //                   isDark
+                        //                       ? Colors.grey.shade800
+                        //                           .withOpacity(0.6)
+                        //                       : Colors.white.withOpacity(0.8),
+                        //               borderRadius: BorderRadius.circular(10),
+                        //               border: Border.all(
+                        //                 color:
+                        //                     isDark
+                        //                         ? Colors.grey.shade700
+                        //                         : Colors.grey.shade200,
+                        //                 width: 1.5,
+                        //               ),
+                        //             ),
+                        //             child: TextField(
+                        //               controller: _slPointsController,
+                        //               textAlign: TextAlign.center,
+                        //               textAlignVertical:
+                        //                   TextAlignVertical.center,
+                        //               keyboardType:
+                        //                   const TextInputType.numberWithOptions(
+                        //                     decimal: true,
+                        //                   ),
+                        //               inputFormatters: [
+                        //                 FilteringTextInputFormatter.digitsOnly,
+                        //               ],
+                        //               style: GoogleFonts.inter(
+                        //                 fontSize: 13,
+                        //                 fontWeight: FontWeight.w600,
+                        //                 color:
+                        //                     isDark
+                        //                         ? Colors.white
+                        //                         : Colors.black87,
+                        //               ),
+                        //               decoration: InputDecoration(
+                        //                 hintText: 'e.g., 50',
+                        //                 hintStyle: GoogleFonts.inter(
+                        //                   fontSize: 11,
+                        //                   color:
+                        //                       isDark
+                        //                           ? Colors.grey.shade500
+                        //                           : Colors.grey.shade400,
+                        //                 ),
+                        //                 border: InputBorder.none,
+                        //                 contentPadding:
+                        //                     const EdgeInsets.symmetric(
+                        //                       horizontal: 12,
+                        //                       vertical: 8,
+                        //                     ),
+                        //                 prefixIcon: Icon(
+                        //                   Iconsax.shield_cross_bold,
+                        //                   size: 16,
+                        //                   color: Colors.red.shade400,
+                        //                 ),
+                        //               ),
+                        //             ),
+                        //           ),
+                        //         ],
+                        //       ),
+                        //     ),
+                        //     const SizedBox(width: 10),
 
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Take Profit (Points)',
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color:
-                                          isDark
-                                              ? Colors.white
-                                              : Colors.black87,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Container(
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color:
-                                          isDark
-                                              ? Colors.grey.shade800
-                                                  .withOpacity(0.6)
-                                              : Colors.white.withOpacity(0.8),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color:
-                                            isDark
-                                                ? Colors.grey.shade700
-                                                : Colors.grey.shade200,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    child: TextField(
-                                      controller: _tpPointsController,
-                                      textAlign: TextAlign.center,
-                                      textAlignVertical: TextAlignVertical.center,
-                                      keyboardType:
-                                          const TextInputType.numberWithOptions(
-                                            decimal: true,
-                                          ),
-                                      inputFormatters: [
-                                        FilteringTextInputFormatter.digitsOnly,
-                                      ],
-                                      style: GoogleFonts.inter(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color:
-                                            isDark
-                                                ? Colors.white
-                                                : Colors.black87,
-                                      ),
-                                      decoration: InputDecoration(
-                                        hintText: 'e.g., 100',
-                                        hintStyle: GoogleFonts.inter(
-                                          fontSize: 11,
-                                          color:
-                                              isDark
-                                                  ? Colors.grey.shade500
-                                                  : Colors.grey.shade400,
-                                        ),
-                                        border: InputBorder.none,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 8,
-                                            ),
-                                        prefixIcon: Icon(
-                                          Iconsax.medal_star_bold,
-                                          size: 16,
-                                          color: Colors.green.shade400,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Center(child: Text("Atau")),
-                        const SizedBox(height: 8),
+                        //     Expanded(
+                        //       child: Column(
+                        //         crossAxisAlignment: CrossAxisAlignment.start,
+                        //         children: [
+                        //           Text(
+                        //             'Take Profit (Points)',
+                        //             textAlign: TextAlign.center,
+                        //             style: GoogleFonts.inter(
+                        //               fontSize: 11,
+                        //               fontWeight: FontWeight.w700,
+                        //               color:
+                        //                   isDark
+                        //                       ? Colors.white
+                        //                       : Colors.black87,
+                        //             ),
+                        //           ),
+                        //           const SizedBox(height: 6),
+                        //           Container(
+                        //             height: 40,
+                        //             decoration: BoxDecoration(
+                        //               color:
+                        //                   isDark
+                        //                       ? Colors.grey.shade800
+                        //                           .withOpacity(0.6)
+                        //                       : Colors.white.withOpacity(0.8),
+                        //               borderRadius: BorderRadius.circular(10),
+                        //               border: Border.all(
+                        //                 color:
+                        //                     isDark
+                        //                         ? Colors.grey.shade700
+                        //                         : Colors.grey.shade200,
+                        //                 width: 1.5,
+                        //               ),
+                        //             ),
+                        //             child: TextField(
+                        //               controller: _tpPointsController,
+                        //               textAlign: TextAlign.center,
+                        //               textAlignVertical: TextAlignVertical.center,
+                        //               keyboardType:
+                        //                   const TextInputType.numberWithOptions(
+                        //                     decimal: true,
+                        //                   ),
+                        //               inputFormatters: [
+                        //                 FilteringTextInputFormatter.digitsOnly,
+                        //               ],
+                        //               style: GoogleFonts.inter(
+                        //                 fontSize: 13,
+                        //                 fontWeight: FontWeight.w600,
+                        //                 color:
+                        //                     isDark
+                        //                         ? Colors.white
+                        //                         : Colors.black87,
+                        //               ),
+                        //               decoration: InputDecoration(
+                        //                 hintText: 'e.g., 100',
+                        //                 hintStyle: GoogleFonts.inter(
+                        //                   fontSize: 11,
+                        //                   color:
+                        //                       isDark
+                        //                           ? Colors.grey.shade500
+                        //                           : Colors.grey.shade400,
+                        //                 ),
+                        //                 border: InputBorder.none,
+                        //                 contentPadding:
+                        //                     const EdgeInsets.symmetric(
+                        //                       horizontal: 12,
+                        //                       vertical: 8,
+                        //                     ),
+                        //                 prefixIcon: Icon(
+                        //                   Iconsax.medal_star_bold,
+                        //                   size: 16,
+                        //                   color: Colors.green.shade400,
+                        //                 ),
+                        //               ),
+                        //             ),
+                        //           ),
+                        //         ],
+                        //       ),
+                        //     ),
+                        //   ],
+                        // ),
+                        // const SizedBox(height: 8),
+                        // Center(child: Text("Atau")),
+                        // const SizedBox(height: 8),
                         // SL & TP by Prices
                         Obx(
                           () {
                             final price = widget.currentPrice?.value;
                             if (price == null) {
-                              return const SizedBox.shrink();
+                              return const SizedBox(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation(CustomColor.secondaryColor),
+                                ),
+                              );
                             }
                             return Row(
                               children: [
