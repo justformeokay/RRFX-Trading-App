@@ -242,7 +242,7 @@ class _PendingAccountState extends State<PendingAccount> {
         Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 12,
+            fontSize: 10,
             fontWeight: FontWeight.w500,
             color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
           ),
@@ -250,7 +250,7 @@ class _PendingAccountState extends State<PendingAccount> {
         Text(
           value,
           style: GoogleFonts.inter(
-            fontSize: 13,
+            fontSize: 10,
             fontWeight: FontWeight.w600,
             color: Theme.of(context).textTheme.bodyLarge?.color,
           ),

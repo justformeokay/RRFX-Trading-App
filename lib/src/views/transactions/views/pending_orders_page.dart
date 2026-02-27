@@ -1785,249 +1785,249 @@ class _EditPositionDialogState extends State<_EditPositionDialog> {
 
               const SizedBox(height: 16),
 
-              // TP Field
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        'Take Profit (TP) - Points',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isDark
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade700,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        order.takeProfit > 0
-                            ? 'Current: ${order.takeProfit.toStringAsFixed(0)} pts'
-                            : 'Current: Not set',
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          color: order.takeProfit > 0
-                              ? Colors.green
-                              : isDark
-                                  ? Colors.grey.shade600
-                                  : Colors.grey.shade500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Obx(
-                    () => TextField(
-                      controller: tpController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: false),
-                      enabled: !isSaving.value,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'e.g., 6000 (integer points)',
-                        helperText: 'Leave empty to remove TP',
-                        counterText: '',
-                        helperStyle: GoogleFonts.inter(
-                          fontSize: 10,
-                          color: isDark
-                              ? Colors.grey.shade600
-                              : Colors.grey.shade500,
-                        ),
-                        hintStyle: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: isDark
-                              ? Colors.grey.shade600
-                              : Colors.grey.shade400,
-                        ),
-                        errorText: tpError.value.isEmpty ? null : tpError.value,
-                        prefixIcon: Padding(
-                          padding: const EdgeInsets.only(left: 12, right: 8),
-                          child: Icon(
-                            Iconsax.arrow_up_bold,
-                            size: 18,
-                            color: Colors.green,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? Colors.grey.shade700
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: CustomColor.secondaryColor,
-                            width: 2,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? Colors.grey.shade700
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-                        disabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? Colors.grey.shade800
-                                : Colors.grey.shade200,
-                          ),
-                        ),
-                        filled: true,
-                        fillColor: isDark
-                            ? Colors.grey.shade800.withOpacity(0.3)
-                            : Colors.grey.shade50,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              // // TP Field
+              // Column(
+              //   crossAxisAlignment: CrossAxisAlignment.start,
+              //   children: [
+              //     Row(
+              //       children: [
+              //         Text(
+              //           'Take Profit (TP) - Points',
+              //           style: GoogleFonts.inter(
+              //             fontSize: 12,
+              //             fontWeight: FontWeight.w600,
+              //             color: isDark
+              //                 ? Colors.grey.shade400
+              //                 : Colors.grey.shade700,
+              //           ),
+              //         ),
+              //         const Spacer(),
+              //         Text(
+              //           order.takeProfit > 0
+              //               ? 'Current: ${order.takeProfit.toStringAsFixed(0)} pts'
+              //               : 'Current: Not set',
+              //           style: GoogleFonts.inter(
+              //             fontSize: 10,
+              //             color: order.takeProfit > 0
+              //                 ? Colors.green
+              //                 : isDark
+              //                     ? Colors.grey.shade600
+              //                     : Colors.grey.shade500,
+              //           ),
+              //         ),
+              //       ],
+              //     ),
+              //     const SizedBox(height: 6),
+              //     Obx(
+              //       () => TextField(
+              //         controller: tpController,
+              //         keyboardType:
+              //             const TextInputType.numberWithOptions(decimal: false),
+              //         enabled: !isSaving.value,
+              //         style: GoogleFonts.inter(
+              //           fontSize: 14,
+              //           fontWeight: FontWeight.w600,
+              //           color: isDark ? Colors.white : Colors.black87,
+              //         ),
+              //         decoration: InputDecoration(
+              //           hintText: 'e.g., 6000 (integer points)',
+              //           helperText: 'Leave empty to remove TP',
+              //           counterText: '',
+              //           helperStyle: GoogleFonts.inter(
+              //             fontSize: 10,
+              //             color: isDark
+              //                 ? Colors.grey.shade600
+              //                 : Colors.grey.shade500,
+              //           ),
+              //           hintStyle: GoogleFonts.inter(
+              //             fontSize: 14,
+              //             color: isDark
+              //                 ? Colors.grey.shade600
+              //                 : Colors.grey.shade400,
+              //           ),
+              //           errorText: tpError.value.isEmpty ? null : tpError.value,
+              //           prefixIcon: Padding(
+              //             padding: const EdgeInsets.only(left: 12, right: 8),
+              //             child: Icon(
+              //               Iconsax.arrow_up_bold,
+              //               size: 18,
+              //               color: Colors.green,
+              //             ),
+              //           ),
+              //           contentPadding: const EdgeInsets.symmetric(
+              //             horizontal: 14,
+              //             vertical: 12,
+              //           ),
+              //           border: OutlineInputBorder(
+              //             borderRadius: BorderRadius.circular(10),
+              //             borderSide: BorderSide(
+              //               color: isDark
+              //                   ? Colors.grey.shade700
+              //                   : Colors.grey.shade300,
+              //             ),
+              //           ),
+              //           focusedBorder: OutlineInputBorder(
+              //             borderRadius: BorderRadius.circular(10),
+              //             borderSide: BorderSide(
+              //               color: CustomColor.secondaryColor,
+              //               width: 2,
+              //             ),
+              //           ),
+              //           enabledBorder: OutlineInputBorder(
+              //             borderRadius: BorderRadius.circular(10),
+              //             borderSide: BorderSide(
+              //               color: isDark
+              //                   ? Colors.grey.shade700
+              //                   : Colors.grey.shade300,
+              //             ),
+              //           ),
+              //           disabledBorder: OutlineInputBorder(
+              //             borderRadius: BorderRadius.circular(10),
+              //             borderSide: BorderSide(
+              //               color: isDark
+              //                   ? Colors.grey.shade800
+              //                   : Colors.grey.shade200,
+              //             ),
+              //           ),
+              //           filled: true,
+              //           fillColor: isDark
+              //               ? Colors.grey.shade800.withOpacity(0.3)
+              //               : Colors.grey.shade50,
+              //         ),
+              //       ),
+              //     ),
+              //   ],
+              // ),
 
-              const SizedBox(height: 16),
+              // const SizedBox(height: 16),
 
-              // SL Field
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        'Stop Loss (SL) - Points',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isDark
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade700,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        order.stopLoss > 0
-                            ? 'Current: ${order.stopLoss.toStringAsFixed(0)} pts'
-                            : 'Current: Not set',
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          color: order.stopLoss > 0
-                              ? Colors.red
-                              : isDark
-                                  ? Colors.grey.shade600
-                                  : Colors.grey.shade500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Obx(
-                    () => TextField(
-                      controller: slController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: false),
-                      enabled: !isSaving.value,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'e.g., 100 (integer points)',
-                        helperText: 'Leave empty to remove SL',
-                        counterText: '',
-                        helperStyle: GoogleFonts.inter(
-                          fontSize: 10,
-                          color: isDark
-                              ? Colors.grey.shade600
-                              : Colors.grey.shade500,
-                        ),
-                        hintStyle: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: isDark
-                              ? Colors.grey.shade600
-                              : Colors.grey.shade400,
-                        ),
-                        errorText: slError.value.isEmpty ? null : slError.value,
-                        prefixIcon: Padding(
-                          padding: const EdgeInsets.only(left: 12, right: 8),
-                          child: Icon(
-                            Iconsax.arrow_down_bold,
-                            size: 18,
-                            color: Colors.red,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? Colors.grey.shade700
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: CustomColor.secondaryColor,
-                            width: 2,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? Colors.grey.shade700
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-                        disabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? Colors.grey.shade800
-                                : Colors.grey.shade200,
-                          ),
-                        ),
-                        filled: true,
-                        fillColor: isDark
-                            ? Colors.grey.shade800.withOpacity(0.3)
-                            : Colors.grey.shade50,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              // // SL Field
+              // Column(
+              //   crossAxisAlignment: CrossAxisAlignment.start,
+              //   children: [
+              //     Row(
+              //       children: [
+              //         Text(
+              //           'Stop Loss (SL) - Points',
+              //           style: GoogleFonts.inter(
+              //             fontSize: 12,
+              //             fontWeight: FontWeight.w600,
+              //             color: isDark
+              //                 ? Colors.grey.shade400
+              //                 : Colors.grey.shade700,
+              //           ),
+              //         ),
+              //         const Spacer(),
+              //         Text(
+              //           order.stopLoss > 0
+              //               ? 'Current: ${order.stopLoss.toStringAsFixed(0)} pts'
+              //               : 'Current: Not set',
+              //           style: GoogleFonts.inter(
+              //             fontSize: 10,
+              //             color: order.stopLoss > 0
+              //                 ? Colors.red
+              //                 : isDark
+              //                     ? Colors.grey.shade600
+              //                     : Colors.grey.shade500,
+              //           ),
+              //         ),
+              //       ],
+              //     ),
+              //     const SizedBox(height: 6),
+              //     Obx(
+              //       () => TextField(
+              //         controller: slController,
+              //         keyboardType:
+              //             const TextInputType.numberWithOptions(decimal: false),
+              //         enabled: !isSaving.value,
+              //         style: GoogleFonts.inter(
+              //           fontSize: 14,
+              //           fontWeight: FontWeight.w600,
+              //           color: isDark ? Colors.white : Colors.black87,
+              //         ),
+              //         decoration: InputDecoration(
+              //           hintText: 'e.g., 100 (integer points)',
+              //           helperText: 'Leave empty to remove SL',
+              //           counterText: '',
+              //           helperStyle: GoogleFonts.inter(
+              //             fontSize: 10,
+              //             color: isDark
+              //                 ? Colors.grey.shade600
+              //                 : Colors.grey.shade500,
+              //           ),
+              //           hintStyle: GoogleFonts.inter(
+              //             fontSize: 14,
+              //             color: isDark
+              //                 ? Colors.grey.shade600
+              //                 : Colors.grey.shade400,
+              //           ),
+              //           errorText: slError.value.isEmpty ? null : slError.value,
+              //           prefixIcon: Padding(
+              //             padding: const EdgeInsets.only(left: 12, right: 8),
+              //             child: Icon(
+              //               Iconsax.arrow_down_bold,
+              //               size: 18,
+              //               color: Colors.red,
+              //             ),
+              //           ),
+              //           contentPadding: const EdgeInsets.symmetric(
+              //             horizontal: 14,
+              //             vertical: 12,
+              //           ),
+              //           border: OutlineInputBorder(
+              //             borderRadius: BorderRadius.circular(10),
+              //             borderSide: BorderSide(
+              //               color: isDark
+              //                   ? Colors.grey.shade700
+              //                   : Colors.grey.shade300,
+              //             ),
+              //           ),
+              //           focusedBorder: OutlineInputBorder(
+              //             borderRadius: BorderRadius.circular(10),
+              //             borderSide: BorderSide(
+              //               color: CustomColor.secondaryColor,
+              //               width: 2,
+              //             ),
+              //           ),
+              //           enabledBorder: OutlineInputBorder(
+              //             borderRadius: BorderRadius.circular(10),
+              //             borderSide: BorderSide(
+              //               color: isDark
+              //                   ? Colors.grey.shade700
+              //                   : Colors.grey.shade300,
+              //             ),
+              //           ),
+              //           disabledBorder: OutlineInputBorder(
+              //             borderRadius: BorderRadius.circular(10),
+              //             borderSide: BorderSide(
+              //               color: isDark
+              //                   ? Colors.grey.shade800
+              //                   : Colors.grey.shade200,
+              //             ),
+              //           ),
+              //           filled: true,
+              //           fillColor: isDark
+              //               ? Colors.grey.shade800.withOpacity(0.3)
+              //               : Colors.grey.shade50,
+              //         ),
+              //       ),
+              //     ),
+              //   ],
+              // ),
 
-              const SizedBox(height: 12),
+              // const SizedBox(height: 12),
 
-              // "Atau" separator
-              Center(
-                child: Text(
-                  'Atau',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                  ),
-                ),
-              ),
+              // // "Atau" separator
+              // Center(
+              //   child: Text(
+              //     'Atau',
+              //     style: GoogleFonts.inter(
+              //       fontSize: 13,
+              //       fontWeight: FontWeight.w600,
+              //       color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+              //     ),
+              //   ),
+              // ),
 
               const SizedBox(height: 12),
 

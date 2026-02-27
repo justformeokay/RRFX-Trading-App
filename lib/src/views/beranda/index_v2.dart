@@ -13,7 +13,6 @@ import 'package:rrfx/src/components/alerts/popup.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
 import 'package:rrfx/src/helpers/variables/global_variables.dart';
-import 'package:rrfx/src/components/bottomsheets/material_bottom_sheets.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/popups/pending_verification_popup.dart';
 import 'package:rrfx/src/controllers/home.dart';
@@ -127,33 +126,38 @@ class _IndexV2State extends State<IndexV2> {
 
   /// Fungsi untuk mendapatkan style (color & icon) berdasarkan status
   Map<String, dynamic> getStatusStyle(String status) {
-    return statusStyleMap[status] ?? {
-      "color": Colors.grey,
-      "icon": Iconsax.info_circle_outline,
-      "label": status,
-    };
+    return statusStyleMap[status] ??
+        {
+          "color": Colors.grey,
+          "icon": Iconsax.info_circle_outline,
+          "label": status,
+        };
   }
 
   void fetchPendingAccountStatus() {
-    homeController.getPendingAccount().then((result) {
-      containsPendingAccount.value = result;
-      
-      final response = homeController.pendingModel.value?.response;
-      if (response?.isNotEmpty == true) {
-        final status = response![0].status ?? "Proses Akun";
-        pendingAccountStatus.value = status;
-        
-        // Set icon dan color berdasarkan status
-        final style = getStatusStyle(status);
-        backgroundStatusPending.value = style["color"] as Color;
-        iconStatusPending.value = style["icon"] as IconData;
-      }
-    }).catchError((e) {
-      ErrorPopup.show(
-        title: "Status Tidak Dikenali",
-        message: "Status akun Anda tidak dapat dikenali oleh sistem. Silakan hubungi customer support kami.",
-      );
-    });
+    homeController
+        .getPendingAccount()
+        .then((result) {
+          containsPendingAccount.value = result;
+
+          final response = homeController.pendingModel.value?.response;
+          if (response?.isNotEmpty == true) {
+            final status = response![0].status ?? "Proses Akun";
+            pendingAccountStatus.value = status;
+
+            // Set icon dan color berdasarkan status
+            final style = getStatusStyle(status);
+            backgroundStatusPending.value = style["color"] as Color;
+            iconStatusPending.value = style["icon"] as IconData;
+          }
+        })
+        .catchError((e) {
+          ErrorPopup.show(
+            title: "Status Tidak Dikenali",
+            message:
+                "Status akun Anda tidak dapat dikenali oleh sistem. Silakan hubungi customer support kami.",
+          );
+        });
   }
 
   @override
@@ -193,22 +197,29 @@ class _IndexV2State extends State<IndexV2> {
         'Content-Type': 'application/json',
       };
       final response = await http
-          .post(Uri.parse('${GlobalVariable.mainURL}/regol/createDemo'), headers: header)
-          .timeout(const Duration(seconds: 20), onTimeout: () {
-        throw TimeoutException('Request timeout');
-      });
+          .post(
+            Uri.parse('${GlobalVariable.mainURL}/regol/createDemo'),
+            headers: header,
+          )
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw TimeoutException('Request timeout');
+            },
+          );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Get demo account reference
         final accountController = Get.find<AccountController>();
-        
+
         // Close the warning dialog first
         Get.back();
-        
+
         // Show success dialog and refresh account data
         ModernAlertDialog.success(
           title: 'Berhasil',
-          message: 'Akun demo berhasil dibuat! Refresh halaman untuk melihat akun demo Anda.',
+          message:
+              'Akun demo berhasil dibuat! Refresh halaman untuk melihat akun demo Anda.',
           buttonText: 'OK',
           onPressed: () {
             Get.back();
@@ -240,7 +251,8 @@ class _IndexV2State extends State<IndexV2> {
       if (mounted) {
         ModernAlertDialog.error(
           title: 'Timeout',
-          message: 'Koneksi ke server memakan waktu terlalu lama. Coba lagi nanti.',
+          message:
+              'Koneksi ke server memakan waktu terlalu lama. Coba lagi nanti.',
           buttonText: 'OK',
           onPressed: () {
             Get.back();
@@ -405,9 +417,11 @@ class _IndexV2State extends State<IndexV2> {
                         : Container(
                           margin: const EdgeInsets.all(16.0),
                           width: double.infinity,
-                          height: kIsWeb 
-                            ? 200.0  // Fixed height untuk web platform
-                            : size.width / 2.3,  // Responsive height untuk mobile
+                          height:
+                              kIsWeb
+                                  ? 200.0 // Fixed height untuk web platform
+                                  : size.width /
+                                      2.3, // Responsive height untuk mobile
                           decoration: BoxDecoration(
                             color: Theme.of(context).cardColor, // ✅ lebih tepat
                             borderRadius: BorderRadius.circular(10.0),
@@ -438,8 +452,10 @@ class _IndexV2State extends State<IndexV2> {
                                   children: [
                                     // === Balance Section ===
                                     Column(
-                                      crossAxisAlignment:CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Row(
                                           children: [
@@ -740,7 +756,10 @@ class _IndexV2State extends State<IndexV2> {
               ),
               Obx(
                 () => Container(
-                  margin: containsPendingAccount.value ? null : const EdgeInsets.only(bottom: 16.0),
+                  margin:
+                      containsPendingAccount.value
+                          ? null
+                          : const EdgeInsets.only(bottom: 16.0),
                   padding: const EdgeInsets.symmetric(vertical: 24.0),
                   width: double.infinity,
                   color: Theme.of(context).cardColor, // ✅ mengikuti theme
@@ -750,7 +769,7 @@ class _IndexV2State extends State<IndexV2> {
                       children: List.generate(menus.length, (i) {
                         final appName = menus[i]['app_name'] as String;
                         final icon = menus[i]['icon'] as IconData;
-                
+
                         return Expanded(
                           child: CupertinoButton(
                             padding: EdgeInsets.zero,
@@ -804,105 +823,118 @@ class _IndexV2State extends State<IndexV2> {
                   ),
                 ),
               ),
-              Obx(
-                () {
-                  if(pendingAccountStatus.value.isEmpty == false && containsPendingAccount.value) {
-                    final isDark = Get.isDarkMode;
-                    final color = backgroundStatusPending.value ?? Colors.grey;
-                    return Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.08),
-                        border: Border.all(
-                          color: color.withOpacity(0.3),
-                          width: 1.5,
-                        ),
-                        borderRadius: BorderRadius.circular(14),
+              Obx(() {
+                if (pendingAccountStatus.value.isEmpty == false &&
+                    containsPendingAccount.value) {
+                  final isDark = Get.isDarkMode;
+                  final color = backgroundStatusPending.value ?? Colors.grey;
+                  return Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.08),
+                      border: Border.all(
+                        color: color.withOpacity(0.3),
+                        width: 1.5,
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: color.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  iconStatusPending.value ?? Iconsax.info_circle_outline,
-                                  color: color,
-                                  size: 24,
-                                ),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: color.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "Status Registrasi Akun Trading",
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: isDark ? Colors.white : Colors.black87,
-                                      ),
+                              child: Icon(
+                                iconStatusPending.value ??
+                                    Iconsax.info_circle_outline,
+                                color: color,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Status Registrasi Akun Trading",
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color:
+                                          isDark
+                                              ? Colors.white
+                                              : Colors.black87,
                                     ),
-                                    const SizedBox(height: 4),
-                                    Obx(() => Text(
-                                      pendingAccountStatus.value.isEmpty ? "Sedang memproses..." : "Status: ${getStatusStyle(pendingAccountStatus.value)['label']}",
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Obx(
+                                    () => Text(
+                                      pendingAccountStatus.value.isEmpty
+                                          ? "Sedang memproses..."
+                                          : "Status: ${getStatusStyle(pendingAccountStatus.value)['label']}",
                                       style: GoogleFonts.inter(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w500,
-                                        color: isDark ? Colors.white70 : Colors.black54,
+                                        color:
+                                            isDark
+                                                ? Colors.white70
+                                                : Colors.black54,
                                       ),
-                                    )),
-                                  ],
-                                ),
-                              ),
-                              buildPendingStatusActionButton(),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: color.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Iconsax.info_circle_outline,
-                                  size: 16,
-                                  color: color,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    "Proses verifikasi akun Anda sedang berlangsung. Biasanya memakan waktu 1-2 hari kerja.",
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                      color: color,
-                                      height: 1.4,
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
+                            buildPendingStatusActionButton(),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: color.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                        ],
-                      ),
-                    );
-                  }
-                  return const SizedBox(height: 10);
+                          child: Row(
+                            children: [
+                              Icon(
+                                Iconsax.info_circle_outline,
+                                size: 16,
+                                color: color,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  "Proses verifikasi akun Anda sedang berlangsung. Biasanya memakan waktu 1-2 hari kerja.",
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: color,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
                 }
-              ),
+                return const SizedBox(height: 10);
+              }),
               PromotionSection(),
               Container(
                 margin: const EdgeInsets.only(bottom: 16.0),
@@ -1026,7 +1058,8 @@ class _IndexV2State extends State<IndexV2> {
                               if (controller.demoAccounts.isEmpty) {
                                 ModernAlertDialog.warning(
                                   title: 'Belum Ada Akun Demo',
-                                  message: 'Anda perlu membuat akun demo terlebih dahulu untuk menggunakan fitur chart trading. Tekan tombol di bawah untuk membuat akun demo.',
+                                  message:
+                                      'Anda perlu membuat akun demo terlebih dahulu untuk menggunakan fitur chart trading. Tekan tombol di bawah untuk membuat akun demo.',
                                   buttonText: 'Buat Akun Demo',
                                   onPressed: _createDemoAccount,
                                 );
@@ -1226,6 +1259,376 @@ class _IndexV2State extends State<IndexV2> {
     );
   }
 
+  /// === Modern Transaction Bottom Sheet ===
+  void _showTransactionBottomSheet(BuildContext context, Size size) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // === Header ===
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Pilih Transaksi",
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Iconsax.close_circle_outline,
+                            color: Colors.black54,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // === Transaction Options ===
+                  _buildTransactionCard(
+                    icon: Iconsax.arrow_down_1_outline,
+                    iconColor: Colors.green,
+                    iconBgColor: Colors.green.withOpacity(0.1),
+                    title: "Deposit",
+                    subtitle: "Tambahkan dana ke akun trading Anda",
+                    onTap: () {
+                      Navigator.pop(context);
+                      Future.delayed(const Duration(milliseconds: 300), () {
+                        _showSelectAccountBottomSheet(context, size, "deposit");
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  _buildTransactionCard(
+                    icon: Iconsax.arrow_up_3_outline,
+                    iconColor: Colors.red,
+                    iconBgColor: Colors.red.withOpacity(0.1),
+                    title: "Withdraw",
+                    subtitle: "Tarik dana dari akun trading Anda",
+                    onTap: () {
+                      Navigator.pop(context);
+                      Future.delayed(const Duration(milliseconds: 300), () {
+                        _showSelectAccountBottomSheet(
+                          context,
+                          size,
+                          "withdraw",
+                        );
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  _buildTransactionCard(
+                    icon: Iconsax.arrow_swap_horizontal_outline,
+                    iconColor: CustomColor.secondaryColor,
+                    iconBgColor: CustomColor.secondaryColor.withOpacity(0.1),
+                    title: "Internal Transfer",
+                    subtitle: "Transfer antar akun trading Anda",
+                    onTap: () {
+                      Navigator.pop(context);
+                      Future.delayed(const Duration(milliseconds: 300), () {
+                        Get.to(() => InternalTransfer());
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// === Transaction Card Widget ===
+  Widget _buildTransactionCard({
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBgColor,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
+          ),
+          child: Row(
+            children: [
+              // Icon Container
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: iconBgColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: iconColor, size: 26),
+              ),
+              const SizedBox(width: 16),
+
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Arrow
+              Icon(
+                Iconsax.arrow_right_3_outline,
+                color: Colors.grey.shade400,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// === Select Account Bottom Sheet ===
+  void _showSelectAccountBottomSheet(
+    BuildContext context,
+    Size size,
+    String transactionType,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // === Header ===
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Pilih Akun Trading",
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Iconsax.close_circle_outline,
+                            color: Colors.black54,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // === Account List ===
+                  Column(
+                    children: List.generate(controller.realAccounts.length, (
+                      index,
+                    ) {
+                      final acc = controller.realAccounts[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildAccountCard(
+                          accountName: acc.namaTipeAkun ?? "",
+                          accountLogin: acc.login ?? "",
+                          balance: acc.balance ?? "0",
+                          currency:
+                              controller
+                                  .selectedAccount
+                                  .value
+                                  ?.accountCurrency ??
+                              "USD",
+                          onTap: () {
+                            Navigator.pop(context);
+                            Future.delayed(
+                              const Duration(milliseconds: 300),
+                              () {
+                                if (transactionType == "deposit") {
+                                  Get.to(
+                                    () =>
+                                        Deposit(id: acc.id, idLogin: acc.login),
+                                  );
+                                } else if (transactionType == "withdraw") {
+                                  Get.to(
+                                    () => Withdrawal(
+                                      id: acc.id,
+                                      idLogin: acc.login,
+                                    ),
+                                  );
+                                }
+                              },
+                            );
+                          },
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// === Account Card Widget ===
+  Widget _buildAccountCard({
+    required String accountName,
+    required String accountLogin,
+    required String balance,
+    required String currency,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.grey.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: CustomColor.secondaryColor.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              // Account Icon
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: CustomColor.secondaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Iconsax.wallet_2_outline,
+                  color: CustomColor.secondaryColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "$accountName - $accountLogin",
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Balance: $currency $balance",
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: CustomColor.secondaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Arrow
+              Icon(
+                Iconsax.arrow_right_3_outline,
+                color: CustomColor.secondaryColor,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   /// === Extracted Handler Function ===
   void _handleMenuTap(BuildContext context, Size size, String appName) async {
     switch (appName) {
@@ -1270,120 +1673,7 @@ class _IndexV2State extends State<IndexV2> {
         }
 
         // === IF ALL VALIDATIONS PASS, SHOW TRANSACTION MENU ===
-        CustomMaterialBottomSheets.defaultBottomSheet(
-          context,
-          isScrolledController: false,
-          title: "Pilih Transaksi",
-          size: size,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.arrow_downward, color: Colors.green),
-              title: Text(
-                'Deposit',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-              ),
-              style: ListTileStyle.list,
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.pop(context);
-                Future.delayed(Duration(milliseconds: 300), () {
-                  CustomMaterialBottomSheets.defaultBottomSheet(
-                    context,
-                    size: size,
-                    title: "Pilih Akun Trading",
-                    children: List.generate(controller.realAccounts.length, (
-                      real,
-                    ) {
-                      final acc = controller.realAccounts[real];
-                      return ListTile(
-                        leading: Icon(
-                          Icons.account_circle_rounded,
-                          color: CustomColor.secondaryColor,
-                        ),
-                        title: Text(
-                          "${acc.namaTipeAkun} - ${acc.login}",
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-                        ),
-                        subtitle: Text(
-                          "Balance: ${controller.selectedAccount.value?.accountCurrency} ${acc.balance}",
-                          style: GoogleFonts.inter(fontSize: 12.0),
-                        ),
-                        onTap: () {
-                          Navigator.pop(context);
-                          Future.delayed(Duration(milliseconds: 300), () {
-                            Get.to(
-                              () => Deposit(id: acc.id, idLogin: acc.login),
-                            );
-                          });
-                        },
-                      );
-                    }),
-                  );
-                });
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.arrow_upward, color: Colors.red),
-              title: Text(
-                'Withdraw',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-              ),
-              style: ListTileStyle.list,
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.pop(context);
-                Future.delayed(Duration(milliseconds: 300), () {
-                  CustomMaterialBottomSheets.defaultBottomSheet(
-                    context,
-                    size: size,
-                    title: "Pilih Akun Trading",
-                    children: List.generate(controller.realAccounts.length, (
-                      real,
-                    ) {
-                      final acc = controller.realAccounts[real];
-                      return ListTile(
-                        leading: Icon(
-                          Icons.account_circle_rounded,
-                          color: CustomColor.secondaryColor,
-                        ),
-                        title: Text(
-                          "${acc.namaTipeAkun} - ${acc.login}",
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-                        ),
-                        subtitle: Text(
-                          "Balance: ${controller.selectedAccount.value?.accountCurrency} ${acc.balance}",
-                          style: GoogleFonts.inter(fontSize: 12.0),
-                        ),
-                        onTap: () {
-                          Navigator.pop(context);
-                          Future.delayed(Duration(milliseconds: 300), () {
-                            Get.to(
-                              () => Withdrawal(id: acc.id, idLogin: acc.login),
-                            );
-                          });
-                        },
-                      );
-                    }),
-                  );
-                });
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.sync_alt, color: Colors.red),
-              title: Text(
-                'Internal Transfer',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-              ),
-              style: ListTileStyle.list,
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.pop(context);
-                Future.delayed(Duration(milliseconds: 300));
-                Get.to(() => InternalTransfer());
-              },
-            ),
-          ],
-        );
+        _showTransactionBottomSheet(context, size);
         break;
       case "Signals":
         Get.to(() => const AllTradingSignals());
@@ -1429,24 +1719,56 @@ class _IndexV2State extends State<IndexV2> {
         } else {
           homeController.getPendingAccount().then((result) async {
             if (!result) {
-              ErrorPopup.show(title: "Informasi Akun Pending", message: "Sistem tidak dapat mengambil data akun pending Anda. Silakan coba beberapa saat lagi.");
+              ErrorPopup.show(
+                title: "Informasi Akun Pending",
+                message:
+                    "Sistem tidak dapat mengambil data akun pending Anda. Silakan coba beberapa saat lagi.",
+              );
               return;
             }
             if (homeController.pendingModel.value?.response?.isEmpty == true) {
               // await regolController.progressAccount();
               Get.to(() => CreateMT5PasswordPage());
-            } else if (homeController.pendingModel.value?.response?.isNotEmpty == true) {
-              if (homeController.pendingModel.value?.response?[0].status == "Registrasi") {
-                AccountProcessingPopup.show(status: homeController.pendingModel.value?.response?[0].status ?? "Registrasi");
-              } else if (homeController.pendingModel.value?.response?[0].status == "Ditolak") {
+            } else if (homeController
+                    .pendingModel
+                    .value
+                    ?.response
+                    ?.isNotEmpty ==
+                true) {
+              if (homeController.pendingModel.value?.response?[0].status ==
+                  "Registrasi") {
+                AccountProcessingPopup.show(
+                  status:
+                      homeController.pendingModel.value?.response?[0].status ??
+                      "Registrasi",
+                );
+              } else if (homeController
+                      .pendingModel
+                      .value
+                      ?.response?[0]
+                      .status ==
+                  "Ditolak") {
                 Get.to(() => CreateMT5PasswordPage());
-              } else if (homeController.pendingModel.value?.response?[0].status == "Regol belum selesai") {
+              } else if (homeController
+                      .pendingModel
+                      .value
+                      ?.response?[0]
+                      .status ==
+                  "Regol belum selesai") {
                 Get.to(() => CreateMT5PasswordPage());
               } else {
-                AccountProcessingPopup.show(status: homeController.pendingModel.value?.response?[0].status ?? "Proses Akun");
+                AccountProcessingPopup.show(
+                  status:
+                      homeController.pendingModel.value?.response?[0].status ??
+                      "Proses Akun",
+                );
               }
             } else {
-              ErrorPopup.show(title: "Status Tidak Dikenali", message: "Status akun Anda tidak dapat dikenali oleh sistem. Silakan hubungi customer support kami.");
+              ErrorPopup.show(
+                title: "Status Tidak Dikenali",
+                message:
+                    "Status akun Anda tidak dapat dikenali oleh sistem. Silakan hubungi customer support kami.",
+              );
             }
           });
         }
@@ -1766,20 +2088,13 @@ class _IndexV2State extends State<IndexV2> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: color.withOpacity(0.15),
-          border: Border.all(
-            color: color.withOpacity(0.4),
-            width: 1.5,
-          ),
+          border: Border.all(color: color.withOpacity(0.4), width: 1.5),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 18,
-              color: color,
-            ),
+            Icon(icon, size: 18, color: color),
             const SizedBox(width: 8),
             Text(
               label,
@@ -1800,16 +2115,16 @@ class _IndexV2State extends State<IndexV2> {
     return Obx(() {
       final status = pendingAccountStatus.value;
       final color = backgroundStatusPending.value ?? Colors.grey;
-      
+
       // Status "Registrasi" atau "Waiting" - button disabled/hilang
       if (status == "Registrasi" || status == "Waiting") {
         return const SizedBox.shrink(); // Hilangkan button
       }
-      
+
       // Status "Ditolak" atau "Regol belum selesai" - button enabled
       final isEnabled = status == "Ditolak" || status == "Regol belum selesai";
       final buttonLabel = status == "Ditolak" ? "Buat Lagi" : "Lanjutkan";
-      
+
       return SizedBox(
         width: 110,
         child: ElevatedButton(
@@ -1821,11 +2136,12 @@ class _IndexV2State extends State<IndexV2> {
               borderRadius: BorderRadius.circular(10),
             ),
           ),
-          onPressed: isEnabled
-              ? () {
-                  Get.to(() => CreateMT5PasswordPage());
-                }
-              : null,
+          onPressed:
+              isEnabled
+                  ? () {
+                    Get.to(() => CreateMT5PasswordPage());
+                  }
+                  : null,
           child: Text(
             buttonLabel,
             style: GoogleFonts.inter(
