@@ -3,4 +3,6 @@
     <string name="default_web_client_id">792822151078-oe86f7chaacemfbmjutved2ns7c4vsmb.apps.googleusercontent.com</string>
     <string name="app_name">RRFX</string>
     <string name="widget_description">Live XAUUSD market price on your home screen</string>
+    <string name="facebook_app_id">934913526145909</string>
+    <string name="facebook_client_token">7f34499290d4d51807a0a50abdb9fc0e</string>
 </resources>

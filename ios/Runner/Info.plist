@@ -148,5 +148,17 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>FacebookAppID</key>
+	<string>934913526145909</string>
+	<key>FacebookClientToken</key>
+	<string>7f34499290d4d51807a0a50abdb9fc0e</string>
+	<key>FacebookDisplayName</key>
+	<string>RRFX Trading</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fbauth2</string>
+		<string>fbshare</string>
+	</array>
 </dict>
 </plist>

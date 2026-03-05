@@ -4,6 +4,8 @@ import 'package:rrfx/src/components/languages/language_variable.dart';
 class GlobalVariable {
   // static final mainURL = "https://api-rrfx.luxurymatrix.com";
   static final mainURL = "https://api-rrfx.techcrm.net";
+  // URL API trident luxury
+  // static final mainURL = "https://api-trident.luxurymatrix.com";
   // static final mainURL = "https://api-rrfx.rrfx.co.id";
   static final x_api_key = "fewAHdSkx28301294cKSnczdAs";
   

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:get/get.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
+import 'package:rrfx/src/service/utm_tracking_service.dart';
 import 'package:rrfx/src/views/webview/external_webview_page.dart';
 import 'package:rrfx/src/views/authentications/signin.dart';
 
@@ -89,7 +90,14 @@ class DeepLinkService {
     final utmParams = _extractUtmParameters(uri);
     if (utmParams.isNotEmpty) {
       print('📊 [DeepLink] UTM parameters detected: $utmParams');
-      
+
+      // 🔥 Log UTM to Firebase Analytics
+      UtmTrackingService().logCampaignFromLink(
+        utmParams: utmParams,
+        sourceUri: uri.toString(),
+        isInitialLink: isInitial,
+      );
+
       // Save UTM parameters ke AuthController
       try {
         final authController = Get.find<AuthController>();
@@ -235,8 +243,11 @@ class DeepLinkService {
       'utm_content',
       'utm_term',
       'utm_id',
-      '_gl',
-      'fbclid',
+      '_gl',           // Google Analytics
+      'fbclid',        // Facebook/Instagram Click ID
+      'ttclid',        // TikTok Click ID
+      'igshid',        // Instagram Share ID
+      'fb_action_ids', // Facebook Action IDs
     ];
     
     for (final key in utmKeys) {

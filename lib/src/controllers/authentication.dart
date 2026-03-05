@@ -18,6 +18,7 @@ import 'package:rrfx/src/views/authentications/verification_account_page.dart';
 import 'package:rrfx/src/views/authentications/verify_passcode_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rrfx/src/controllers/home.dart';
+import 'package:rrfx/src/service/utm_tracking_service.dart';
 import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/models/auth/personal_model.dart';
 import 'dart:async';
@@ -430,6 +431,12 @@ class AuthController extends GetxController {
         }
         Get.log("✅ [AUTH] Registration successful");
         responseMessage.value = result['message'];
+
+        // 🔥 Log Firebase Analytics sign_up conversion with UTM attribution
+        await UtmTrackingService().logSignUpConversion(
+          utmParams: _utmParameters.value,
+          method: 'email',
+        );
 
         // Clear UTM parameters after successful registration
         clearUtmParameters();

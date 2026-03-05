@@ -83,6 +83,13 @@
         <meta-data
             android:name="com.google.android.gms.client_id"
             android:value="@string/default_web_client_id"/>
+        <!-- Facebook App ID & Client Token -->
+        <meta-data 
+            android:name="com.facebook.sdk.ApplicationId" 
+            android:value="@string/facebook_app_id"/>
+        <meta-data 
+            android:name="com.facebook.sdk.ClientToken" 
+            android:value="@string/facebook_client_token"/>
 
         <!-- Widget Receiver -->
         <receiver

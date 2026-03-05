@@ -19,7 +19,7 @@ class ExploreContentController extends GetxController {
         "https://gateway.rrfx.co.id/api/v1/contents/category/rewards?type=PROMOTION&limit=3&highlight=true",
       );
 
-      promotions.value = response.body["data"]["list"] ?? [];
+      promotions.value = response.body?["data"]?["list"] ?? [];
     } finally {
       isLoadingPromotions.value = false;
     }
@@ -33,7 +33,7 @@ class ExploreContentController extends GetxController {
         "$baseUrl?type=NEWS&limit=3",
       );
 
-      news.value = response.body["data"]["list"] ?? [];
+      news.value = response.body?["data"]?["list"] ?? [];
     } finally {
       isLoadingNews.value = false;
     }
@@ -46,7 +46,7 @@ class ExploreContentController extends GetxController {
         "$baseUrl?type=MARKET_ANALYTIC&limit=3",
       );
 
-      analysis.value = response.body["data"]["list"] ?? [];
+      analysis.value = response.body?["data"]?["list"] ?? [];
     } finally {
       isLoadingAnalysis.value = false;
     }

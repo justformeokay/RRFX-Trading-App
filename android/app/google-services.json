@@ -1,14 +1,32 @@
 {
   "project_info": {
-    "project_number": "842913049513",
-    "firebase_url": "https://rrfx-50381-default-rtdb.asia-southeast1.firebasedatabase.app",
-    "project_id": "rrfx-50381",
-    "storage_bucket": "rrfx-50381.firebasestorage.app"
+    "project_number": "924273899863",
+    "project_id": "fx-d2829",
+    "storage_bucket": "fx-d2829.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:842913049513:android:cc5d5613b446aeae7df2b8",
+        "mobilesdk_app_id": "1:924273899863:android:c39bc04e06f3434087e612",
+        "android_client_info": {
+          "package_name": "com.fx18"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCiNTaBjHE7_3NskZOzs0Wh6KSFtikA698"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:924273899863:android:b9b09e9cd7dc32e187e612",
         "android_client_info": {
           "package_name": "com.rrfx.app"
         }
@@ -16,7 +34,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCqJoP4gcWVRGyAGsSOk9Qgg9HoDmPzm00"
+          "current_key": "AIzaSyCiNTaBjHE7_3NskZOzs0Wh6KSFtikA698"
         }
       ],
       "services": {

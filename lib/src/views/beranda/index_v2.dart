@@ -1321,7 +1321,7 @@ class _IndexV2State extends State<IndexV2> {
                     onTap: () {
                       Navigator.pop(context);
                       Future.delayed(const Duration(milliseconds: 300), () {
-                        _showSelectAccountBottomSheet(context, size, "deposit");
+                        Get.to(() => const Deposit());
                       });
                     },
                   ),
@@ -1336,11 +1336,7 @@ class _IndexV2State extends State<IndexV2> {
                     onTap: () {
                       Navigator.pop(context);
                       Future.delayed(const Duration(milliseconds: 300), () {
-                        _showSelectAccountBottomSheet(
-                          context,
-                          size,
-                          "withdraw",
-                        );
+                        Get.to(() => const Withdrawal());
                       });
                     },
                   ),

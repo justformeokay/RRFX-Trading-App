@@ -50,23 +50,19 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCqJoP4gcWVRGyAGsSOk9Qgg9HoDmPzm00',
-    appId: '1:842913049513:android:cc5d5613b446aeae7df2b8',
-    messagingSenderId: '842913049513',
-    projectId: 'rrfx-50381',
-    databaseURL: 'https://rrfx-50381-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'rrfx-50381.firebasestorage.app',
+    apiKey: 'AIzaSyCiNTaBjHE7_3NskZOzs0Wh6KSFtikA698',
+    appId: '1:924273899863:android:b9b09e9cd7dc32e187e612',
+    messagingSenderId: '924273899863',
+    projectId: 'fx-d2829',
+    storageBucket: 'fx-d2829.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBzRHz5d1yL-MLdRZUNC1Rb7Ed-14XN3Jc',
-    appId: '1:842913049513:ios:88b094b7f44f046c7df2b8',
-    messagingSenderId: '842913049513',
-    projectId: 'rrfx-50381',
-    databaseURL: 'https://rrfx-50381-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'rrfx-50381.firebasestorage.app',
-    androidClientId: '842913049513-9cd84ju8dd9ducg4p20i7urfeqs7fng0.apps.googleusercontent.com',
-    iosClientId: '842913049513-m6fb41tr7isqu61m1lh549pb4mh8rmlu.apps.googleusercontent.com',
+    apiKey: 'AIzaSyCSeT7ubu-116b8IqHGuf2qjynYuMvaMjs',
+    appId: '1:924273899863:ios:9ce44686d8c0682f87e612',
+    messagingSenderId: '924273899863',
+    projectId: 'fx-d2829',
+    storageBucket: 'fx-d2829.firebasestorage.app',
     iosBundleId: 'com.rrfx.app',
   );
 
