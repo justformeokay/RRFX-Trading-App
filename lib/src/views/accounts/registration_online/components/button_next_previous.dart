@@ -14,7 +14,7 @@ class ButtonNextPrevious extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
+      padding: const EdgeInsets.only(left: 20.0, right: 20.0, top: 20.0, bottom: 50.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

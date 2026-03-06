@@ -14,7 +14,6 @@ import 'package:rrfx/src/controllers/company_controller.dart';
 import 'package:rrfx/src/controllers/trading.dart';
 import 'package:rrfx/src/views/accounts/registration_online/components/button_next_previous.dart';
 import 'package:rrfx/src/views/accounts/registration_online/components/time_and_statement.dart';
-import 'package:rrfx/src/views/accounts/registration_online/controllers/product_controller.dart';
 import 'package:rrfx/src/views/accounts/registration_online/controllers/progress_account_controller.dart';
 import 'package:rrfx/src/views/accounts/registration_online/controllers/statement_controller.dart';
 import 'package:rrfx/src/views/accounts/registration_online/repository/regol_repository.dart';
