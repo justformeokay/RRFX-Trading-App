@@ -256,7 +256,7 @@ class _ProductViewState extends State<ProductView> {
         ),
         // Tombol Submit
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.only(bottom: 30.0, top: 5.0),
           child: Obx(
             () => ElevatedButton(
               style: ElevatedButton.styleFrom(

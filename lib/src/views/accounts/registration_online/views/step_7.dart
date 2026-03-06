@@ -70,7 +70,7 @@ class _Step7State extends State<Step7> {
   TextEditingController noIdentitas = TextEditingController();
   TextEditingController namaIbuKandung = TextEditingController();
   TextEditingController statusPerkawinan = TextEditingController();
-  TextEditingController namaPasangan = TextEditingController();
+  // TextEditingController namaPasangan = TextEditingController();
   TextEditingController statusKepemilikanRumahController = TextEditingController();
   TextEditingController noTelpRumah = TextEditingController();
   TextEditingController noFaksimiliRumah = TextEditingController();
@@ -160,8 +160,8 @@ class _Step7State extends State<Step7> {
       'pendidikanTerakhir': pendidikanTerakhir.text,
       'nomorNPWP': nomorNPWP.text,
       'namaIbuKandung': namaIbuKandung.text,
-      'statusPerkawinan': statusPerkawinan.text,
-      'namaPasangan': namaPasangan.text,
+      // 'statusPerkawinan': statusPerkawinan.text,
+      // 'namaPasangan': namaPasangan.text,
       'statusKepemilikanRumah': statusKepemilikanRumahController.text,
       'noTelpRumah': noTelpRumah.text,
       'noFaksimiliRumah': noFaksimiliRumah.text,
@@ -231,9 +231,9 @@ class _Step7State extends State<Step7> {
       if (cachedData['statusPerkawinan']?.isNotEmpty == true) {
         statusPerkawinan.text = cachedData['statusPerkawinan'];
       }
-      if (cachedData['namaPasangan']?.isNotEmpty == true) {
-        namaPasangan.text = cachedData['namaPasangan'];
-      }
+      // if (cachedData['namaPasangan']?.isNotEmpty == true) {
+      //   namaPasangan.text = cachedData['namaPasangan'];
+      // }
       if (cachedData['statusKepemilikanRumah']?.isNotEmpty == true) {
         statusKepemilikanRumahController.text = cachedData['statusKepemilikanRumah'];
       }
@@ -363,7 +363,7 @@ class _Step7State extends State<Step7> {
     nomorNPWP.addListener(_saveToCache);
     namaIbuKandung.addListener(_saveToCache);
     statusPerkawinan.addListener(_saveToCache);
-    namaPasangan.addListener(_saveToCache);
+    // namaPasangan.addListener(_saveToCache);
     statusKepemilikanRumahController.addListener(_saveToCache);
     noTelpRumah.addListener(_saveToCache);
     noFaksimiliRumah.addListener(_saveToCache);
@@ -417,7 +417,7 @@ class _Step7State extends State<Step7> {
     nomorNPWP.removeListener(_saveToCache);
     namaIbuKandung.removeListener(_saveToCache);
     statusPerkawinan.removeListener(_saveToCache);
-    namaPasangan.removeListener(_saveToCache);
+    // namaPasangan.removeListener(_saveToCache);
     statusKepemilikanRumahController.removeListener(_saveToCache);
     noTelpRumah.removeListener(_saveToCache);
     noFaksimiliRumah.removeListener(_saveToCache);
@@ -497,7 +497,7 @@ class _Step7State extends State<Step7> {
       regolController.isLoading(true);
       nomorNPWP.text = progressController.progressData.value?.response?.npwp ?? '';
       jenisKelamin.text = progressController.progressData.value?.response?.gender ?? '';
-      namaPasangan.text = progressController.progressData.value?.response?.wifeHusbandName ?? '';
+      // namaPasangan.text = progressController.progressData.value?.response?.wifeHusbandName ?? '';
       statusPerkawinan.text = progressController.progressData.value?.response?.maritalStatus ?? '';
       statusKepemilikanRumahController.text = progressController.progressData.value?.response?.statusRumah ?? '';
       rt.text = progressController.progressData.value?.response?.rt ?? '';
@@ -621,7 +621,7 @@ class _Step7State extends State<Step7> {
     noIdentitas.dispose();
     namaIbuKandung.dispose();
     statusPerkawinan.dispose();
-    namaPasangan.dispose();
+    // namaPasangan.dispose();
     noFaksimiliRumah.dispose();
     noTelpRumah.dispose();
     noHandphone.dispose();
@@ -894,7 +894,7 @@ class _Step7State extends State<Step7> {
                     ),
                     Obx(
                       () => VoidTextField(requiredField: true, controller: statusPerkawinan, readOnly: false, fieldName: "Status Perkawinan", hintText: "Status Perkawinan", labelText: "Status Perkawinan", iconData: Icons.home_mini, onPressed: regolController.isLoading.value ? null : (){
-                        CustomMaterialBottomSheets.defaultBottomSheet(context, title: "Pilih Status Kepemilikan Rumah", size: size, children: List.generate(GlobalVariable.maritalIndoVersion.length, (i){
+                        CustomMaterialBottomSheets.defaultBottomSheet(context, title: "Pilih Status Perkawinan", size: size, children: List.generate(GlobalVariable.maritalIndoVersion.length, (i){
                           return ListTile(
                             leading: Icon(Icons.check_circle,
                                 color: (statusPerkawinan.text == GlobalVariable.maritalIndoVersion[i])
@@ -912,15 +912,15 @@ class _Step7State extends State<Step7> {
                         }));
                       }),
                     ),
-                    statusPerkawinan.text == "Kawin" || statusPerkawinan.text == "Menikah" ? NameTextFieldNewVersion(
-                      controller: namaPasangan,
-                      readOnly: false,
-                      useStringOnly: true,
-                      labelText: "Nama Suami/Istri",
-                      fieldName: "Nama Suami/Istri",
-                      hintText: "Nama Suami/Istri",
-                      maxLength: 20,
-                    ) : const SizedBox(),
+                    // statusPerkawinan.text == "Kawin" || statusPerkawinan.text == "Menikah" ? NameTextFieldNewVersion(
+                    //   controller: namaPasangan,
+                    //   readOnly: false,
+                    //   useStringOnly: true,
+                    //   labelText: "Nama Suami/Istri",
+                    //   fieldName: "Nama Suami/Istri",
+                    //   hintText: "Nama Suami/Istri",
+                    //   maxLength: 20,
+                    // ) : const SizedBox(),
                     NumberTextField(
                       requiredField: true,
                       iconData: Icons.phone_android_rounded,
@@ -1037,7 +1037,7 @@ class _Step7State extends State<Step7> {
                       enabled: false,
                       text: "Saya menyetujui bahwa tidak memiliki anggota keluarga yang bekerja di BAPPEBTI / Bursa Berjangka / Kliring Berjangka",
                       onChanged: (v) {
-                        setState(() => agree1 = v!);
+                        setState(() => agree1 = v);
                       },
                     ),
 
@@ -1046,7 +1046,7 @@ class _Step7State extends State<Step7> {
                       enabled: false,
                       text: "Saya menyetujui bahwa tidak dinyatakan pailit oleh Pengadilan",
                       onChanged: (v) {
-                        setState(() => agree2 = v!);
+                        setState(() => agree2 = v);
                       },
                     ),
                   ],
@@ -1877,7 +1877,7 @@ class _Step7State extends State<Step7> {
                     noHandphone: phone ?? noHandphone.text,
                     nomorNPWP: nomorNPWP.text,
                     namaPerusahaan: namaPerusahaan.text,
-                    namaIstri: namaPasangan.text,
+                    // namaIstri: namaPasangan.text,
                     phoneCode: phoneCode ?? "+62",
                     statusPerkawinan: statusPerkawinan.text,
                     jenisKelamin: jenisKelamin.text,

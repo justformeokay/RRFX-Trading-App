@@ -2033,6 +2033,7 @@ class _EditPositionDialogState extends State<_EditPositionDialog> {
 
               // SL/TP Prices Row
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: Column(
@@ -2049,49 +2050,68 @@ class _EditPositionDialogState extends State<_EditPositionDialog> {
                           ),
                         ),
                         const SizedBox(height: 6),
-                        Container(
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.grey.shade800.withOpacity(0.3)
-                                : Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
+                        Obx(
+                          () => Container(
+                            height: 44,
+                            decoration: BoxDecoration(
                               color: isDark
-                                  ? Colors.grey.shade700
-                                  : Colors.grey.shade300,
-                            ),
-                          ),
-                          child: TextField(
-                            controller: slPriceController,
-                            textAlign: TextAlign.center,
-                            keyboardType: TextInputType.number,
-                            enabled: !isSaving.value,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              _PriceShiftInputFormatter(
-                                decimalPlaces: _getDigitsForSymbol(order.symbol),
-                                integerDigits: order.priceCurrent > 0
-                                    ? order.priceCurrent.truncate().toString().length
-                                    : 4,
-                              ),
-                            ],
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 10),
-                              prefixIcon: Icon(
-                                Iconsax.shield_cross_bold,
-                                size: 16,
-                                color: Colors.red.shade400,
+                                  ? Colors.grey.shade800.withOpacity(0.3)
+                                  : Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: slError.value.isNotEmpty
+                                    ? Colors.red
+                                    : isDark
+                                        ? Colors.grey.shade700
+                                        : Colors.grey.shade300,
                               ),
                             ),
+                            child: TextField(
+                              controller: slPriceController,
+                              textAlign: TextAlign.center,
+                              keyboardType: TextInputType.number,
+                              enabled: !isSaving.value,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                _PriceShiftInputFormatter(
+                                  decimalPlaces: _getDigitsForSymbol(order.symbol),
+                                  integerDigits: order.priceCurrent > 0
+                                      ? order.priceCurrent.truncate().toString().length
+                                      : 4,
+                                ),
+                              ],
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
+                              decoration: InputDecoration(
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 10),
+                                prefixIcon: Icon(
+                                  Iconsax.shield_cross_bold,
+                                  size: 16,
+                                  color: Colors.red.shade400,
+                                ),
+                              ),
+                            ),
                           ),
+                        ),
+                        // SL Error text
+                        Obx(
+                          () => slError.value.isNotEmpty
+                              ? Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    slError.value,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
                         ),
                       ],
                     ),
@@ -2112,49 +2132,68 @@ class _EditPositionDialogState extends State<_EditPositionDialog> {
                           ),
                         ),
                         const SizedBox(height: 6),
-                        Container(
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.grey.shade800.withOpacity(0.3)
-                                : Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
+                        Obx(
+                          () => Container(
+                            height: 44,
+                            decoration: BoxDecoration(
                               color: isDark
-                                  ? Colors.grey.shade700
-                                  : Colors.grey.shade300,
-                            ),
-                          ),
-                          child: TextField(
-                            controller: tpPriceController,
-                            textAlign: TextAlign.center,
-                            keyboardType: TextInputType.number,
-                            enabled: !isSaving.value,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              _PriceShiftInputFormatter(
-                                decimalPlaces: _getDigitsForSymbol(order.symbol),
-                                integerDigits: order.priceCurrent > 0
-                                    ? order.priceCurrent.truncate().toString().length
-                                    : 4,
-                              ),
-                            ],
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 10),
-                              prefixIcon: Icon(
-                                Iconsax.medal_star_bold,
-                                size: 16,
-                                color: Colors.green.shade400,
+                                  ? Colors.grey.shade800.withOpacity(0.3)
+                                  : Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: tpError.value.isNotEmpty
+                                    ? Colors.red
+                                    : isDark
+                                        ? Colors.grey.shade700
+                                        : Colors.grey.shade300,
                               ),
                             ),
+                            child: TextField(
+                              controller: tpPriceController,
+                              textAlign: TextAlign.center,
+                              keyboardType: TextInputType.number,
+                              enabled: !isSaving.value,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                _PriceShiftInputFormatter(
+                                  decimalPlaces: _getDigitsForSymbol(order.symbol),
+                                  integerDigits: order.priceCurrent > 0
+                                      ? order.priceCurrent.truncate().toString().length
+                                      : 4,
+                                ),
+                              ],
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
+                              decoration: InputDecoration(
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 10),
+                                prefixIcon: Icon(
+                                  Iconsax.medal_star_bold,
+                                  size: 16,
+                                  color: Colors.green.shade400,
+                                ),
+                              ),
+                            ),
                           ),
+                        ),
+                        // TP Error text
+                        Obx(
+                          () => tpError.value.isNotEmpty
+                              ? Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    tpError.value,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
                         ),
                       ],
                     ),
@@ -2331,6 +2370,50 @@ class _EditPositionDialogState extends State<_EditPositionDialog> {
       if (sl == null || sl <= 0) {
         slError.value = 'Enter a valid integer points or leave empty';
         hasError = true;
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Validate SL/TP price position based on order type
+    // ─────────────────────────────────────────────────────────
+    final slPriceStr = slPriceController.text.trim().replaceAll(',', '');
+    final tpPriceStr = tpPriceController.text.trim().replaceAll(',', '');
+    final slPrice = double.tryParse(slPriceStr) ?? 0.0;
+    final tpPrice = double.tryParse(tpPriceStr) ?? 0.0;
+    final entryPrice = order.priceOrder;
+    final isBuyType = order.orderType.toLowerCase().contains('buy');
+
+    // Validate SL position relative to entry price
+    if (slPrice > 0) {
+      if (isBuyType) {
+        // For Buy orders (Buy Limit, Buy Stop): SL must be below entry price
+        if (slPrice >= entryPrice) {
+          slError.value = 'SL must be below entry price (${_formatPrice(entryPrice, order.symbol)}) for ${order.orderType}';
+          hasError = true;
+        }
+      } else {
+        // For Sell orders (Sell Limit, Sell Stop): SL must be above entry price
+        if (slPrice <= entryPrice) {
+          slError.value = 'SL must be above entry price (${_formatPrice(entryPrice, order.symbol)}) for ${order.orderType}';
+          hasError = true;
+        }
+      }
+    }
+
+    // Validate TP position relative to entry price
+    if (tpPrice > 0) {
+      if (isBuyType) {
+        // For Buy orders: TP must be above entry price
+        if (tpPrice <= entryPrice) {
+          tpError.value = 'TP must be above entry price (${_formatPrice(entryPrice, order.symbol)}) for ${order.orderType}';
+          hasError = true;
+        }
+      } else {
+        // For Sell orders: TP must be below entry price
+        if (tpPrice >= entryPrice) {
+          tpError.value = 'TP must be below entry price (${_formatPrice(entryPrice, order.symbol)}) for ${order.orderType}';
+          hasError = true;
+        }
       }
     }
 
