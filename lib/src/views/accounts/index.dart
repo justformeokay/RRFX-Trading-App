@@ -79,6 +79,30 @@ class _AccountsState extends State<Accounts> {
             child: Scaffold(
               appBar: CustomAppBar.defaultAppBar(
                 autoImplyLeading: true,
+                actions: [
+                  IconButton(
+                    onPressed: () {
+                      tradingController.getTradingAccount().then((result) {
+                        if (!result) {
+                          CustomAlert.alertError(context, message: tradingController.responseMessage.value);
+                        } else {
+                          if (tradingController.tradingAccountModels.value?.response.real?.isNotEmpty == true) {
+                            haveDemoAccount(true);
+                            haveRealAccount(true);
+                          } else {
+                            haveRealAccount(false);
+                            if (tradingController.tradingAccountModels.value?.response.demo?.isNotEmpty == true) {
+                              haveDemoAccount(true);
+                            } else {
+                              haveDemoAccount(false);
+                            }
+                          }
+                        }
+                      });
+                    },
+                    icon: Icon(Icons.refresh),
+                  ),
+                  ],
                 bottom: PreferredSize(
                   preferredSize: Size.fromHeight(170),
                   child: Column(

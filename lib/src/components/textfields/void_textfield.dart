@@ -73,7 +73,7 @@ class _VoidTextFieldState extends State<VoidTextField> {
       child: MouseRegion(
         cursor: isReadOnly ? SystemMouseCursors.click : SystemMouseCursors.text,
         child: GestureDetector(
-          onTap: widget.onPressed,
+          onTap: widget.readOnly == true ? null : widget.onPressed,
           behavior: HitTestBehavior.opaque,
           child: AbsorbPointer(
             absorbing: true,

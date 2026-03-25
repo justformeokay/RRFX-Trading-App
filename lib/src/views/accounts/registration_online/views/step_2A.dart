@@ -8,6 +8,7 @@ import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/textfields/void_textfield.dart';
 import 'package:rrfx/src/views/accounts/registration_online/controllers/progress_account_controller.dart';
 import 'package:rrfx/src/views/accounts/registration_online/controllers/statement_controller.dart';
+import 'package:rrfx/src/views/accounts/registration_online/controllers/step_controller.dart';
 import 'package:rrfx/src/views/accounts/registration_online/repository/regol_repository.dart';
 import 'package:rrfx/src/views/accounts/registration_online/views/step_17.dart';
 import 'package:rrfx/src/views/accounts/registration_online/views/step_3.dart';
@@ -23,9 +24,11 @@ class ProductView extends StatefulWidget {
 class _ProductViewState extends State<ProductView> {
   RxBool selectedCDDType = false.obs;
   RxInt selectedCDDTypeIndex = 1.obs;
+  StepController stepController = Get.put(StepController());
   RegolRepository regolRepository = Get.put(RegolRepository());
   StatementController statementController = Get.put(StatementController());
   TextEditingController cddTipeController = TextEditingController();
+  TextEditingController typeOfCDDController = TextEditingController();
   final progressController = Get.put(ProgressAccountController());
   final controller = Get.put(ProductController());
 
@@ -33,6 +36,7 @@ class _ProductViewState extends State<ProductView> {
   void initState() {
     super.initState();
     Future.delayed(Duration.zero, () async {
+      typeOfCDDController.text = stepController.typeOfCDDList.first;
       progressController.fetchProgressAccount().then((result){
         final data = progressController.progressData.value;
         final cddList = data?.data?.cddTipe ?? [];
@@ -40,7 +44,7 @@ class _ProductViewState extends State<ProductView> {
           return CustomScaffoldMessanger.showAppSnackBar(context, message: "CDD Type tidak dapat ditemukan", type: SnackBarType.info);
         }
         selectedCDDType(true);
-        cddTipeController.text = "Standard";
+        cddTipeController.text = stepController.cDDTypesList.first;
       });
     });
   }
@@ -89,8 +93,54 @@ class _ProductViewState extends State<ProductView> {
                     onTap: () {
                       setState(() {
                         cddTipeController.text = value;
+                        stepController.selectedCDD.value = value;
                         Get.back();
                       });
+                      Get.log("Selected CDD Type: ${stepController.selectedCDD.value}");
+                    },
+                  );
+                }),
+              );
+            },
+          );
+        }),
+        const SizedBox(height: 10),
+        Obx(() {
+          final data = progressController.progressData.value;
+          if (progressController.isLoading.value) {
+            return const Center(child: CircularProgressIndicator(color: CustomColor.secondaryColor));
+          }
+          final cddList = data?.data?.cddTipe ?? [];
+          if (cddList.isEmpty) {
+            return const Text("Type of CDD belum tersedia");
+          }
+          return VoidTextField(
+            readOnly: true,
+            requiredField: true,
+            controller: typeOfCDDController,
+            fieldName: "Type of CDD",
+            hintText: "Pilih Type of CDD",
+            labelText: "Type of CDD",
+            onPressed: () {
+              CustomMaterialBottomSheets.defaultBottomSheet(
+                context,
+                size: size,
+                title: "Pilih Type of CDD",
+                isScrolledController: false,
+                children: List.generate(stepController.typeOfCDDList.length, (index) {
+                  final item = stepController.typeOfCDDList[index];
+                  if (item.isEmpty) return const SizedBox.shrink();
+                  final value = item;
+                  return ListTile(
+                    leading: Icon(Icons.check_circle, color: (typeOfCDDController.text == value) ? CustomColor.secondaryColor : Colors.grey, size: 22),
+                    title: Text(value.isNotEmpty ? value : "Tidak diketahui"),
+                    onTap: () {
+                      setState(() {
+                        typeOfCDDController.text = value;
+                        stepController.selectedTypeOfCDD.value = value;
+                        Get.back();
+                      });
+                      Get.log("Selected Type of CDD: ${stepController.selectedTypeOfCDD.value}");
                     },
                   );
                 }),
@@ -267,13 +317,21 @@ class _ProductViewState extends State<ProductView> {
                 ),
               ),
               onPressed: regolRepository.isLoading.value ? null : () async {
+                final selectedCDD = (cddTipeController.text == "Standart") ? "1" : "2";
+                final alreadyHave = progressController.progressData.value?.data?.alreadyHaveAccount;
+                Get.log("Selected Product: ${controller.selectedProduct.value?.name}");
+                Get.log("Selected CDD Type: ${stepController.selectedCDD.value}");
+                Get.log("Selected Type of CDD: ${stepController.selectedTypeOfCDD.value}");
+                Get.log("==================================");
+                Get.log("Selected Suffix: ${controller.selectedProduct.value?.suffix}");
+                Get.log("Selected CDD: $selectedCDD");
+                Get.log("Already Have Account: $alreadyHave");
+                Get.log("Skip Regol: ${alreadyHave == null || alreadyHave == false ? 0 : 1}");
                 final selected = controller.selectedProduct.value;
                 if (selected == null) {
                   AppSnackbar.error("Silakan pilih produk terlebih dahulu!");
                   return;
                 }
-                final selectedCDD = (cddTipeController.text == "Standard") ? "1" : "2";
-                final alreadyHave = progressController.progressData.value?.data?.alreadyHaveAccount;
                 Future<void> handleStep({
                   required int skipRegol,
                   required Widget nextStep,

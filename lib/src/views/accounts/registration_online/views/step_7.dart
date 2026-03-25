@@ -90,6 +90,7 @@ class _Step7State extends State<Step7> {
 
   // PEKERJAAN
   TextEditingController pekerjaanSaya = TextEditingController();
+  TextEditingController pekerjaanLainnya = TextEditingController();
   TextEditingController namaPerusahaan = TextEditingController();
   TextEditingController bidangUsaha = TextEditingController();
   TextEditingController jabatan = TextEditingController();
@@ -916,9 +917,9 @@ class _Step7State extends State<Step7> {
                       controller: namaPasangan,
                       readOnly: false,
                       useStringOnly: true,
-                      labelText: "Nama Suami/Istri",
-                      fieldName: "Nama Suami/Istri",
-                      hintText: "Nama Suami/Istri",
+                      labelText: statusPerkawinan.text == "Kawin" || statusPerkawinan.text == "Menikah" ? "Nama Istri/Suami" : statusPerkawinan.text == "Janda" ? "Nama Suami" : "Nama Istri",
+                      fieldName: statusPerkawinan.text == "Kawin" || statusPerkawinan.text == "Menikah" ? "Nama Istri/Suami" : statusPerkawinan.text == "Janda" ? "Nama Suami" : "Nama Istri",
+                      hintText: statusPerkawinan.text == "Kawin" || statusPerkawinan.text == "Menikah" ? "Nama Istri/Suami" : statusPerkawinan.text == "Janda" ? "Nama Suami" : "Nama Istri",
                       maxLength: 20,
                     ) : const SizedBox(),
                     NumberTextField(
@@ -1147,7 +1148,8 @@ class _Step7State extends State<Step7> {
                 ]),
                 SmoothExpansionTile(title: "PEKERJAAN", children: [
                   Obx(() {
-                    final pekerjaan = progressController.progressData.value?.data?.listPekerjaan ?? [];
+                    final pekerjaanList = progressController.progressData.value?.data?.listPekerjaan ?? [];
+                    final pekerjaan = ['Freelance', ...pekerjaanList];
                     final isLoading = progressController.isLoading.value;
                     return VoidTextField(
                       requiredField: true,
@@ -1192,6 +1194,16 @@ class _Step7State extends State<Step7> {
                       },
                     );
                   }),
+                  pekerjaanSaya.text == "Lainnya" ? NameTextFieldNewVersion(
+                    requiredField: true,
+                    controller: pekerjaanLainnya,
+                    readOnly: false,
+                    useStringOnly: true,
+                    labelText: "Pekerjaan Lainnya",
+                    fieldName: "Pekerjaan Lainnya",
+                    hintText: "Masukkan pekerjaan Anda",
+                    maxLength: 50,
+                  ) : const SizedBox(),
                   NameTextFieldNewVersion(
                     requiredField: true,
                     controller: namaPerusahaan,
@@ -1854,7 +1866,7 @@ class _Step7State extends State<Step7> {
                     daruratKodePos: kodePosKontakDarurat.text,
                     daruratNama: namaKontakDarurat.text,
                     daruratTelp: noTelpKontakDarurat.text,
-                    pekerjaan: pekerjaanSaya.text,
+                    pekerjaan: pekerjaanSaya.text == "Lainnya" ? pekerjaanLainnya.text : pekerjaanSaya.text,
                     tujuanPembukaanRekening: tujuanPembukaanRekening.text,
                     telpRumah: noTelpRumah.text,
                     faksimiliRumah: noFaksimiliRumah.text,

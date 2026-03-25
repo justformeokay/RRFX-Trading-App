@@ -200,6 +200,7 @@ Future<void> showCloseConfirmationDialog({
                 ),
               ],
             ),
+            const SizedBox(height: 35.0)
           ],
         ),
       );

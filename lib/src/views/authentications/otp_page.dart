@@ -1,7 +1,5 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
@@ -12,10 +10,8 @@ import 'package:rrfx/src/components/textfields/label_textfield.dart';
 import 'package:rrfx/src/components/textfields/otp_textfield.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
 import 'package:rrfx/src/controllers/home.dart';
-
 import 'package:rrfx/src/helpers/formatters/masking_email.dart';
 import 'package:rrfx/src/views/authentications/verification_account_page.dart';
-import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
 
 class OtpPage extends StatefulWidget {
   const OtpPage({super.key});
@@ -47,8 +43,6 @@ class _OtpPageState extends State<OtpPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
     return GestureDetector(
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       child: Scaffold(
@@ -109,7 +103,6 @@ class _OtpPageState extends State<OtpPage> {
                     const SizedBox(height: 5.0),
                     Obx(
                       () {
-                        final email = maskEmail(homeController.profileModel.value?.email ?? 'example@email.com');
                         return Text(
                           "Kode OTP telah dikirim ke $otpChannel anda. Jika Anda tidak menerima kode OTP, pilih cara dibawah untuk menerima kode OTP dan verifikasi akun Anda",
                           style: TextStyle(
@@ -300,7 +293,7 @@ class _OtpPageState extends State<OtpPage> {
           ),
         ),
         bottomNavigationBar: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: const EdgeInsets.only(left: 24, right: 24, bottom: 40.0),
           child: Obx(
             () => DefaultButton.defaultElevatedButton(
               onPressed: authController.isLoading.value

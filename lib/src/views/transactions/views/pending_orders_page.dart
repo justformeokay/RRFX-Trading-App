@@ -2284,6 +2284,7 @@ class _EditPositionDialogState extends State<_EditPositionDialog> {
                   ),
                 ],
               ),
+              const SizedBox(height: 35.0),
             ],
           ),
         ),

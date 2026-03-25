@@ -7,6 +7,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 class StepController extends GetxController {
   var isLoading = false.obs;
   var selectedAccountType = 'real'.obs; // real/demo
+  var cDDTypesList = ['Standart', 'Sederhana'].obs;
+  var typeOfCDDList = ['SPA', 'Multilateral'].obs;
+  var selectedCDD = 'Standart'.obs;
+  var selectedTypeOfCDD = 'SPA'.obs;
   var accounts = <AccountModel>[].obs;
 
   Future<String?> getToken() async {

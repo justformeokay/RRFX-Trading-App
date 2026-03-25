@@ -108,13 +108,18 @@ class _MessageBarState extends State<_MessageBar> {
 
   void _submitMessage() async {
     isSending.value = true;
-    utilitiesController.sendMessage(code: widget.codeChat, message: _textController.text, attachmentPath: widget.imageURL).then((result){
+    utilitiesController.sendMessage(code: widget.codeChat, message: _textController.text, attachmentPath: widget.imageURL).then((result) async {
       isSending.value = false;
       if(!result){
         AppSnackbar.error("Gagal mengirim pesan. Silakan coba lagi.");
         return;
       }
       AppSnackbar.success("Pesan berhasil dikirim.");
+      
+      // 🔄 Fetch messages setelah gambar berhasil dikirim
+      await utilitiesController.listMessageOfTicket(code: widget.codeChat);
+      utilitiesController.messagesModel.refresh();
+      
       Navigator.of(context).pop();
     });
   }

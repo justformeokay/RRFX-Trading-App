@@ -11,7 +11,7 @@ class CustomMaterialBottomSheets {
         duration: Duration(milliseconds: 500)
       ),
       enableDrag: true,
-      isDismissible: false,
+      isDismissible: true,
       isScrollControlled: isScrolledController ?? true,
       context: context,
       elevation: 5,
