@@ -299,7 +299,6 @@ Future<bool> step7({
 }) async {
   try {
     final requiredFields = {
-      'Nomor NPWP': nomorNPWP,
       'Jenis Kelamin': jenisKelamin,
       'Nama Ibu': namaIbu,
       'Kewarganegaraan': kewarganegaraan,
@@ -332,7 +331,7 @@ Future<bool> step7({
     final Map<String, String?> rawData = {
       'aggree': 'Ya',
       'agg_date': formattedDate,
-      'app_npwp': nomorNPWP,
+      'app_npwp':  nomorNPWP,
       'app_gender': jenisKelamin,
       'app_nama_ibu': namaIbu,
       'app_status_perkawinan': statusPerkawinan,

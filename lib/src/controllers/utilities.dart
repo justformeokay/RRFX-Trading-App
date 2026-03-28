@@ -21,6 +21,7 @@ import 'package:rrfx/src/models/utilities/province_models_api.dart';
 import 'package:rrfx/src/models/utilities/province_raja_models.dart';
 import 'package:rrfx/src/models/utilities/slide_model.dart';
 import 'package:rrfx/src/models/utilities/trading_signals_model.dart';
+import 'package:rrfx/src/models/utilities/ticket_topics_model.dart';
 import 'package:rrfx/src/service/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -32,6 +33,7 @@ class UtilitiesController extends GetxController {
   RxString selectedCountry = "".obs;
   RxString selectedProvince = "".obs;
   RxString selectedCity = "".obs;
+  RxString selectedTopic = "".obs;
   RxBool loadingPrice = false.obs;
 
   AuthService authService = Get.find();
@@ -50,12 +52,13 @@ class UtilitiesController extends GetxController {
   // Ticket
   Rxn<ListOfTicketsModel> listTicketModel = Rxn<ListOfTicketsModel>();
   Rxn<MessagesModel> messagesModel = Rxn<MessagesModel>();
+  Rxn<TicketTopicsModel> ticketTopicsModel = Rxn<TicketTopicsModel>();
+  RxList<String> topics = <String>[].obs;
 
   //Raja Class Models
   Rxn<ProvinceRajaModels> provinceRajaModels = Rxn<ProvinceRajaModels>();
   Rxn<KabupatenRajaModels> kabupatenRajaModels = Rxn<KabupatenRajaModels>();
   Rxn<KecamatanRajaModels> kecamatanRajaModels = Rxn<KecamatanRajaModels>();
-
 
   Rxn<ProvinceModelsAPI> provinceModelAPI = Rxn<ProvinceModelsAPI>();
   Rxn<KabupatenModelsAPI> kabupatenModelAPI = Rxn<KabupatenModelsAPI>();
@@ -71,9 +74,7 @@ class UtilitiesController extends GetxController {
       isLoading(true);
       http.Response response = await http.get(
         Uri.tryParse("https://countriesnow.space/api/v0.1/countries/capital")!,
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: {'Content-Type': 'application/json'},
       );
       var result = jsonDecode(response.body);
       isLoading(false);
@@ -95,10 +96,10 @@ class UtilitiesController extends GetxController {
     try {
       isLoadingProvince(true);
       http.Response response = await http.get(
-        Uri.tryParse("https://countriesnow.space/api/v0.1/countries/states/q?country=$countryName")!,
-        headers: {
-          'Content-Type': 'application/json'
-      },
+        Uri.tryParse(
+          "https://countriesnow.space/api/v0.1/countries/states/q?country=$countryName",
+        )!,
+        headers: {'Content-Type': 'application/json'},
       );
       var result = jsonDecode(response.body);
       isLoadingProvince(false);
@@ -120,10 +121,10 @@ class UtilitiesController extends GetxController {
     try {
       isLoadingCity(true);
       http.Response response = await http.get(
-        Uri.tryParse("https://countriesnow.space/api/v0.1/countries/state/cities/q?country=${selectedCountry.value}&state=${selectedProvince.value}")!,
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        Uri.tryParse(
+          "https://countriesnow.space/api/v0.1/countries/state/cities/q?country=${selectedCountry.value}&state=${selectedProvince.value}",
+        )!,
+        headers: {'Content-Type': 'application/json'},
       );
       var result = jsonDecode(response.body);
       isLoadingCity(false);
@@ -147,9 +148,7 @@ class UtilitiesController extends GetxController {
       isLoadingProvince(true);
       http.Response response = await http.get(
         Uri.tryParse("https://pro.rajaongkir.com/api/province")!,
-        headers: {
-          'key': 'e049d10db2bd7fc4d5ec3cb4035633be'
-        },
+        headers: {'key': 'e049d10db2bd7fc4d5ec3cb4035633be'},
       );
       var result = jsonDecode(response.body);
       isLoadingProvince(false);
@@ -171,10 +170,10 @@ class UtilitiesController extends GetxController {
     try {
       isLoadingCity(true);
       http.Response response = await http.get(
-        Uri.tryParse("https://pro.rajaongkir.com/api/city?province=$selectedProvince")!,
-        headers: {
-          'key': 'e049d10db2bd7fc4d5ec3cb4035633be'
-        },
+        Uri.tryParse(
+          "https://pro.rajaongkir.com/api/city?province=$selectedProvince",
+        )!,
+        headers: {'key': 'e049d10db2bd7fc4d5ec3cb4035633be'},
       );
       var result = jsonDecode(response.body);
       isLoadingCity(false);
@@ -197,9 +196,7 @@ class UtilitiesController extends GetxController {
       isLoadingCity(true);
       http.Response response = await http.get(
         Uri.tryParse("https://pro.rajaongkir.com/api/subdistrict?city=409")!,
-        headers: {
-          'key': 'e049d10db2bd7fc4d5ec3cb4035633be'
-        },
+        headers: {'key': 'e049d10db2bd7fc4d5ec3cb4035633be'},
       );
       var result = jsonDecode(response.body);
       isLoadingCity(false);
@@ -239,7 +236,7 @@ class UtilitiesController extends GetxController {
   Future<bool> getKabupatenAPI() async {
     try {
       Map<String, dynamic> result = await authService.post("regol/getRegency", {
-        "province" : selectedProvinceID.value
+        "province": selectedProvinceID.value,
       });
 
       if (result['status'] != true) {
@@ -257,9 +254,10 @@ class UtilitiesController extends GetxController {
   // Kecamatan API
   Future<bool> getKecamatanAPI() async {
     try {
-      Map<String, dynamic> result = await authService.post("regol/getDistrict", {
-        "regency" : selectedKabupatenID.value
-      });
+      Map<String, dynamic> result = await authService.post(
+        "regol/getDistrict",
+        {"regency": selectedKabupatenID.value},
+      );
       if (result['status'] != true) {
         return false;
       }
@@ -275,9 +273,10 @@ class UtilitiesController extends GetxController {
   // Desa API
   Future<bool> getDesaAPI() async {
     try {
-      Map<String, dynamic> result = await authService.post("regol/getVillages", {
-        "district" : selectedKecamatanID.value
-      });
+      Map<String, dynamic> result = await authService.post(
+        "regol/getVillages",
+        {"district": selectedKecamatanID.value},
+      );
 
       if (result['status'] != true) {
         return false;
@@ -290,7 +289,6 @@ class UtilitiesController extends GetxController {
       return false;
     }
   }
-
 
   // Desa API
   Future<bool> getNewsList() async {
@@ -325,7 +323,6 @@ class UtilitiesController extends GetxController {
     }
   }
 
-
   // Daftar Tickets API
   Future<bool> ticketList() async {
     try {
@@ -343,11 +340,39 @@ class UtilitiesController extends GetxController {
     }
   }
 
+  // Get Ticket Topics API
+  Future<bool> getTopics() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('accessToken');
+    try {
+      isLoading(true);
+      http.Response response = await http.get(
+        Uri.tryParse("${GlobalVariable.mainURL}/ticket/topics")!,
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': 'Bearer $token'});
+      var result = jsonDecode(response.body);
+      isLoading(false);
+      responseMessage.value = result['message'];
+      if (response.statusCode == 200 && result['status']) {
+        topics.value = List<String>.from(result['data'] ?? []);
+        Get.log("✅ [UtilitiesController] Topics fetched successfully: ${topics.join(", ")}");
+        return true;
+      }
+      return false;
+    } catch (e) {
+      isLoading(false);
+      responseMessage.value = e.toString();
+      return false;
+    }
+  }
+
   // Create Tickets API
   Future<bool> createTicket({String? subject}) async {
     try {
       Map<String, dynamic> result = await authService.post("ticket/create", {
-        "subject" : subject
+        "subject": subject,
+        "topic": selectedTopic.value,
       });
 
       if (result['status'] != true) {
@@ -361,12 +386,11 @@ class UtilitiesController extends GetxController {
     }
   }
 
-
   // Create Tickets API
   Future<bool> closeTicket({String? code}) async {
     try {
       Map<String, dynamic> result = await authService.post("ticket/close", {
-        "code" : code
+        "code": code,
       });
       if (result['status'] != true) {
         return false;
@@ -382,7 +406,9 @@ class UtilitiesController extends GetxController {
   // List Message of Ticket API
   Future<bool> listMessageOfTicket({String? code}) async {
     try {
-      Map<String, dynamic> result = await authService.get("ticket/chats?code=$code");
+      Map<String, dynamic> result = await authService.get(
+        "ticket/chats?code=$code",
+      );
 
       if (result['status'] != true) {
         return false;
@@ -403,15 +429,11 @@ class UtilitiesController extends GetxController {
     String? attachmentPath, // optional (file)
   }) async {
     try {
-      Map<String, String> body = {
-        'code': code ?? "",
-      };
+      Map<String, String> body = {'code': code ?? ""};
       if (message != null && message.isNotEmpty) {
         body['message'] = message;
       }
-      Map<String, String> file = {
-        'attachment': attachmentPath ?? "",
-      };
+      Map<String, String> file = {'attachment': attachmentPath ?? ""};
       final result = await authService.multipart(
         "ticket/send-message",
         body,
@@ -428,7 +450,6 @@ class UtilitiesController extends GetxController {
       return false;
     }
   }
-
 
   // Desa API
   Future<bool> getSlideImageLogin() async {
@@ -448,13 +469,16 @@ class UtilitiesController extends GetxController {
   }
 
   // Desa API
-  Future convertingMoney({String? amount, String? accountID, String? type = "withdrawal"}) async {
+  Future convertingMoney({
+    String? amount,
+    String? accountID,
+    String? type = "withdrawal",
+  }) async {
     try {
-      Map<String, dynamic> result = await authService.post("transaction/rate-conversation", {
-        "amount" : amount,
-        "account" : accountID,
-        "type" : type
-      });
+      Map<String, dynamic> result = await authService.post(
+        "transaction/rate-conversation",
+        {"amount": amount, "account": accountID, "type": type},
+      );
       responseMessage(result['message']);
       if (result['status'] != true) {
         return false;
@@ -485,9 +509,10 @@ class UtilitiesController extends GetxController {
   // Desa API
   Future<bool> getNewsDetail({String? newsID}) async {
     try {
-      Map<String, dynamic> result = await authService.post("public/news-detail", {
-        "id" : newsID
-      });
+      Map<String, dynamic> result = await authService.post(
+        "public/news-detail",
+        {"id": newsID},
+      );
 
       if (result['status'] != true) {
         return false;
@@ -501,15 +526,14 @@ class UtilitiesController extends GetxController {
     }
   }
 
-
   Future<bool> getTradingSignals({String? timeFrame}) async {
     try {
       isLoading(true);
       http.Response response = await http.get(
-        Uri.tryParse("https://api-mt5.techcrm.net/v5-terminal-analis/analysis_main?timeframe=${timeFrame ?? "H1"}")!,
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        Uri.tryParse(
+          "https://api-mt5.techcrm.net/v5-terminal-analis/analysis_main?timeframe=${timeFrame ?? "H1"}",
+        )!,
+        headers: {'Content-Type': 'application/json'},
       );
       var result = jsonDecode(response.body);
       isLoading(false);
@@ -531,9 +555,7 @@ class UtilitiesController extends GetxController {
       loadingPrice(true);
       http.Response response = await http.get(
         Uri.tryParse("https://api-mt5.techcrm.net/v5-terminal-analis/prices")!,
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: {'Content-Type': 'application/json'},
       );
       var result = jsonDecode(response.body);
 
@@ -574,7 +596,7 @@ class UtilitiesController extends GetxController {
       final result = jsonDecode(response.body);
       isLoading.value = false;
 
-      if(result['data'].toList().isEmpty){
+      if (result['data'].toList().isEmpty) {
         responseMessage.value = result['message'];
         return false;
       }
@@ -587,7 +609,8 @@ class UtilitiesController extends GetxController {
       }
 
       // handle kalau bukan sales
-      if (result['status'] == true && (result['data'] is List && result['data'].isEmpty)) {
+      if (result['status'] == true &&
+          (result['data'] is List && result['data'].isEmpty)) {
         responseMessage.value = result['message'];
         inviteLinkModel.value = null;
         return false;
@@ -626,18 +649,22 @@ class UtilitiesController extends GetxController {
       if (response.statusCode == 200 && result['status'] == true) {
         // Check if data is a List (empty array for non-sales)
         if (result['data'] is List) {
-          responseMessage.value = result['message'] ?? "Tidak ada link referral";
+          responseMessage.value =
+              result['message'] ?? "Tidak ada link referral";
           inviteLinkModel.value = null;
           isLoading.value = false;
           return false;
         }
-        
+
         // Check if data is empty Map or null
-        if (result['data'] == null || 
-            (result['data'] is Map && 
-             (result['data']['general'] == null || result['data']['general'].isEmpty) && 
-             (result['data']['spesific'] == null || result['data']['spesific'].isEmpty))) {
-          responseMessage.value = result['message'] ?? "Tidak ada link referral";
+        if (result['data'] == null ||
+            (result['data'] is Map &&
+                (result['data']['general'] == null ||
+                    result['data']['general'].isEmpty) &&
+                (result['data']['spesific'] == null ||
+                    result['data']['spesific'].isEmpty))) {
+          responseMessage.value =
+              result['message'] ?? "Tidak ada link referral";
           inviteLinkModel.value = null;
           isLoading.value = false;
           return false;
@@ -646,7 +673,7 @@ class UtilitiesController extends GetxController {
         inviteLinkModel.value = InviteLinkModel.fromJson({
           "data": result["data"],
         });
-        
+
         responseMessage.value = result['message'] ?? "Berhasil memuat data";
         isLoading.value = false;
         return true;

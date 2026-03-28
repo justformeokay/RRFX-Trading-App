@@ -71,7 +71,7 @@ class _ProductViewState extends State<ProductView> {
             return const Text("CDD Type belum tersedia");
           }
           return VoidTextField(
-            readOnly: true,
+            readOnly: false,
             requiredField: true,
             controller: cddTipeController,
             fieldName: "CDD Type",
@@ -115,7 +115,7 @@ class _ProductViewState extends State<ProductView> {
             return const Text("Type of CDD belum tersedia");
           }
           return VoidTextField(
-            readOnly: true,
+            readOnly: false,
             requiredField: true,
             controller: typeOfCDDController,
             fieldName: "Type of CDD",

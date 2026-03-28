@@ -11,6 +11,7 @@ import 'package:rrfx/src/components/textfields/otp_textfield.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
 import 'package:rrfx/src/controllers/home.dart';
 import 'package:rrfx/src/helpers/formatters/masking_email.dart';
+import 'package:rrfx/src/views/authentications/success_verified_otp.dart';
 import 'package:rrfx/src/views/authentications/verification_account_page.dart';
 
 class OtpPage extends StatefulWidget {
@@ -307,7 +308,8 @@ class _OtpPageState extends State<OtpPage> {
                               message: authController.responseMessage.value,
                               type: SnackBarType.success,
                             );
-                            Get.offAll(() => const VerificationAccountPage());
+                            Get.offAll(() => const SuccessVerifiedOtpPage());
+                            // Get.offAll(() => const VerificationAccountPage());
                           } else {
                             CustomScaffoldMessanger.showAppSnackBar(
                               context,

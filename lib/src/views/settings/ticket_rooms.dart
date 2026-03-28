@@ -23,6 +23,7 @@ class TicketRooms extends StatefulWidget {
 class _TicketRoomsState extends State<TicketRooms> {
   final UtilitiesController utilitiesController = Get.find();
   final RxInt selectedIndex = 0.obs;
+  final RxInt selectedIndexTopics = 0.obs;
   final RxBool isLoadingCreate = false.obs;
 
   final RxList<String> subjectType = [
@@ -38,6 +39,14 @@ class _TicketRoomsState extends State<TicketRooms> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       utilitiesController.ticketList().then((success) {
+        if (!success) {
+          CustomScaffoldMessanger.showAppSnackBar(
+            context,
+            message: utilitiesController.responseMessage.value,
+          );
+        }
+      });
+      utilitiesController.getTopics().then((success) {
         if (!success) {
           CustomScaffoldMessanger.showAppSnackBar(
             context,
@@ -203,15 +212,11 @@ class _TicketRoomsState extends State<TicketRooms> {
         backgroundColor: CustomColor.secondaryColor,
         child: const Icon(Icons.add, color: Colors.white),
         onPressed: () async {
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          prefs.getString("accessToken");
-
           CustomMaterialBottomSheets.defaultBottomSheet(
             context,
             size: size,
             title: "Pilih Subjek Ticket",
             children: [
-              const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -229,6 +234,54 @@ class _TicketRoomsState extends State<TicketRooms> {
                   ),
                 ),
               ),
+              const SizedBox(height: 10),
+              Text("Pilih Topics yang sesuai dengan masalah kamu, agar tim kami bisa membantu dengan lebih cepat.", style: GoogleFonts.inter(fontSize: 12, color: Colors.grey)),
+              const SizedBox(height: 20),
+              Obx(() {
+                final topics = utilitiesController.topics;
+                if (topics.isEmpty) {
+                  return SizedBox(
+                    height: 80,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 12),
+                          Text(
+                            "Loading topics...",
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: List.generate(
+                    topics.length,
+                    (i) => Obx(
+                      () => ChoiceChip(
+                        shape: const StadiumBorder(),
+                        label: Text(topics[i]),
+                        selectedColor: CustomColor.secondaryColor,
+                        backgroundColor: Theme.of(context).chipTheme.backgroundColor,
+                        selected: selectedIndexTopics.value == i,
+                        onSelected: (_){
+                          selectedIndexTopics.value = i;
+                          utilitiesController.selectedTopic.value = topics[i];
+                          print("📌 Selected topic: ${topics[i]}");
+                        },
+                      ),
+                    ),
+                  ),
+                );
+              }),
               const SizedBox(height: 20),
               Obx(() {
                 return CustomButtons.buildFilledButton(
@@ -236,21 +289,23 @@ class _TicketRoomsState extends State<TicketRooms> {
                       ? "Membuat Ticket..."
                       : "Mulai Tiket Sekarang",
                   onPressed: () {
+                    Get.log("Subject terpilih: ${subjectType[selectedIndex.value]}");
                     isLoadingCreate.value = true;
-
-                    utilitiesController
-                        .createTicket(subject: subjectType[selectedIndex.value])
-                        .then((success) {
+                    final topics = utilitiesController.ticketTopicsModel.value?.data ?? [];
+                    final subject = topics.isNotEmpty ? topics[selectedIndex.value] : '';
+                    utilitiesController.createTicket(subject: subjectType[selectedIndex.value]).then((success) {
                       isLoadingCreate.value = false;
-
                       if (success) {
                         utilitiesController.ticketList().then((_) {
                           Get.back();
-                          final newTicket = utilitiesController.listTicketModel.value!.response!.first;
-                          Get.to(() => Tickets(
-                            ticketCode: newTicket.code,
-                            closed: newTicket.status == "closed",
-                          ));
+                          final list = utilitiesController.listTicketModel.value?.response;
+                          if (list != null && list.isNotEmpty) {
+                            final newTicket = list.first;
+                            Get.to(() => Tickets(
+                              ticketCode: newTicket.code,
+                              closed: newTicket.status == "closed",
+                            ));
+                          }
                         });
                       }
                     });

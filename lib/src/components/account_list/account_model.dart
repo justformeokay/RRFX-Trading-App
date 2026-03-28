@@ -59,7 +59,11 @@ class AccountDetailModel {
   final String? minTopup;
   final String? minWithdrawal;
   final String? maxWithdrawal;
+
   // Tambahkan properti lain yang relevan di sini
+  final String? cddType;
+  final double? limitMargin;
+  final double? residualLimit;
 
   AccountDetailModel({
     this.id,
@@ -81,30 +85,36 @@ class AccountDetailModel {
     this.minTopup,
     this.minWithdrawal,
     this.maxWithdrawal,
+    this.cddType,
+    this.limitMargin,
+    this.residualLimit,
   });
   
 
   factory AccountDetailModel.fromJson(Map<String, dynamic> json) {
     return AccountDetailModel(
-      id: json['id'] as String?,
-      login: json['login'] as String?,
-      type: json['type'] as String?,
-      namaTipeAkun: json['nama_tipe_akun'] as String?,
-      balance: json['balance'] as String?,
-      currency: json['currency'] as String?,
-      marginFree: json['margin_free'] as String?,
-      accountCurrency: json['account_currency'] as String?,
+      id: json['id']?.toString(),
+      login: json['login']?.toString(),
+      type: json['type']?.toString(),
+      namaTipeAkun: json['nama_tipe_akun']?.toString(),
+      balance: json['balance']?.toString(),
+      currency: json['currency']?.toString(),
+      marginFree: json['margin_free']?.toString(),
+      accountCurrency: json['account_currency']?.toString(),
       marginFreePercent: _toDouble(json['margin_free_percent']),
-      totalDepositUsd: json['total_deposit_usd'] as String?,
-      totalWithdrawalUsd: json['total_withdrawal_usd'] as String?,
-      pnl: json['pnl'] as String?,
-      equity: json['equity'] as String?,
-      margin: json['margin'] as String?,
-      minDeposit: json['min_deposit'] as String?,
-      maxDeposit: json['max_deposit'] as String?,
-      minTopup: json['min_topup'] as String?,
-      minWithdrawal: json['min_withdrawal'] as String?,
-      maxWithdrawal: json['max_withdrawal'] as String?,
+      totalDepositUsd: json['total_deposit_usd']?.toString(),
+      totalWithdrawalUsd: json['total_withdrawal_usd']?.toString(),
+      pnl: json['pnl']?.toString(),
+      equity: json['equity']?.toString(),
+      margin: json['margin']?.toString(),
+      minDeposit: json['min_deposit']?.toString(),
+      maxDeposit: json['max_deposit']?.toString(),
+      minTopup: json['min_topup']?.toString(),
+      minWithdrawal: json['min_withdrawal']?.toString(),
+      maxWithdrawal: json['max_withdrawal']?.toString(),
+      cddType: json['cdd_type']?.toString(),
+      limitMargin: _toDouble(json['limit_margin']),
+      residualLimit: _toDouble(json['residual_limit']),
     );
   }
   
@@ -128,6 +138,9 @@ class AccountDetailModel {
       'min_topup': minTopup,
       'min_withdrawal': minWithdrawal,
       'max_withdrawal': maxWithdrawal,
+      'cdd_type': cddType,
+      'limit_margin': limitMargin,
+      'residual_limit': residualLimit,
     };
   }
 }

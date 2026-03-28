@@ -106,6 +106,9 @@ class Real {
     this.totalDepositUsd,
     this.totalWithdrawalIdr,
     this.totalWithdrawalUsd,
+    this.cddType,
+    this.limitMargin,
+    this.residualLimit,
   });
   String? id;
   String? login;
@@ -128,6 +131,9 @@ class Real {
   String? totalDepositUsd;
   String? totalWithdrawalIdr;
   String? totalWithdrawalUsd;
+  String? cddType;
+  double? limitMargin;
+  double? residualLimit;
 
   Real.fromJson(Map<String, dynamic> json){
     id = json['id'];
@@ -151,5 +157,8 @@ class Real {
     totalDepositUsd = json['total_deposit_usd'];
     totalWithdrawalIdr = json['total_withdrawal_idr'];
     totalWithdrawalUsd = json['total_withdrawal_usd'];
+    cddType = json['cdd_type'];
+    limitMargin = json['limit_margin'] != null ? double.tryParse(json['limit_margin'].toString()) : null;
+    residualLimit = json['residual_limit'] != null ? double.tryParse(json['residual_limit'].toString()) : null;
   }
 }

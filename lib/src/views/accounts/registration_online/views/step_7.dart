@@ -32,6 +32,7 @@ import 'package:rrfx/src/views/accounts/registration_online/components/time_and_
 import 'package:rrfx/src/views/accounts/registration_online/controllers/progress_account_controller.dart';
 // import 'package:rrfx/src/views/accounts/registration_online/controllers/progress_account_controller.dart';
 import 'package:rrfx/src/views/accounts/registration_online/controllers/statement_controller.dart';
+import 'package:rrfx/src/views/accounts/registration_online/controllers/step_controller.dart';
 import 'package:rrfx/src/views/accounts/registration_online/controllers/upload_controller.dart';
 import 'package:rrfx/src/views/accounts/registration_online/repository/regol_repository.dart';
 import 'package:rrfx/src/views/accounts/registration_online/views/step_8.dart';
@@ -49,6 +50,7 @@ class _Step7State extends State<Step7> {
   final progressController = Get.find<ProgressAccountController>();
   final uploadController = Get.put(UploadController());
   final multipleController = Get.put(MultiUploadController());
+  StepController stepController = Get.find();
 
   // DATA PRIBADI
   TextEditingController nama = TextEditingController();
@@ -678,7 +680,23 @@ class _Step7State extends State<Step7> {
       child: Scaffold(
         appBar: CustomAppBar.defaultAppBar(
           autoImplyLeading: true,
-          title: "Step 7"
+          title: "Step 7",
+          actions:  [
+            Obx(() {
+              return DropdownButton(
+                value: stepController.selectedCDD.value,
+                items: stepController.cDDTypesList.map((type) {
+                  return DropdownMenuItem(
+                    value: type,
+                    child: Text(type),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  stepController.selectedCDD.value = value ?? '';
+                },
+              );
+            }),
+          ]
         ),
         body: Padding(
           padding: EdgeInsets.symmetric(horizontal: 15.0),
@@ -850,17 +868,19 @@ class _Step7State extends State<Step7> {
                         );
                       }));
                     }),
-                    NumberTextField(
-                      requiredField: true,
-                      useValidator: false,
-                      iconData: Clarity.number_list_line,
-                      controller: nomorNPWP,
-                      readOnly: false,
-                      minLength: 16,
-                      maxLength: 16,
-                      labelText: "Nomor NPWP",
-                      fieldName: "Nomor NPWP",
-                      hintText: "Nomor NPWP",
+                    Obx(
+                      () => NumberTextField(
+                        requiredField: stepController.selectedCDD.value == "Standart" ? true : false,
+                        useValidator: false,
+                        iconData: Clarity.number_list_line,
+                        controller: nomorNPWP,
+                        readOnly: false,
+                        minLength: 16,
+                        maxLength: 16,
+                        labelText: "Nomor NPWP",
+                        fieldName: "Nomor NPWP",
+                        hintText: "Nomor NPWP",
+                      ),
                     ),
                     NameTextFieldNewVersion(
                       requiredField: true,
@@ -1744,8 +1764,8 @@ class _Step7State extends State<Step7> {
                   // ===================================================================
                   //        📌 FIELD TEXT WAJIB DIISI — AUTO VALIDATION LIST
                   // ===================================================================
-                  final requiredFields = [
-                    {"value": nomorNPWP.text, "message": "Mohon inputkan NPWP Anda"},
+                  List<Map<String, String>?>? requiredFields = [
+                    stepController.selectedCDD.value == "Standart" ? {"value": nomorNPWP.text, "message": "Mohon inputkan NPWP Anda"} : null,
                     {"value": sumberPenghasilan.text, "message": "Mohon inputkan sumber penghasilan"},
                     {"value": pendidikanTerakhir.text, "message": "Mohon inputkan pendidikan terakhir"},
                     {"value": jenisKelamin.text, "message": "Mohon pilih jenis kelamin"},
@@ -1775,6 +1795,7 @@ class _Step7State extends State<Step7> {
 
                   // Jalankan validasi tekstual
                   for (var item in requiredFields) {
+                    if (item == null) continue;
                     if (item["value"] == null || item["value"].toString().trim().isEmpty) {
                       return AppSnackbar.error(item["message"].toString());
                     }
@@ -1887,7 +1908,7 @@ class _Step7State extends State<Step7> {
                     pengalamanInvestasi: pengalamanInvestasi.text,
                     noKantor: noTelpKantor.text,
                     noHandphone: phone ?? noHandphone.text,
-                    nomorNPWP: nomorNPWP.text,
+                    nomorNPWP: stepController.selectedCDD.value == "Standart" ? nomorNPWP.text : "",
                     namaPerusahaan: namaPerusahaan.text,
                     namaIstri: namaPasangan.text,
                     phoneCode: phoneCode ?? "+62",

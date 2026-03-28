@@ -95,6 +95,7 @@ class AccountController extends GetxController {
     } catch (e) {
       isLoading.value = false;
       Get.snackbar('Error API', e.toString().replaceAll('Exception: ', ''));
+      print('❌ [AccountController] Error fetching account info: $e');
       _allAccounts.clear(); 
       selectedAccount.value = null; 
     } finally {
