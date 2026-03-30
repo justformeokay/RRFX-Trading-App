@@ -531,7 +531,7 @@ class UtilitiesController extends GetxController {
       isLoading(true);
       http.Response response = await http.get(
         Uri.tryParse(
-          "https://api-mt5.techcrm.net/v5-terminal-analis/analysis_main?timeframe=${timeFrame ?? "H1"}",
+          "${GlobalVariable.mt5URL}/v5-terminal-analis/analysis_main?timeframe=${timeFrame ?? "H1"}",
         )!,
         headers: {'Content-Type': 'application/json'},
       );
@@ -554,7 +554,7 @@ class UtilitiesController extends GetxController {
     try {
       loadingPrice(true);
       http.Response response = await http.get(
-        Uri.tryParse("https://api-mt5.techcrm.net/v5-terminal-analis/prices")!,
+        Uri.tryParse("${GlobalVariable.mt5URL}/v5-terminal-analis/prices")!,
         headers: {'Content-Type': 'application/json'},
       );
       var result = jsonDecode(response.body);

@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:dio/dio.dart';
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 
 class ArticlesController extends GetxController {
   final Dio dio = Dio();
@@ -20,7 +21,7 @@ class ArticlesController extends GetxController {
 
     loading.value = true;
 
-    final url = "https://gateway.rrfx.co.id/api/v1/contents/category/all?type=ARTICLE&limit=7&page=${page.value}";
+    final url = "${GlobalVariable.gatewayURL}/api/v1/contents/category/all?type=ARTICLE&limit=7&page=${page.value}";
 
     try {
       final res = await dio.get(url);

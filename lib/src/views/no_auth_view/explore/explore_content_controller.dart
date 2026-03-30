@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 
 class ExploreContentController extends GetxController {
   RxBool isLoadingNews = false.obs;
@@ -7,7 +8,7 @@ class ExploreContentController extends GetxController {
   RxList<dynamic> news = <dynamic>[].obs;
   RxList<dynamic> analysis = <dynamic>[].obs;
 
-  final String baseUrl = "https://gateway.rrfx.co.id/api/v1/contents/category/all";
+  final String baseUrl = "${GlobalVariable.gatewayURL}/api/v1/contents/category/all";
 
   RxBool isLoadingPromotions = false.obs;
   RxList<dynamic> promotions = <dynamic>[].obs;
@@ -16,7 +17,7 @@ class ExploreContentController extends GetxController {
     isLoadingPromotions.value = true;
     try {
       final response = await GetConnect().get(
-        "https://gateway.rrfx.co.id/api/v1/contents/category/rewards?type=PROMOTION&limit=3&highlight=true",
+        "${GlobalVariable.gatewayURL}/api/v1/contents/category/rewards?type=PROMOTION&limit=3&highlight=true",
       );
 
       promotions.value = response.body?["data"]?["list"] ?? [];

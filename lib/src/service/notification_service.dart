@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rrfx/firebase_options.dart';
@@ -15,6 +16,11 @@ Future<void> firebaseBackgroundHandler(RemoteMessage message) async {
 }
 
 Future<void> initFirebaseAndNotifications() async {
+  if (kIsWeb) {
+    print('⚠️ Firebase not configured for web, skipping initialization.');
+    return;
+  }
+
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 

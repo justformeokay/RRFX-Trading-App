@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:get/get.dart';
 import 'package:dio/dio.dart';
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'market_analysis_model.dart';
 
@@ -48,7 +49,7 @@ class MarketAnalysisController extends GetxController {
 
       final res = await _dio
           .get(
-            "https://gateway.rrfx.co.id/api/v1/contents/category/all",
+            "${GlobalVariable.gatewayURL}/api/v1/contents/category/all",
             queryParameters: {
               "type": "MARKET_ANALYTIC",
               "limit": limit,
@@ -93,7 +94,7 @@ class MarketAnalysisController extends GetxController {
 
       final res = await _dio
           .get(
-            "https://gateway.rrfx.co.id/api/v1/contents/category/all",
+            "${GlobalVariable.gatewayURL}/api/v1/contents/category/all",
             queryParameters: {
               "type": "MARKET_ANALYTIC",
               "limit": limit,

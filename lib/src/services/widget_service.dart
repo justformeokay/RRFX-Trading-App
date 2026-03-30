@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:home_widget/home_widget.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:http/http.dart' as http;
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 
 class WidgetService {
   static const String _widgetName = 'MarketAnalysisWidgetProvider';
@@ -13,7 +14,7 @@ class WidgetService {
   static const String keyMarketsCount = 'widget_markets_count';
   
   // API Endpoint untuk multi-market analysis
-  static const String _apiEndpoint = 'https://api-mt5.techcrm.net/v5-terminal-analis/analysis_main?timeframe=H1';
+  static final String _apiEndpoint = '${GlobalVariable.mt5URL}/v5-terminal-analis/analysis_main?timeframe=H1';
 
   /// Initialize widget service
   static Future<void> initialize() async {

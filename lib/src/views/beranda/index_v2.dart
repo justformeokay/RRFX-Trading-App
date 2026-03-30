@@ -24,6 +24,7 @@ import 'package:rrfx/src/models/beranda/trading_card_models.dart';
 import 'package:rrfx/src/views/accounts/account_information.dart';
 import 'package:rrfx/src/views/accounts/demo_account_information.dart';
 import 'package:rrfx/src/views/accounts/registration_online/views/step_0_password_meta.dart';
+import 'package:rrfx/src/views/accounts/registration_online/views/step_3.dart';
 import 'package:rrfx/src/views/beranda/all_trading_signals.dart';
 import 'package:rrfx/src/views/beranda/rrfx-contents/market_analysis/market_analysis_detail_page.dart';
 import 'package:rrfx/src/views/beranda/rrfx-contents/market_analysis/market_analysis_page.dart';
@@ -218,8 +219,7 @@ class _IndexV2State extends State<IndexV2> {
         // Show success dialog and refresh account data
         ModernAlertDialog.success(
           title: 'Berhasil',
-          message:
-              'Akun demo berhasil dibuat! Refresh halaman untuk melihat akun demo Anda.',
+          message: 'Akun demo berhasil dibuat! Refresh halaman untuk melihat akun demo Anda.',
           buttonText: 'OK',
           onPressed: () {
             Get.back();
@@ -773,8 +773,9 @@ class _IndexV2State extends State<IndexV2> {
                         return Expanded(
                           child: CupertinoButton(
                             padding: EdgeInsets.zero,
-                            onPressed:
-                                () => _handleMenuTap(context, size, appName),
+                            onPressed: () {
+                              _handleMenuTap(context, size, appName);
+                            },
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -824,8 +825,7 @@ class _IndexV2State extends State<IndexV2> {
                 ),
               ),
               Obx(() {
-                if (pendingAccountStatus.value.isEmpty == false &&
-                    containsPendingAccount.value) {
+                if (pendingAccountStatus.value.isEmpty == false && containsPendingAccount.value) {
                   final isDark = Get.isDarkMode;
                   final color = backgroundStatusPending.value ?? Colors.grey;
                   return Container(
@@ -1713,6 +1713,20 @@ class _IndexV2State extends State<IndexV2> {
             }
           });
         } else {
+          if(controller.realAccounts.isNotEmpty) {
+            final hasSederhana = controller.realAccounts.any(
+              (acc) => acc.cddType == "sederhana",
+            );
+            if (hasSederhana) {
+              ModernAlertDialog.warning(
+                title: 'Tidak Dapat Membuat Akun',
+                message: 'Akun Anda berjenis CDD Sederhana sehingga tidak dapat membuat akun trading baru. Silakan hubungi customer support untuk informasi lebih lanjut.',
+                buttonText: 'OK',
+                onPressed: () => Get.back(),
+              );
+              return;
+            }
+          }
           homeController.getPendingAccount().then((result) async {
             if (!result) {
               ErrorPopup.show(
@@ -1725,39 +1739,15 @@ class _IndexV2State extends State<IndexV2> {
             if (homeController.pendingModel.value?.response?.isEmpty == true) {
               // await regolController.progressAccount();
               Get.to(() => CreateMT5PasswordPage());
-            } else if (homeController
-                    .pendingModel
-                    .value
-                    ?.response
-                    ?.isNotEmpty ==
-                true) {
-              if (homeController.pendingModel.value?.response?[0].status ==
-                  "Registrasi") {
-                AccountProcessingPopup.show(
-                  status:
-                      homeController.pendingModel.value?.response?[0].status ??
-                      "Registrasi",
-                );
-              } else if (homeController
-                      .pendingModel
-                      .value
-                      ?.response?[0]
-                      .status ==
-                  "Ditolak") {
+            } else if (homeController.pendingModel.value?.response?.isNotEmpty == true) {
+              if (homeController.pendingModel.value?.response?[0].status == "Registrasi") {
+                AccountProcessingPopup.show(status: homeController.pendingModel.value?.response?[0].status ?? "Registrasi");
+              } else if (homeController.pendingModel.value?.response?[0].status == "Ditolak") {
                 Get.to(() => CreateMT5PasswordPage());
-              } else if (homeController
-                      .pendingModel
-                      .value
-                      ?.response?[0]
-                      .status ==
-                  "Regol belum selesai") {
+              } else if (homeController.pendingModel.value?.response?[0].status == "Regol belum selesai") {
                 Get.to(() => CreateMT5PasswordPage());
               } else {
-                AccountProcessingPopup.show(
-                  status:
-                      homeController.pendingModel.value?.response?[0].status ??
-                      "Proses Akun",
-                );
+                AccountProcessingPopup.show(status: homeController.pendingModel.value?.response?[0].status ?? "Proses Akun");
               }
             } else {
               ErrorPopup.show(
@@ -2132,12 +2122,13 @@ class _IndexV2State extends State<IndexV2> {
               borderRadius: BorderRadius.circular(10),
             ),
           ),
-          onPressed:
-              isEnabled
-                  ? () {
-                    Get.to(() => CreateMT5PasswordPage());
-                  }
-                  : null,
+          onPressed: isEnabled ? () {
+            if(homeController.pendingModel.value?.response?[0].login != "0") {
+              Get.to(() => Step3());
+              return;
+            }
+            Get.to(() => CreateMT5PasswordPage());
+          } : null,
           child: Text(
             buttonLabel,
             style: GoogleFonts.inter(

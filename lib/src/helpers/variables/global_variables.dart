@@ -1,8 +1,24 @@
 import 'package:get/get.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:rrfx/src/components/languages/language_variable.dart';
 
 class GlobalVariable {
-  static final mainURL = "https://api-rrfx.luxurymatrix.com";
+  // Development proxy (hanya untuk local dev)
+  static const _devProxy = "http://localhost:8089";
+  // Production domain
+  static const _prodDomain = "https://rrfx.mathlab.id";
+
+  static final mainURL = kIsWeb
+      ? (kDebugMode ? "$_devProxy/api" : "$_prodDomain/api")
+      : "https://api-rrfx.luxurymatrix.com";
+
+  static final gatewayURL = kIsWeb
+      ? (kDebugMode ? "$_devProxy/gateway" : "$_prodDomain/gateway")
+      : "https://gateway.rrfx.co.id";
+
+  static final mt5URL = kIsWeb
+      ? (kDebugMode ? "$_devProxy/mt5" : "$_prodDomain/mt5")
+      : "https://api-mt5.techcrm.net";
   // static final mainURL = "https://api-rrfx.techcrm.net";
   // URL API trident luxury
   // static final mainURL = "https://api-trident.luxurymatrix.com";

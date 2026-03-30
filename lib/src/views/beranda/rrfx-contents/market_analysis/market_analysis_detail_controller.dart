@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 
 import 'market_analysis_detail_model.dart';
 
@@ -18,7 +19,7 @@ class MarketAnalysisDetailController extends GetxController {
       errorMessage.value = null;
       errorType.value = null;
 
-      final url = Uri.parse("https://gateway.rrfx.co.id/api/v1/contents/$slug");
+      final url = Uri.parse("${GlobalVariable.gatewayURL}/api/v1/contents/$slug");
       
       // Set timeout 15 detik
       final response = await http.get(url).timeout(

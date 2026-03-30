@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:dio/dio.dart';
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/views/beranda/rrfx-contents/promotions/promotion_model.dart';
 
 class PromotionController extends GetxController {
@@ -7,7 +8,7 @@ class PromotionController extends GetxController {
   final isLoading = false.obs;
 
   final dio = Dio(BaseOptions(
-    baseUrl: "https://gateway.rrfx.co.id",
+    baseUrl: GlobalVariable.gatewayURL,
   ));
 
   @override

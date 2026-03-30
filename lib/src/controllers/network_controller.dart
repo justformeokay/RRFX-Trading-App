@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get/get.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:rrfx/src/service/network_speed_service.dart';
@@ -53,7 +54,7 @@ class NetworkController extends GetxController {
 
   /// Mengecek network speed dan menampilkan dialog jika > 300ms
   Future<void> checkNetworkSpeed() async {
-    if (isCheckingSpeed.value) return;
+    if (kIsWeb || isCheckingSpeed.value) return;
     
     // isCheckingSpeed.value = true;
     
@@ -96,6 +97,7 @@ class NetworkController extends GetxController {
 
   /// Manual check network speed tanpa dialog loading
   Future<int?> getNetworkSpeed() async {
+    if (kIsWeb) return null;
     try {
       // Warm up
       try {

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'promotion_detail_model.dart';
 
 class PromotionDetailController extends GetxController {
@@ -19,7 +20,7 @@ class PromotionDetailController extends GetxController {
   }
 
   final dio = Dio(BaseOptions(
-    baseUrl: "https://gateway.rrfx.co.id",
+    baseUrl: GlobalVariable.gatewayURL,
   ));
 
   Future<void> fetchDetail() async {
