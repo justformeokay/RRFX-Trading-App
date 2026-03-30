@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform, SocketException;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -197,9 +198,14 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: SafeArea(
           child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
+            child: Center(
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: kIsWeb ? 450 : double.infinity,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Column(
                 children: [
                   AnimatedLockIcon(animationController: _lockAnimationController),
                   SizedBox(height: size.height * 0.03),
@@ -536,6 +542,8 @@ class _VerifyPasscodePageState extends State<VerifyPasscodePage>
                     ),
                   ),
                 ],
+              ),
+                ),
               ),
             ),
           ),

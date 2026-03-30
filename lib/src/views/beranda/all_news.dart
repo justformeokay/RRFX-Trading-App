@@ -1,5 +1,6 @@
 import 'package:bounce/bounce.dart';
 import 'package:flutter/material.dart';
+import 'package:rrfx/src/helpers/widgets/app_network_image.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:html/parser.dart' as html_parser;
@@ -120,7 +121,7 @@ class _CardGridPageState extends State<CardGridPage> {
                       children: [
                         // Gambar
                         Expanded(
-                          child: Image.network(
+                          child: AppNetworkImage(
                             card.imageUrl,
                             width: double.infinity,
                             fit: BoxFit.cover,

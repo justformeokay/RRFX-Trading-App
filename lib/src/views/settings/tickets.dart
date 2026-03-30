@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:rrfx/src/helpers/widgets/app_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -298,7 +299,7 @@ class FullscreenImage extends StatelessWidget {
       body: GestureDetector(
         onTap: () => Get.back(),
         child: Center(
-          child: Hero(tag: url, child: Image.network(url)),
+          child: Hero(tag: url, child: AppNetworkImage(url)),
         ),
       ),
     );
@@ -548,7 +549,7 @@ class _MessageBubbleState extends State<MessageBubble>
                 },
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(14),
-                  child: Image.network(
+                  child: AppNetworkImage(
                     widget.message,
                     fit: BoxFit.cover,
                     loadingBuilder: (_, child, progress) {

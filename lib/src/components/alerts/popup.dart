@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -124,7 +125,7 @@ class AuthDirectionPopup {
         ),
         child: Container(
           padding: const EdgeInsets.all(22),
-          width: Get.width * 0.8,
+          width: min(Get.width * 0.8, 450),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

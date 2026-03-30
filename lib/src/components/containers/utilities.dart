@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
+import 'package:rrfx/src/helpers/widgets/app_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:rrfx/src/components/colors/default.dart';
@@ -98,7 +99,7 @@ class UtilitiesWidget {
               borderRadius: BorderRadius.circular(10),
               child: (urlPhoto != null && urlPhoto.isNotEmpty)
                   ? (isImageOnline == true
-                      ? Image.network(
+                      ? AppNetworkImage(
                           urlPhoto,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {

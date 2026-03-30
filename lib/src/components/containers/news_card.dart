@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:rrfx/src/helpers/widgets/app_network_image.dart';
 
 class NewsCard {
   static Widget blurredNews({Function()? onPressed, String? imageURL}){
@@ -11,7 +12,7 @@ class NewsCard {
           children: [
             // Background image
             imageURL != null
-              ? Image.network(imageURL,
+              ? AppNetworkImage(imageURL,
                   fit: BoxFit.cover,
                   width: double.infinity,
                   height: 200,

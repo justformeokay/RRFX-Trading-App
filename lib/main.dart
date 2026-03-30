@@ -80,6 +80,16 @@ class _MyAppState extends State<MyApp> {
     ever(widget.themeController.isDark, (_) {
       _setSystemUIOverlayStyle();
     });
+    
+    // Allow portrait dan landscape untuk web
+    if (kIsWeb) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    }
   }
   void _setSystemUIOverlayStyle() {
     final bool isDark = widget.themeController.isDark.value;
@@ -130,34 +140,9 @@ class _MyAppState extends State<MyApp> {
         home: networkController.hasConnection.value ? const Splashscreen() : const NoNetworkPage(),
       );
 
-      // Jika Web, bungkus dengan mobile frame wrapper
+      // Jika Web, tampilkan full width seperti web app
       if (kIsWeb) {
-        return MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData.light(),
-          darkTheme: ThemeData.dark(),
-          themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-          home: Scaffold(
-            backgroundColor: isDark ? const Color(0xFF0d0d1a) : const Color(0xFFe8e8f0),
-            body: Center(
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 430), // iPhone 14 Pro Max width
-                decoration: BoxDecoration(
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.4),
-                      blurRadius: 40,
-                      spreadRadius: 0,
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  child: mainApp,
-                ),
-              ),
-            ),
-          ),
-        );
+        return mainApp;
       }
 
       // Untuk Mobile, gunakan langsung tanpa wrapper

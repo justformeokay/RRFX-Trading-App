@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:rrfx/src/helpers/widgets/app_network_image.dart';
 import 'package:intl/intl.dart';
 
 class ArticleCard extends StatelessWidget {
@@ -46,7 +47,7 @@ class ArticleCard extends StatelessWidget {
             // Thumbnail
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-              child: Image.network(
+              child: AppNetworkImage(
                 thumbnail,
                 height: 160,
                 width: double.infinity,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:rrfx/src/helpers/widgets/app_network_image.dart';
 
 enum NewsCardType { news, marketAnalysis, fundamentals }
 
@@ -83,7 +84,7 @@ class NewsCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               child: AspectRatio(
                 aspectRatio: 16 / 9,
-                child: Image.network(
+                child: AppNetworkImage(
                   imageUrl,
                   fit: BoxFit.cover,
                   loadingBuilder: (context, child, loadingProgress) {

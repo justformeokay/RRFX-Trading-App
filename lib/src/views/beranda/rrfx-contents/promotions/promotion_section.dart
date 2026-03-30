@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:rrfx/src/helpers/widgets/app_network_image.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/views/beranda/rrfx-contents/promotions/promotion_controller.dart';
 import 'package:rrfx/src/views/beranda/rrfx-contents/promotions/promotion_detail_page.dart';
@@ -106,7 +107,7 @@ class _PromotionSectionState extends State<PromotionSection> {
             fit: StackFit.expand,
             children: [
               // Image
-              Image.network(
+              AppNetworkImage(
                 item.image,
                 fit: BoxFit.cover,
                 loadingBuilder: (context, child, loadingProgress) {

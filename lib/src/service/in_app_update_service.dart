@@ -1,5 +1,6 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:in_app_update/in_app_update.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:get/get.dart';
@@ -25,6 +26,11 @@ class InAppUpdateService {
 
   // Check for updates (Cross-platform)
   Future<void> checkForUpdate() async {
+    if (kIsWeb) {
+      print('ℹ️  [VERSION_CHECK] Web platform - version checking not supported');
+      return;
+    }
+    
     if (Platform.isAndroid) {
       await _checkAndroidUpdate();
     } else if (Platform.isIOS) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:rrfx/src/helpers/widgets/app_network_image.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -68,7 +69,7 @@ class NewsDetailPage extends StatelessWidget {
                             borderRadius: const BorderRadius.vertical(
                               bottom: Radius.circular(20),
                             ),
-                            child: Image.network(
+                            child: AppNetworkImage(
                               data.image,
                               height: 260,
                               fit: BoxFit.cover,
@@ -133,7 +134,7 @@ class NewsDetailPage extends StatelessWidget {
                           borderRadius: const BorderRadius.vertical(
                             bottom: Radius.circular(20),
                           ),
-                          child: Image.network(
+                          child: AppNetworkImage(
                             data.image,
                             width: double.infinity,
                             height: 240,

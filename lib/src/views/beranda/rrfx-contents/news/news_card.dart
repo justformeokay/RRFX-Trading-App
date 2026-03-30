@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:rrfx/src/helpers/widgets/app_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:rrfx/src/views/beranda/rrfx-contents/news/news_detail_page.dart';
 
@@ -53,7 +54,7 @@ class NewsCard extends StatelessWidget {
             // ==============================
             ClipRRect(
               borderRadius: BorderRadius.circular(14),
-              child: Image.network(
+              child: AppNetworkImage(
                 thumbnail,
                 width: 90,
                 height: 90,

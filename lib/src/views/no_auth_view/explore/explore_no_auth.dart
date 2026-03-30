@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:rrfx/src/helpers/widgets/app_network_image.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
@@ -205,7 +206,7 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
           child: Stack(
             children: [
               Positioned.fill(
-                child: Image.network(
+                child: AppNetworkImage(
                   item["image"],
                   fit: BoxFit.cover,
                 ),
@@ -464,7 +465,7 @@ class _ExploreNoAuthState extends State<ExploreNoAuth> {
                 topLeft: Radius.circular(14),
                 bottomLeft: Radius.circular(14),
               ),
-              child: Image.network(
+              child: AppNetworkImage(
                 item["thumbnail"] ?? item["image"],
                 width: 110,
                 height: 90,

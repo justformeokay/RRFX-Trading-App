@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:rrfx/src/helpers/widgets/app_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:rrfx/src/views/beranda/rrfx-contents/market_analysis/market_analysis_detail_page.dart';
 import 'market_analysis_model.dart';
@@ -30,7 +31,7 @@ class MarketAnalysisCard extends StatelessWidget {
             // Thumbnail
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: Image.network(
+              child: AppNetworkImage(
                 data.thumbnail,
                 height: 70,
                 width: 70,
