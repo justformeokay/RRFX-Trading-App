@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:get/get.dart';
@@ -133,6 +134,200 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
     }
   }
 
+  // ── Close All Positions ────────────────────────────────────────────────────
+
+  void _showCloseAllConfirmation(BuildContext context, List<dynamic> positions) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final totalPositions = positions.length;
+
+    double totalProfit = 0;
+    for (final p in positions) {
+      totalProfit += double.tryParse('${p.profit ?? 0}') ?? 0;
+    }
+
+    final profitColor = totalProfit >= 0 ? Colors.greenAccent.shade400 : Colors.redAccent.shade200;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      isScrollControlled: true,
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 45,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.25),
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            Container(
+              width: 70,
+              height: 70,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.red.withOpacity(0.1),
+              ),
+              child: Icon(Icons.warning_amber_rounded, size: 36, color: Colors.red.shade400),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              "Close All Positions?",
+              style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: isDark ? Colors.white : Colors.black87),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Semua $totalPositions posisi aktif akan ditutup sekaligus.\nTindakan ini tidak bisa dibatalkan.",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(fontSize: 13, color: Colors.grey, height: 1.4),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: Colors.grey.withOpacity(0.15)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("Total Posisi", style: GoogleFonts.inter(fontSize: 13, color: Colors.grey)),
+                      Text("$totalPositions posisi", style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black87)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: profitColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      "Total P/L: ${totalProfit >= 0 ? '+' : ''}${totalProfit.toStringAsFixed(2)} USD",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: profitColor),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      minimumSize: const Size.fromHeight(48),
+                      elevation: 0,
+                    ),
+                    child: Text("Batal", style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? Colors.white70 : Colors.black54)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _executeCloseAll(context, positions);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      minimumSize: const Size.fromHeight(48),
+                      elevation: 0,
+                    ),
+                    child: Text("Close All", style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _executeCloseAll(BuildContext context, List<dynamic> positions) async {
+    final loginID = controller.selectedAccount.value?.login;
+    if (loginID == null) return;
+
+    final total = positions.length;
+    final completed = 0.obs;
+    final failed = <String>[].obs;
+    final isCancelled = false.obs;
+
+    Get.dialog(
+      Obx(() => _CloseAllProgressDialog(
+        total: total,
+        completed: completed.value,
+        failed: failed.length,
+        isCancelled: isCancelled.value,
+        onCancel: () => isCancelled.value = true,
+      )),
+      barrierDismissible: false,
+    );
+
+    // Parallel batches of 3 for speed + server stability
+    const batchSize = 3;
+    final tickets = positions.map((p) => '${p.ticket}').toList();
+
+    for (int i = 0; i < tickets.length; i += batchSize) {
+      if (isCancelled.value) break;
+
+      final end = (i + batchSize).clamp(0, tickets.length);
+      final batch = tickets.sublist(i, end);
+
+      await Future.wait(batch.map((ticket) async {
+        if (isCancelled.value) return;
+        try {
+          final result = await tradingController.closingOrder(
+            loginID: loginID,
+            ticketID: ticket,
+          ).timeout(
+            const Duration(seconds: 20),
+            onTimeout: () => throw Exception('Timeout'),
+          );
+          if (result['status'] == true) {
+            completed.value++;
+          } else {
+            failed.add(ticket);
+            completed.value++;
+          }
+        } catch (_) {
+          failed.add(ticket);
+          completed.value++;
+        }
+      }));
+    }
+
+    if (Get.isDialogOpen ?? false) Get.back();
+
+    final successCount = completed.value - failed.length;
+    if (failed.isEmpty && !isCancelled.value) {
+      AppSnackbar.success("Semua $total posisi berhasil ditutup.");
+    } else if (isCancelled.value) {
+      AppSnackbar.error("Dibatalkan. $successCount dari $total posisi berhasil ditutup.");
+    } else {
+      AppSnackbar.error("$successCount dari $total berhasil. ${failed.length} posisi gagal.");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Force rebuild when account changes to prevent showing old data
@@ -166,9 +361,40 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
                     bottom: BorderSide(color: Colors.grey.withOpacity(0.1)),
                   ),
                 ),
-                child: Text(
-                  "Positions",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Positions",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    if (opened != null && opened.isNotEmpty && !isForexHoliday())
+                      GestureDetector(
+                        onTap: () => _showCloseAllConfirmation(context, opened),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.close_rounded, size: 14, color: Colors.red.shade400),
+                              const SizedBox(width: 4),
+                              Text(
+                                "Close All",
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.red.shade400,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -469,6 +695,9 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
 }
 
 class _PositionTile extends StatelessWidget {
+  // Static lock to prevent concurrent close operations
+  static bool _isClosingPosition = false;
+
   final int index;
   final int? digits;
   final String? positionId;
@@ -807,7 +1036,12 @@ class _PositionTile extends StatelessWidget {
   }
 
   void _onClosePosition(BuildContext context) async {
-    // ✅ Get.find() — controller sudah terdaftar, tidak perlu Get.put() lagi
+    // Prevent concurrent close operations
+    if (_isClosingPosition) {
+      AppSnackbar.error("Sedang memproses penutupan posisi lain, harap tunggu.");
+      return;
+    }
+
     final accountController = Get.find<AccountController>();
     final tradingController = Get.find<TradingController>();
 
@@ -823,7 +1057,6 @@ class _PositionTile extends StatelessWidget {
     // Listen to position updates from API response (updated by WebSocket indirectly)
     final worker = ever(tradingController.openOrderModel, (model) {
       if (model?.response != null) {
-        // Find this position in the updated list
         final position = model!.response!.firstWhereOrNull(
           (p) => p.ticket.toString() == positionId,
         );
@@ -844,51 +1077,48 @@ class _PositionTile extends StatelessWidget {
         // Dispose worker before closing
         worker.dispose();
 
-        // Show modern loading indicator (non-dismissible)
+        // Acquire lock
+        _isClosingPosition = true;
+
+        // Show loading dialog with force-cancel capability
         _showModernLoadingDialog(context, "Closing Position...");
 
-        // ✅ Safety: close dialog after 25 seconds max to prevent infinite stuck
-        bool isCompleted = false;
-        Future.delayed(const Duration(seconds: 25), () {
-          if (!isCompleted && (Get.isDialogOpen ?? false)) {
-            Get.back();
-            AppSnackbar.error("Request timeout - silakan coba lagi.");
-          }
-        });
-
         try {
+          // Use .timeout() directly on the API call for guaranteed timeout
           final result = await tradingController.closingOrder(
             loginID: loginID,
             ticketID: positionId ?? '',
+          ).timeout(
+            const Duration(seconds: 20),
+            onTimeout: () => throw Exception('Request timeout - koneksi memakan waktu terlalu lama'),
           );
-          isCompleted = true;
 
           // Close loading
           if (Get.isDialogOpen ?? false) Get.back();
 
-          // ✅ Double-check result status (defensive)
           if (result['status'] == true) {
             AppSnackbar.success("Posisi $positionId berhasil ditutup.");
           } else {
             final msg = result['message'] ?? 'Gagal menutup posisi';
             AppSnackbar.error(msg.toString());
           }
-
-          // Reload positions once
-          // [DISABLED] await tradingController.openOrder(login: loginID);
         } catch (e) {
-          isCompleted = true;
           // Close loading
           if (Get.isDialogOpen ?? false) Get.back();
-          // Show user-friendly error dialog
-          await ErrorHandler.showErrorDialog(
-            e,
-            title: 'Gagal Menutup Posisi',
-            onRetry: () {
-              // Retry closing the position
-              _onClosePosition(context);
-            },
-          );
+
+          final errMsg = e.toString().replaceAll('Exception: ', '');
+          if (errMsg.contains('timeout') || errMsg.contains('terlalu lama')) {
+            AppSnackbar.error("Request timeout - silakan coba lagi.");
+          } else {
+            await ErrorHandler.showErrorDialog(
+              e,
+              title: 'Gagal Menutup Posisi',
+              onRetry: () => _onClosePosition(context),
+            );
+          }
+        } finally {
+          // Always release the lock
+          _isClosingPosition = false;
         }
       },
     );
@@ -1181,84 +1411,276 @@ class _PositionTile extends StatelessWidget {
     return 5;
   }
 
-  /// 🎯 Modern loading dialog untuk closing position
+  /// 🎯 Modern loading dialog dengan force-cancel button
   void _showModernLoadingDialog(BuildContext context, String title) {
     Get.dialog(
-      Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.grey.shade900
-                  : Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 30,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 🎯 Animated circular progress indicator
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        CustomColor.secondaryColor.withValues(alpha: 0.1),
-                        Colors.blue.withValues(alpha: 0.05),
-                      ],
-                    ),
-                  ),
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      color: CustomColor.secondaryColor,
-                      strokeWidth: 3,
-                      backgroundColor: CustomColor.secondaryColor.withValues(alpha: 0.2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
+      _LoadingDialogContent(title: title),
+      barrierDismissible: false,
+    );
+  }
+}
 
-                // 📝 Title text
+/// Stateful loading dialog that shows a cancel button after 8 seconds
+class _LoadingDialogContent extends StatefulWidget {
+  final String title;
+  const _LoadingDialogContent({required this.title});
+
+  @override
+  State<_LoadingDialogContent> createState() => _LoadingDialogContentState();
+}
+
+class _LoadingDialogContentState extends State<_LoadingDialogContent> {
+  bool _showCancel = false;
+  Timer? _cancelTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _cancelTimer = Timer(const Duration(seconds: 8), () {
+      if (mounted) setState(() => _showCancel = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _cancelTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.grey.shade900 : Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      CustomColor.secondaryColor.withValues(alpha: 0.1),
+                      Colors.blue.withValues(alpha: 0.05),
+                    ],
+                  ),
+                ),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: CustomColor.secondaryColor,
+                    strokeWidth: 3,
+                    backgroundColor: CustomColor.secondaryColor.withValues(alpha: 0.2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                widget.title,
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "Please wait while we process your request",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  height: 1.5,
+                  fontWeight: FontWeight.w400,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              if (_showCancel) ...[
+                const SizedBox(height: 20),
                 Text(
-                  title,
+                  "Proses memakan waktu lebih lama dari biasanya",
+                  textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 11,
+                    color: Colors.orange,
                   ),
                 ),
                 const SizedBox(height: 12),
-
-                // 💬 Subtitle text
-                Text(
-                  "Please wait while we process your request",
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    height: 1.5,
-                    fontWeight: FontWeight.w400,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () {
+                      _PositionTile._isClosingPosition = false;
+                      if (Get.isDialogOpen ?? false) Get.back();
+                      AppSnackbar.error("Proses dibatalkan. Silakan coba lagi.");
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.red.withOpacity(0.3)),
+                      ),
+                    ),
+                    child: Text(
+                      "Batalkan",
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
                   ),
                 ),
               ],
-            ),
+            ],
           ),
         ),
       ),
-      barrierDismissible: false,
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Close All Progress Dialog
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _CloseAllProgressDialog extends StatelessWidget {
+  final int total;
+  final int completed;
+  final int failed;
+  final bool isCancelled;
+  final VoidCallback onCancel;
+
+  const _CloseAllProgressDialog({
+    required this.total,
+    required this.completed,
+    required this.failed,
+    required this.isCancelled,
+    required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final progress = total > 0 ? completed / total : 0.0;
+    final successCount = completed - failed;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: Container(
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.grey.shade900 : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Progress ring
+            SizedBox(
+              width: 80,
+              height: 80,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CircularProgressIndicator(
+                    value: progress,
+                    strokeWidth: 5,
+                    backgroundColor: CustomColor.secondaryColor.withOpacity(0.15),
+                    color: failed > 0 ? Colors.orange : CustomColor.secondaryColor,
+                  ),
+                  Center(
+                    child: Text(
+                      "$completed/$total",
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            Text(
+              isCancelled ? "Membatalkan..." : "Menutup Posisi...",
+              style: GoogleFonts.inter(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Status text
+            if (failed > 0)
+              Text(
+                "$failed posisi gagal",
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.red.shade400, fontWeight: FontWeight.w600),
+              ),
+            if (successCount > 0)
+              Text(
+                "$successCount berhasil ditutup",
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.greenAccent.shade400, fontWeight: FontWeight.w500),
+              ),
+
+            const SizedBox(height: 6),
+            Text(
+              "Mohon tunggu, jangan tutup halaman ini",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+            ),
+
+            if (!isCancelled && completed < total) ...[
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: onCancel,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Colors.red.withOpacity(0.3)),
+                    ),
+                  ),
+                  child: Text(
+                    "Batalkan Sisa",
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

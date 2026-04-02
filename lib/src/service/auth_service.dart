@@ -751,7 +751,10 @@ class AuthService extends GetxController {
       http.Response response = await http.post(
         Uri.parse("${GlobalVariable.mainURL}/auth/refresh"),
         headers: headers,
-        body: body, // Tidak perlu jsonEncode untuk form-urlencoded
+        body: body,
+      ).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw Exception('Token refresh timeout'),
       );
 
       Get.log('📥 REFRESH TOKEN RESPONSE');
