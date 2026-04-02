@@ -681,22 +681,22 @@ class _Step7State extends State<Step7> {
         appBar: CustomAppBar.defaultAppBar(
           autoImplyLeading: true,
           title: "Step 7",
-          actions:  [
-            Obx(() {
-              return DropdownButton(
-                value: stepController.selectedCDD.value,
-                items: stepController.cDDTypesList.map((type) {
-                  return DropdownMenuItem(
-                    value: type,
-                    child: Text(type),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  stepController.selectedCDD.value = value ?? '';
-                },
-              );
-            }),
-          ]
+          // actions:  [
+          //   Obx(() {
+          //     return DropdownButton(
+          //       value: stepController.selectedCDD.value,
+          //       items: stepController.cDDTypesList.map((type) {
+          //         return DropdownMenuItem(
+          //           value: type,
+          //           child: Text(type),
+          //         );
+          //       }).toList(),
+          //       onChanged: (value) {
+          //         stepController.selectedCDD.value = value ?? '';
+          //       },
+          //     );
+          //   }),
+          // ]
         ),
         body: Padding(
           padding: EdgeInsets.symmetric(horizontal: 15.0),

@@ -1,24 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="RRFX Trading App">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -29,10 +17,173 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>rrfx</title>
+  <title>RRFX Trading</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #1a1a2e;
+      overflow: hidden;
+    }
+    #loading-screen {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #1a1a2e;
+      z-index: 9999;
+      transition: opacity 0.4s ease;
+    }
+    #loading-screen.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #loading-logo {
+      width: 88px;
+      height: 88px;
+      margin-bottom: 28px;
+      animation: pulse 1.8s ease-in-out infinite;
+      border-radius: 16px;
+    }
+    #loading-title {
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+    }
+    #loading-text {
+      color: rgba(212, 168, 67, 0.85);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      margin-bottom: 28px;
+      transition: opacity 0.3s;
+    }
+    #loading-bar-container {
+      width: 220px;
+      height: 3px;
+      background-color: rgba(212, 168, 67, 0.15);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    #loading-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #d4a843, #f0d078);
+      border-radius: 3px;
+      transition: width 0.5s ease;
+    }
+    #loading-hint {
+      color: rgba(255,255,255,0.3);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 11px;
+      text-align: center;
+      max-width: 260px;
+      line-height: 1.5;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    #loading-hint.visible {
+      opacity: 1;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.04); opacity: 0.85; }
+    }
+  </style>
 </head>
 <body>
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <img id="loading-logo" src="icons/Icon-512.png" alt="RRFX">
+    <div id="loading-title">RRFX</div>
+    <div id="loading-text">Memuat aplikasi...</div>
+    <div id="loading-bar-container">
+      <div id="loading-bar"></div>
+    </div>
+    <div id="loading-hint">Proses pertama kali memuat<br>mungkin membutuhkan waktu lebih lama</div>
+  </div>
+
+  <script>
+    (function() {
+      var bar = document.getElementById('loading-bar');
+      var text = document.getElementById('loading-text');
+      var hint = document.getElementById('loading-hint');
+      var progress = 0;
+      var startTime = Date.now();
+      var done = false;
+
+      var interval = setInterval(function() {
+        if (done) return;
+        var elapsed = (Date.now() - startTime) / 1000; // seconds
+
+        // Realistic progress: slow down significantly after 40%
+        // Never exceeds 75% — jump to 100% only when Flutter fires
+        if (progress < 20) {
+          progress += 1.5;        // 0-20%: fast (~1.3s)
+        } else if (progress < 40) {
+          progress += 0.6;        // 20-40%: moderate (~3.3s total)
+        } else if (progress < 60) {
+          progress += 0.15;       // 40-60%: slow (~22s total)
+        } else if (progress < 75) {
+          progress += 0.05;       // 60-75%: very slow (~52s total)
+        }
+
+        bar.style.width = Math.min(progress, 75) + '%';
+
+        // Update status text based on elapsed time
+        if (elapsed < 5) {
+          text.textContent = 'Memuat aplikasi...';
+        } else if (elapsed < 15) {
+          text.textContent = 'Mengunduh aset...';
+        } else if (elapsed < 30) {
+          text.textContent = 'Menyiapkan mesin...';
+        } else {
+          text.textContent = 'Hampir siap...';
+        }
+
+        // Show hint after 10 seconds
+        if (elapsed > 10 && !hint.classList.contains('visible')) {
+          hint.classList.add('visible');
+        }
+      }, 150);
+
+      window.addEventListener('flutter-first-frame', function() {
+        done = true;
+        clearInterval(interval);
+        bar.style.width = '100%';
+        text.textContent = 'Selesai!';
+        setTimeout(function() {
+          var screen = document.getElementById('loading-screen');
+          if (screen) {
+            screen.classList.add('fade-out');
+            setTimeout(function() { if (screen) screen.remove(); }, 400);
+          }
+        }, 150);
+      });
+
+      // Fail-safe: if Flutter never fires first-frame after 60s, show error
+      setTimeout(function() {
+        if (!done) {
+          done = true;
+          clearInterval(interval);
+          bar.style.width = '100%';
+          bar.style.background = 'linear-gradient(90deg, #e74c3c, #c0392b)';
+          text.textContent = 'Gagal memuat aplikasi';
+          hint.textContent = 'Coba muat ulang halaman (Ctrl+Shift+R)';
+          hint.classList.add('visible');
+        }
+      }, 60000);
+    })();
+  </script>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -117,7 +118,12 @@ class _SignInState extends State<SignIn> {
           ],
         ),
         resizeToAvoidBottomInset: true,
-        body: SingleChildScrollView(
+        body: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: kIsWeb ? 480 : double.infinity,
+            ),
+            child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,6 +274,8 @@ class _SignInState extends State<SignIn> {
                 ),
               ),
             ],
+          ),
+            ),
           ),
         ),
       ),

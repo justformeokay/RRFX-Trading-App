@@ -636,10 +636,20 @@ class TradingController extends GetxController {
         'market/execution/close',
         {'login': loginID, 'ticket': ticketID},
       );
+      
+      // ✅ Check result status and throw on failure
+      // authService.post never throws - it always returns a Map
+      if (result['status'] != true) {
+        final message = result['message'] ?? 'Gagal menutup posisi';
+        throw Exception(message);
+      }
+      
       return result;
     } catch (e) {
       isLoading(false);
-      throw Exception("executionOrder error: $e");
+      // Re-throw with cleaner message
+      final errMsg = e.toString().replaceAll('Exception: ', '');
+      throw Exception(errMsg);
     }
   }
 

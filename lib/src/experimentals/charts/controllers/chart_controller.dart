@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:rrfx/src/experimentals/charts/models/ohlc_data.dart';
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../models/ticker_model.dart';
 
@@ -109,7 +110,7 @@ class ChartControllerExperimentals extends GetxController {
     try {
       // Menggunakan URL WebSocket yang baru
       _channel = WebSocketChannel.connect(
-        Uri.parse('ws://207.148.119.106:9003'),
+        Uri.parse(GlobalVariable.wsMarketURL),
       );
 
       _channel!.stream.listen(

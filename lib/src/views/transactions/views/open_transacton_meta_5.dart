@@ -844,23 +844,40 @@ class _PositionTile extends StatelessWidget {
         // Dispose worker before closing
         worker.dispose();
 
-        // Show modern loading indicator
+        // Show modern loading indicator (non-dismissible)
         _showModernLoadingDialog(context, "Closing Position...");
 
+        // ✅ Safety: close dialog after 25 seconds max to prevent infinite stuck
+        bool isCompleted = false;
+        Future.delayed(const Duration(seconds: 25), () {
+          if (!isCompleted && (Get.isDialogOpen ?? false)) {
+            Get.back();
+            AppSnackbar.error("Request timeout - silakan coba lagi.");
+          }
+        });
+
         try {
-          await tradingController.closingOrder(
+          final result = await tradingController.closingOrder(
             loginID: loginID,
             ticketID: positionId ?? '',
           );
+          isCompleted = true;
 
           // Close loading
           if (Get.isDialogOpen ?? false) Get.back();
 
-          AppSnackbar.success("Posisi $positionId berhasil ditutup.");
+          // ✅ Double-check result status (defensive)
+          if (result['status'] == true) {
+            AppSnackbar.success("Posisi $positionId berhasil ditutup.");
+          } else {
+            final msg = result['message'] ?? 'Gagal menutup posisi';
+            AppSnackbar.error(msg.toString());
+          }
 
           // Reload positions once
           // [DISABLED] await tradingController.openOrder(login: loginID);
         } catch (e) {
+          isCompleted = true;
           // Close loading
           if (Get.isDialogOpen ?? false) Get.back();
           // Show user-friendly error dialog

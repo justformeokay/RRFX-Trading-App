@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -104,7 +105,12 @@ class _SettingsState extends State<Settings> {
 
     return Scaffold(
       backgroundColor: isDark ? Colors.black : const Color(0xFFF5F5F7),
-      body: Obx(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: kIsWeb ? 500 : double.infinity,
+          ),
+          child: Obx(
         () => RefreshIndicator(
           color: CustomColor.secondaryColor,
           onRefresh:
@@ -298,6 +304,8 @@ class _SettingsState extends State<Settings> {
               const SliverToBoxAdapter(child: SizedBox(height: 40)),
             ],
           ),
+        ),
+      ),
         ),
       ),
     );

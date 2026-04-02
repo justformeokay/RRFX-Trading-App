@@ -13,6 +13,7 @@ class AuthService extends GetxController {
   String? accessToken;
   String? refreshToken;
   Map<String, String> deviceInfo = {};
+  bool _initialized = false;
 
   final Map<String, String> headers = {
     'Content-Type': 'application/x-www-form-urlencoded'
@@ -28,10 +29,11 @@ class AuthService extends GetxController {
   }
 
   Future<bool> init() async {
+    if (_initialized && accessToken != null) return true;
     SharedPreferences preferences = await SharedPreferences.getInstance();
     accessToken = preferences.getString('accessToken');
     refreshToken = preferences.getString('refreshToken');
-  
+    _initialized = true;
     return true;
   }
 

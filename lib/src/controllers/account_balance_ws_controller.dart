@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/controllers/trading.dart';
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/models/trades/open_order_model.dart';
 
 enum AccountWSStatus { connecting, connected, failed, disconnected }
@@ -102,7 +103,7 @@ class AccountBalanceWSController extends GetxController
       status.value = AccountWSStatus.connecting;
       // print('🔌 [AccountWS] Connecting to ws://207.148.119.106:9006');
 
-      channel = WebSocketChannel.connect(Uri.parse('ws://207.148.119.106:9006'));
+      channel = WebSocketChannel.connect(Uri.parse(GlobalVariable.wsAccountURL));
 
       // Capture current generation so stale callbacks are ignored
       final gen = _subscriptionGen;

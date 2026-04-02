@@ -5,12 +5,16 @@ import 'package:rrfx/src/components/languages/language_variable.dart';
 class GlobalVariable {
   // Development proxy (hanya untuk local dev)
   static const _devProxy = "http://localhost:8089";
-  // Production domain
-  static const _prodDomain = "https://rrfx.mathlab.id";
+  // Production domain — otomatis pakai hostname saat ini di web
+  // Jadi build yang sama bisa jalan di rrfx.mathlab.id, staging-webmobile-rrfx.techcrm.net, dll.
+  static final _prodDomain = kIsWeb ? Uri.base.origin : "https://rrfx.mathlab.id";
+  static final _prodWsDomain = kIsWeb
+      ? "wss://${Uri.base.host}"
+      : "wss://rrfx.mathlab.id";
 
   static final mainURL = kIsWeb
       ? (kDebugMode ? "$_devProxy/api" : "$_prodDomain/api")
-      : "https://api-rrfx.luxurymatrix.com";
+      : "https://api-rrfx.techcrm.net";
 
   static final gatewayURL = kIsWeb
       ? (kDebugMode ? "$_devProxy/gateway" : "$_prodDomain/gateway")
@@ -19,6 +23,16 @@ class GlobalVariable {
   static final mt5URL = kIsWeb
       ? (kDebugMode ? "$_devProxy/mt5" : "$_prodDomain/mt5")
       : "https://api-mt5.techcrm.net";
+
+  // WebSocket URLs
+  static final wsMarketURL = kIsWeb
+      ? (kDebugMode ? "ws://207.148.119.106:9003" : "$_prodWsDomain/ws-market/")
+      : "ws://207.148.119.106:9003";
+
+  static final wsAccountURL = kIsWeb
+      ? (kDebugMode ? "ws://207.148.119.106:9006" : "$_prodWsDomain/ws-account/")
+      : "ws://207.148.119.106:9006";
+
   // static final mainURL = "https://api-rrfx.techcrm.net";
   // URL API trident luxury
   // static final mainURL = "https://api-trident.luxurymatrix.com";

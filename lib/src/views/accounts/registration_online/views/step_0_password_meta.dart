@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -258,7 +259,12 @@ class _CreateMT5PasswordPageState extends State<CreateMT5PasswordPage> {
             ),
           ),
         ),
-        body: SingleChildScrollView(
+        body: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: kIsWeb ? 480 : double.infinity,
+            ),
+            child: SingleChildScrollView(
           padding: const EdgeInsets.all(26),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,7 +443,7 @@ class _CreateMT5PasswordPageState extends State<CreateMT5PasswordPage> {
                             await _savePasswordToStorage(passC.text);
                             
                             loading.value = false;
-                            AppSnackbar.success("Password MT5 berhasil dibuat.");
+                            // AppSnackbar.success("Password MT5 berhasil dibuat.");
                             regolRepository.passwordMeta5 = passC.text;
                             Get.to(() => const ProductView());
                           },
@@ -476,6 +482,8 @@ class _CreateMT5PasswordPageState extends State<CreateMT5PasswordPage> {
                 );
               }),
             ],
+          ),
+            ),
           ),
         ),
       ),

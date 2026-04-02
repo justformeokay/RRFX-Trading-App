@@ -200,37 +200,45 @@ class _ModernAlertContentState extends State<_ModernAlertContent>
     final isDark = Get.isDarkMode;
     final bgColor = _getBackgroundColor();
     final lightBgColor = _getLightBackgroundColor();
+    
+    // Responsive sizing
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 600;
+    final maxDialogWidth = isDesktop ? 450.0 : double.infinity;
 
     return FadeTransition(
       opacity: _fadeAnimation,
       child: ScaleTransition(
         scale: _scaleAnimation,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 24),
-          padding: const EdgeInsets.all(28),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: bgColor.withOpacity(0.2),
-                blurRadius: 30,
-                offset: const Offset(0, 10),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxDialogWidth),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: bgColor.withOpacity(0.2),
+                    blurRadius: 30,
+                    offset: const Offset(0, 10),
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+                border: Border.all(
+                  color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
+                  width: 1,
+                ),
               ),
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
-            border: Border.all(
-              color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
               // ICON CIRCLE
               Container(
                 padding: const EdgeInsets.all(16),
@@ -325,6 +333,8 @@ class _ModernAlertContentState extends State<_ModernAlertContent>
                 ),
               ),
             ],
+          ),
+            ),
           ),
         ),
       ),

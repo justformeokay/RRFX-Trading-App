@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
 import 'package:rrfx/src/service/deeplink_service.dart';
@@ -7,6 +8,7 @@ import 'package:rrfx/src/views/authentications/setup_passcode_page.dart';
 import 'package:rrfx/src/views/authentications/signin.dart';
 import 'package:rrfx/src/views/authentications/verify_passcode_page.dart';
 import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
+import 'package:rrfx/src/views/mainpage.dart';
 import 'package:rrfx/src/views/webview/external_webview_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rrfx/src/controllers/two_factory_auth.dart';
@@ -69,7 +71,18 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
       // 🔗 Check again setelah async operation
       if (_navigateToPendingWebView()) return;
 
-      bool loggedIn = await getLoggedIn();
+      // === DEBUG: Check all auth-related stored values ===
+      final prefs = await SharedPreferences.getInstance();
+      final storedLoggedIn = prefs.getBool('loggedIn');
+      final storedAccessToken = prefs.getString('accessToken');
+      final storedRefreshToken = prefs.getString('refreshToken');
+      print('🔍 [SPLASH] DEBUG SharedPreferences:');
+      print('   loggedIn = $storedLoggedIn');
+      print('   accessToken = ${storedAccessToken != null ? "${storedAccessToken.substring(0, storedAccessToken.length > 20 ? 20 : storedAccessToken.length)}..." : "NULL"}');
+      print('   refreshToken = ${storedRefreshToken != null ? "EXISTS (${storedRefreshToken.length} chars)" : "NULL"}');
+      // === END DEBUG ===
+
+      bool loggedIn = storedLoggedIn ?? false;
     
     // 🔗 Check again setelah login check
     if (_navigateToPendingWebView()) return;
@@ -77,6 +90,10 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
     // ✅ If user is logged in, fetch profile and check passcode from API response
     if (loggedIn) {
       Get.log("📡 [SPLASH] User logged in - Fetching profile from API...");
+      
+      // Ensure auth tokens are loaded before making API calls
+      await authService.init();
+      print('🔑 [SPLASH] AuthService tokens after init: accessToken=${authService.accessToken != null ? "EXISTS" : "NULL"}, refreshToken=${authService.refreshToken != null ? "EXISTS" : "NULL"}');
       
       // Fetch profile dari API
       bool resultProfile = await homeController.profile();
@@ -128,7 +145,17 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
       // ✅ Cek passcode dari API response (bukan dari local storage)
       final hasPasscode = profileData.passcode ?? true;
       
-      Get.log("🔐 [SPLASH] Passcode status from API: $hasPasscode");
+      print("🔐 [SPLASH] Passcode status from API: $hasPasscode");
+      print("🌐 [SPLASH] kIsWeb = $kIsWeb");
+      
+      // ✅ Di web, skip passcode verification - langsung ke Mainpage
+      if (kIsWeb) {
+        print("🌐 [SPLASH] Web platform - Skipping passcode, going to Mainpage");
+        _finishTransition(() {
+          Get.offAll(() => Mainpage());
+        });
+        return;
+      }
       
       if (hasPasscode) {
         // ✅ Passcode sudah setup, HARUS verifikasi passcode

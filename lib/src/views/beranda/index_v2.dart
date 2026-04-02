@@ -290,6 +290,31 @@ class _IndexV2State extends State<IndexV2> {
     super.dispose();
   }
 
+  /// Format balance dengan separator ribuan menggunakan periode
+  /// Contoh: 57350.61 -> "57.350,61"
+  String _formatBalance(dynamic balance) {
+    if (balance == null || balance.toString().isEmpty) return "0,00";
+    
+    try {
+      // Jika balance adalah string, convert ke double terlebih dahulu
+      double numBalance;
+      if (balance is String) {
+        numBalance = double.parse(balance);
+      } else if (balance is num) {
+        numBalance = balance.toDouble();
+      } else {
+        numBalance = double.parse(balance.toString());
+      }
+      
+      // Gunakan locale Indonesia untuk format dengan periode (ribuan) dan koma (desimal)
+      final formatter = NumberFormat("#,##0.00", "id_ID");
+      return formatter.format(numBalance);
+    } catch (e) {
+      print("Error formatting balance: $e");
+      return "$balance";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -527,7 +552,7 @@ class _IndexV2State extends State<IndexV2> {
                                                       !controller.hasAccounts
                                                           ? const SizedBox()
                                                           : Text(
-                                                            "${controller.selectedAccount.value?.accountCurrency} ${showHideBalance.value ? "****" : controller.selectedAccount.value?.balance}",
+                                                            "${controller.selectedAccount.value?.accountCurrency} ${showHideBalance.value ? "****" : _formatBalance(controller.selectedAccount.value?.balance)}",
                                                             style: GoogleFonts.inter(
                                                               fontSize: 20,
                                                               fontWeight:
@@ -560,7 +585,7 @@ class _IndexV2State extends State<IndexV2> {
                                           ),
                                         ),
                                         Text(
-                                          "Equity: ${controller.selectedAccount.value?.accountCurrency} ${controller.selectedAccount.value?.equity ?? 0}",
+                                          "Equity: ${controller.selectedAccount.value?.accountCurrency} ${controller.selectedAccount.value?.equity != null ? _formatBalance(controller.selectedAccount.value?.equity) : "0,00"}",
                                           style: GoogleFonts.inter(
                                             fontWeight: FontWeight.w500,
                                             fontSize: 12,
@@ -672,7 +697,7 @@ class _IndexV2State extends State<IndexV2> {
                                               !controller.hasAccounts
                                                   ? const SizedBox()
                                                   : Text(
-                                                    "${controller.selectedAccount.value?.accountCurrency} ${controller.selectedAccount.value?.marginFree}",
+                                                    "${controller.selectedAccount.value?.accountCurrency} ${controller.selectedAccount.value?.marginFree != null ? _formatBalance(controller.selectedAccount.value?.marginFree) : "0,00"}",
                                                     style: GoogleFonts.inter(
                                                       fontWeight:
                                                           FontWeight.w700,

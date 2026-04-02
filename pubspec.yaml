@@ -2,7 +2,7 @@ name: rrfx
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 1.9.45+25
+version: 1.9.46+26
 
 environment:
   sdk: ^3.7.2
@@ -91,14 +91,9 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/json/
-    - assets/fonts/
     - assets/sounds/
     - assets/svgs/
 
-  fonts:
-    - family: OCRA
-      fonts:
-        - asset: assets/fonts/OCRA-Alternate.otf
   # fonts:
   #   - family: Schyler
   #     fonts:

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -168,7 +169,7 @@ class AuthController extends GetxController {
         Get.log("❌ [AUTH] Login failed - API status false");
 
         // Check if account is locked
-        final message = result['message'] ?? "";
+        final message = _extractMessage(result['message']);
         if (message.toLowerCase().contains("locked")) {
           Get.log("🔒 [AUTH] Account is locked - Going to LockedPage");
           Get.offAll(() => const LockedPage());
@@ -199,18 +200,17 @@ class AuthController extends GetxController {
         Get.log(
           "❌ [AUTH] Login failed - HTTP status code not 200: ${response.statusCode}",
         );
-        responseMessage(result['message'] ?? "Login gagal");
+        final loginErrMsg = _extractMessage(result['message'], fallback: "Login gagal");
+        responseMessage(loginErrMsg);
         ModernAlertDialog.error(
           title: "Masalah Server",
-          message:
-              result['message'] ??
-              "Terjadi kesalahan saat login. Silakan coba lagi.",
+          message: loginErrMsg.isNotEmpty ? loginErrMsg : "Terjadi kesalahan saat login. Silakan coba lagi.",
           buttonText: "OK",
         );
         return;
       }
 
-      responseMessage(result['message'] ?? "Login berhasil");
+      responseMessage(_extractMessage(result['message'], fallback: "Login berhasil"));
       final status = result['response']?['status'] ?? "";
       final hasPasscode = result['response']?['passcode'] ?? false;
       statusAccount(status.toLowerCase());
@@ -327,6 +327,23 @@ class AuthController extends GetxController {
 
   /// Register API
   /// Helper method untuk menentukan pesan error yang sesuai
+  /// Safely extracts a user-readable string from an API `message` field
+  /// which may be a String, Map (validation errors), or List.
+  String _extractMessage(dynamic rawMsg, {String fallback = "Terjadi kesalahan"}) {
+    if (rawMsg == null) return fallback;
+    if (rawMsg is String) return rawMsg.isNotEmpty ? rawMsg : fallback;
+    if (rawMsg is Map) {
+      // Validation errors: pick the first value
+      final first = rawMsg.values.firstOrNull;
+      if (first is List) return first.first?.toString() ?? fallback;
+      return first?.toString() ?? fallback;
+    }
+    if (rawMsg is List) {
+      return rawMsg.map((e) => e.toString()).join(', ');
+    }
+    return rawMsg.toString();
+  }
+
   String _getErrorMessage(Object error) {
     if (error is SocketException) {
       // Koneksi internet terputus atau host tidak ditemukan
@@ -340,6 +357,8 @@ class AuthController extends GetxController {
     } else if (error is HttpException) {
       // HTTP error
       return "Terjadi kesalahan jaringan. Silakan periksa koneksi Anda.";
+    } else if (error is TypeError) {
+      return "Terjadi kesalahan tidak terduga. Silakan coba lagi.";
     } else {
       final errorString = error.toString();
 
@@ -356,6 +375,9 @@ class AuthController extends GetxController {
         return "Koneksi terputus oleh server. Silakan coba lagi.";
       } else if (errorString.contains("No address associated with hostname")) {
         return "Server tidak dapat diakses. Periksa koneksi internet Anda.";
+      } else if (errorString.contains("TypeError") ||
+          errorString.contains("is not a subtype of")) {
+        return "Terjadi kesalahan tidak terduga. Silakan coba lagi.";
       }
 
       return error.toString();
@@ -418,25 +440,38 @@ class AuthController extends GetxController {
             },
           );
 
-      var result = jsonDecode(response.body);
-      isLoading(false);
       Get.log("📥 [AUTH] Register response status: ${response.statusCode}");
       Get.log("📋 [AUTH] Register response: ${response.body}");
+
+      dynamic result;
+      try {
+        result = jsonDecode(response.body);
+      } catch (parseErr) {
+        Get.log("❌ [AUTH] Failed to parse response body: $parseErr");
+        isLoading(false);
+        responseMessage.value = "Gagal membaca respons server. Silakan coba lagi.";
+        return false;
+      }
+      isLoading(false);
 
       if (response.statusCode == 200) {
         if (result['status'] != true) {
           Get.log("❌ [AUTH] Registration failed - status false");
-          responseMessage.value = result['message'] ?? "Registrasi gagal";
+          responseMessage.value = _extractMessage(result['message'], fallback: "Registrasi gagal");
           return false;
         }
         Get.log("✅ [AUTH] Registration successful");
-        responseMessage.value = result['message'];
+        responseMessage.value = _extractMessage(result['message'], fallback: "Registrasi berhasil");
 
         // 🔥 Log Firebase Analytics sign_up conversion with UTM attribution
-        await UtmTrackingService().logSignUpConversion(
-          utmParams: _utmParameters.value,
-          method: 'email',
-        );
+        try {
+          await UtmTrackingService().logSignUpConversion(
+            utmParams: _utmParameters.value,
+            method: 'email',
+          );
+        } catch (analyticsErr) {
+          Get.log("⚠️ [AUTH] Analytics log failed (non-fatal): $analyticsErr");
+        }
 
         // Clear UTM parameters after successful registration
         clearUtmParameters();
@@ -444,14 +479,14 @@ class AuthController extends GetxController {
         return true;
       }
       Get.log("❌ [AUTH] Registration failed - status code not 200");
-      responseMessage.value =
-          result['message'] ?? "Terjadi kesalahan saat registrasi";
+      responseMessage.value = _extractMessage(result['message'], fallback: "Terjadi kesalahan saat registrasi");
       return false;
-    } catch (e) {
+    } catch (e, stackTrace) {
       Get.log("❌ [AUTH] Exception in register(): $e");
+      Get.log("🔍 [AUTH] Exception type: ${e.runtimeType}");
+      Get.log("📋 [AUTH] Stack trace: $stackTrace");
       isLoading(false);
 
-      // Gunakan helper method untuk mendapatkan pesan error yang sesuai
       responseMessage.value = _getErrorMessage(e);
       return false;
     }
@@ -476,14 +511,14 @@ class AuthController extends GetxController {
       var result = jsonDecode(response.body);
       isLoadingOTP(false);
       if (response.statusCode == 200) {
-        responseMessage.value = result['message'];
+        responseMessage.value = _extractMessage(result['message']);
         return true;
       }
-      responseMessage.value = result['message'];
+      responseMessage.value = _extractMessage(result['message']);
       return false;
     } catch (e) {
       isLoadingOTP(false);
-      responseMessage.value = e.toString();
+      responseMessage.value = _getErrorMessage(e);
       return false;
     }
   }
@@ -507,14 +542,14 @@ class AuthController extends GetxController {
       var result = jsonDecode(response.body);
       isLoadingOTP(false);
       if (response.statusCode == 200) {
-        responseMessage.value = result['message'];
+        responseMessage.value = _extractMessage(result['message']);
         return true;
       }
-      responseMessage.value = result['message'];
+      responseMessage.value = _extractMessage(result['message']);
       return false;
     } catch (e) {
       isLoadingOTP(false);
-      responseMessage.value = e.toString();
+      responseMessage.value = _getErrorMessage(e);
       return false;
     }
   }
@@ -529,7 +564,7 @@ class AuthController extends GetxController {
         body: {'email': email},
       );
       var result = jsonDecode(response.body);
-      responseMessage.value = result['message'];
+      responseMessage.value = _extractMessage(result['message']);
       isLoading(false);
       if (result['status'] == true) {
         return true;
@@ -551,7 +586,7 @@ class AuthController extends GetxController {
       );
       var result = jsonDecode(response.body);
       isLoading(false);
-      responseMessage.value = result['message'];
+      responseMessage.value = _extractMessage(result['message']);
       if (response.statusCode == 200 && result['status']) {
         countryCodeModel(CountryCodeModel.fromJson(result));
         return true;
@@ -624,20 +659,22 @@ class AuthController extends GetxController {
       var result = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        responseMessage.value = result['message'];
+        final versionMsg = _extractMessage(result['message']);
+        responseMessage.value = versionMsg;
         return {
           'success': true,
           'isServerError': false,
-          'message': result['message'],
+          'message': versionMsg,
         };
       }
 
       // Version mismatch or other API error
-      responseMessage.value = result['message'];
+      final versionErrMsg = _extractMessage(result['message']);
+      responseMessage.value = versionErrMsg;
       return {
         'success': false,
         'isServerError': false,
-        'message': result['message'],
+        'message': versionErrMsg,
       };
     } catch (e) {
       isLoading(false);
@@ -662,7 +699,7 @@ class AuthController extends GetxController {
       );
       isLoading(false);
       Get.log("Response Confirm OTP: $result");
-      responseMessage(result['message']);
+      responseMessage(_extractMessage(result['message']));
       if (result['status'] == true) {
         return true;
       }
@@ -772,7 +809,7 @@ class AuthController extends GetxController {
       print('═══════════════════════════════════════════════════\n');
       
       isLoading(false);
-      responseMessage(result['message']);
+      responseMessage(_extractMessage(result['message']));
       if (result['status'] == true) {
         print('✅ [VERIFICATION] Verification successful');
         return true;

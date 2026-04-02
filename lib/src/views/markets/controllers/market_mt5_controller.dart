@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/views/markets/models/market_mt5_model.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -27,7 +28,7 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
   final Rxn<DateTime> lastUpdateTime = Rxn<DateTime>();
   
   // URL WebSocket
-  final String _wsUrl = 'ws://207.148.119.106:9003';
+  final String _wsUrl = GlobalVariable.wsMarketURL;
   // Status koneksi
   final RxBool isConnected = false.obs;
   final RxBool hasConnectionError = false.obs;

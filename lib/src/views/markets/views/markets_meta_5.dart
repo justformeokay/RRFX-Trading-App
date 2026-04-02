@@ -413,121 +413,130 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
             }
             
             // Data tersedia, tampilkan list
-            return Column(
-              children: [
-                // Offline/Cached data banner
-                if (controller.isUsingCachedData.value || !controller.isConnected.value)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
-                      border: Border(
-                        bottom: BorderSide(
-                          color: Colors.orange.withOpacity(0.3),
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Iconsax.warning_2_outline,
-                          size: 16,
-                          color: Colors.orange,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            controller.lastUpdateTime.value != null
-                              ? 'Showing cached data from ${_formatLastUpdate(controller.lastUpdateTime.value!)}'
-                              : 'Showing cached data',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.orange.shade700,
+            final screenWidth = MediaQuery.of(context).size.width;
+            final isDesktop = screenWidth > 600;
+            final maxWidth = isDesktop ? 420.0 : double.infinity;
+            
+            return Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxWidth),
+                child: Column(
+                  children: [
+                    // Offline/Cached data banner
+                    if (controller.isUsingCachedData.value || !controller.isConnected.value)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.1),
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Colors.orange.withOpacity(0.3),
+                              width: 1,
                             ),
                           ),
                         ),
-                        GestureDetector(
-                          onTap: controller.retryConnection,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Iconsax.warning_2_outline,
+                              size: 16,
+                              color: Colors.orange,
                             ),
-                            child: Text(
-                              'Retry',
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.orange.shade700,
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                controller.lastUpdateTime.value != null
+                                  ? 'Showing cached data from ${_formatLastUpdate(controller.lastUpdateTime.value!)}'
+                                  : 'Showing cached data',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.orange.shade700,
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                
-                // Search result info (only show when searching)
-                if (searchQuery.value.isNotEmpty)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: CustomColor.secondaryColor.withOpacity(0.1),
-                      border: Border(
-                        bottom: BorderSide(
-                          color: isDarkMode 
-                            ? Colors.grey.shade800 
-                            : Colors.grey.shade200,
-                          width: 1,
+                            GestureDetector(
+                              onTap: controller.retryConnection,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'Retry',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.orange.shade700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Iconsax.search_status_1_outline,
-                          size: 16,
-                          color: CustomColor.secondaryColor,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${filteredSymbols.length} of ${allSymbols.length} markets',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: CustomColor.secondaryColor,
+                    
+                    // Search result info (only show when searching)
+                    if (searchQuery.value.isNotEmpty)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: CustomColor.secondaryColor.withOpacity(0.1),
+                          border: Border(
+                            bottom: BorderSide(
+                              color: isDarkMode 
+                                ? Colors.grey.shade800 
+                                : Colors.grey.shade200,
+                              width: 1,
+                            ),
                           ),
                         ),
-                      ],
+                        child: Row(
+                          children: [
+                            Icon(
+                              Iconsax.search_status_1_outline,
+                              size: 16,
+                              color: CustomColor.secondaryColor,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${filteredSymbols.length} of ${allSymbols.length} markets',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: CustomColor.secondaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    
+                    // Market list
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: filteredSymbols.length,
+                        itemBuilder: (context, index) {
+                          final model = controller.marketData[filteredSymbols[index]]!;
+                          final bool isZeroDecimal = _isZeroDecimalPair(model.symbol);
+                          final bool isTwoDecimal = _isTwoDecimalPair(model.symbol);
+                          
+                          return _buildMarketTile(
+                            model, 
+                            fgColor, 
+                            secondaryTextColor!, 
+                            isZeroDecimal,
+                            isTwoDecimal,
+                            searchQuery: searchQuery.value, // Pass search query for highlighting
+                          ); 
+                        },
+                      ),
                     ),
-                  ),
-                
-                // Market list
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: filteredSymbols.length,
-                    itemBuilder: (context, index) {
-                      final model = controller.marketData[filteredSymbols[index]]!;
-                      final bool isZeroDecimal = _isZeroDecimalPair(model.symbol);
-                      final bool isTwoDecimal = _isTwoDecimalPair(model.symbol);
-                      
-                      return _buildMarketTile(
-                        model, 
-                        fgColor, 
-                        secondaryTextColor!, 
-                        isZeroDecimal,
-                        isTwoDecimal,
-                        searchQuery: searchQuery.value, // Pass search query for highlighting
-                      ); 
-                    },
-                  ),
+                  ],
                 ),
-              ],
+              ),
             );
           },
         ),

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -36,11 +37,13 @@ class _SignupState extends State<Signup> {
   RxBool isButtonEnabled = false.obs;
   RxBool isEmailValid = false.obs;
   RxString number = "".obs;
+
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   TextEditingController referalController = TextEditingController();
   TextEditingController phoneController = TextEditingController();
   TextEditingController fullNameController = TextEditingController();
+  
   AuthController authController = Get.find();
   String? referalCode;
   final GetStorage _localStorage = GetStorage();
@@ -65,39 +68,24 @@ class _SignupState extends State<Signup> {
         passwordController.text.isNotEmpty;
   }
 
-  // signup.dart (di dalam _SignupState)
   @override
   void initState() {
     super.initState();
     authController.getCountryCode();
 
-    // Listen to form changes for real-time validation
     emailController.addListener(() => _onEmailChanged(emailController.text));
     fullNameController.addListener(updateButtonState);
     phoneController.addListener(updateButtonState);
     passwordController.addListener(updateButtonState);
 
-    // ⬇️ Ambil referral code dari arguments (deeplink)
     final args = Get.arguments;
-    print('📋 [Signup] Arguments received: $args');
-    
     if (args != null && args['code'] != null) {
       referalCode = args['code'];
-      print('✅ [Signup] Referral code set: $referalCode');
-      // Optional: auto-fill ke textfield jika mau
-      // referalController.text = referalCode ?? '';
-    } else {
-      print('⚠️ [Signup] No referral code in arguments');
     }
   }
 
   @override
   void dispose() {
-    emailController.removeListener(() => _onEmailChanged(emailController.text));
-    fullNameController.removeListener(updateButtonState);
-    phoneController.removeListener(updateButtonState);
-    passwordController.removeListener(updateButtonState);
-
     fullNameController.dispose();
     emailController.dispose();
     phoneController.dispose();
@@ -111,20 +99,23 @@ class _SignupState extends State<Signup> {
     final size = MediaQuery.of(context).size;
     return GestureDetector(
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-      child: Stack(
-        children: [
-          Scaffold(
-            appBar: AppBar(
-              elevation: 0,
-              forceMaterialTransparency: true,
-              actions: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 2.0, top: 8.0),
-                  child: SimpleVersionBadge(),
-                ),
-              ],
+      child: Scaffold(
+        appBar: AppBar(
+          elevation: 0,
+          forceMaterialTransparency: true,
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 2.0, top: 8.0),
+              child: SimpleVersionBadge(),
             ),
-            body: SafeArea(
+          ],
+        ),
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: kIsWeb ? 480 : double.infinity,
+              ),
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 child: Form(
@@ -151,8 +142,7 @@ class _SignupState extends State<Signup> {
                           style: GoogleFonts.inter(
                             fontSize: 35,
                             fontWeight: FontWeight.w700,
-                            color:
-                                Theme.of(context).textTheme.titleLarge?.color,
+                            color: Theme.of(context).textTheme.titleLarge?.color,
                           ),
                         ),
                         const SizedBox(height: 5.0),
@@ -201,37 +191,12 @@ class _SignupState extends State<Signup> {
                             keyboardType: TextInputType.phone,
                             maxLength: 13,
                             inputFormatters: [
-                              FilteringTextInputFormatter
-                                  .digitsOnly, // hanya angka
+                              FilteringTextInputFormatter.digitsOnly,
                             ],
                             decoration: InputDecoration(
                               hintText: "81xxxx",
                               hintStyle: GoogleFonts.inter(
-                                color:
-                                    Theme.of(
-                                      context,
-                                    ).textTheme.bodySmall?.color,
-                              ),
-                              label: RichText(
-                                text: TextSpan(
-                                  text: "Nomor Hp",
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color:
-                                        Theme.of(
-                                          context,
-                                        ).textTheme.bodySmall?.color,
-                                  ),
-                                  children: [
-                                    const TextSpan(
-                                      text: "",
-                                      style: TextStyle(
-                                        color: Colors.red,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                color: Theme.of(context).textTheme.bodySmall?.color,
                               ),
                               prefixIcon: GestureDetector(
                                 onTap: () {
@@ -240,54 +205,20 @@ class _SignupState extends State<Signup> {
                                     size: size,
                                     title: "Pilih Kode Negara",
                                     children: List.generate(
-                                      authController
-                                              .countryCodeModel
-                                              .value
-                                              ?.response
-                                              ?.length ??
-                                          0,
+                                      authController.countryCodeModel.value?.response?.length ?? 0,
                                       (index) {
-                                        final country =
-                                            authController
-                                                .countryCodeModel
-                                                .value
-                                                ?.response?[index];
+                                        final country = authController.countryCodeModel.value?.response?[index];
                                         return ListTile(
-                                          leading: Container(
-                                            width: 30,
-                                            height: 30,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: CustomColor
-                                                  .secondaryBackground
-                                                  .withValues(alpha: 0.3),
-                                            ),
-                                            child: Center(
-                                              child: Text(
-                                                "${index + 1}",
-                                                style: TextStyle(fontSize: 16),
-                                              ),
-                                            ),
+                                          leading: CircleAvatar(
+                                            backgroundColor: CustomColor.secondaryBackground.withOpacity(0.3),
+                                            child: Text("${index + 1}", style: const TextStyle(fontSize: 14)),
                                           ),
-                                          title: Text(
-                                            country?.name ?? "",
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                          subtitle: Text(
-                                            country?.phoneCode ?? "",
-                                            style: TextStyle(
-                                              color:
-                                                  Theme.of(
-                                                    context,
-                                                  ).textTheme.bodySmall?.color,
-                                            ),
-                                          ),
+                                          title: Text(country?.name ?? "", style: const TextStyle(fontWeight: FontWeight.w700)),
+                                          subtitle: Text(country?.phoneCode ?? ""),
                                           onTap: () {
-                                            phoneCode(country?.phoneCode);
+                                            phoneCode.value = country?.phoneCode ?? "+62";
                                             phoneController.clear();
-                                            phoneNumber("");
+                                            phoneNumber.value = "";
                                             Get.back();
                                           },
                                         );
@@ -295,56 +226,32 @@ class _SignupState extends State<Signup> {
                                     ),
                                   );
                                 },
-                                child: Container(
-                                  width: 80,
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    phoneCode.value,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
+                                child: Obx(() => Container(
+                                      width: 70,
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        phoneCode.value,
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    )),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12.0),
-                                borderSide: BorderSide(
-                                  color: CustomColor.secondaryColor,
-                                ),
+                                borderSide: BorderSide(color: CustomColor.secondaryColor),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12.0),
-                                borderSide: BorderSide(
-                                  color: CustomColor.textThemeDarkSoftColor,
-                                ),
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12.0),
-                                borderSide: BorderSide(
-                                  color: CustomColor.textThemeDarkSoftColor,
-                                ),
+                                borderSide: BorderSide(color: CustomColor.textThemeDarkSoftColor),
                               ),
                             ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Mohon isikan Nomor HP';
-                              } else if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
-                                return 'Nomor HP hanya boleh berisi angka';
-                              }
-                              return null;
-                            },
                             onChanged: (val) {
                               String clean = val;
-                              if (phoneCode.value == "+62") {
-                                if (clean.startsWith("0")) {
-                                  clean = clean.substring(1);
-                                  phoneController.value = TextEditingValue(
-                                    text: clean,
-                                    selection: TextSelection.collapsed(
-                                      offset: clean.length,
-                                    ),
-                                  );
-                                }
+                              if (phoneCode.value == "+62" && clean.startsWith("0")) {
+                                clean = clean.substring(1);
+                                phoneController.value = TextEditingValue(
+                                  text: clean,
+                                  selection: TextSelection.collapsed(offset: clean.length),
+                                );
                               }
                               phoneNumber.value = clean;
                               updateButtonState();
@@ -371,151 +278,62 @@ class _SignupState extends State<Signup> {
                           width: double.infinity,
                           child: Obx(
                             () => DefaultButton.defaultElevatedButton(
-                              onPressed:
-                                  authController.isLoading.value ||
-                                          !checkedRead.value ||
-                                          !isEmailValid.value ||
-                                          fullNameController.text.isEmpty ||
-                                          phoneNumber.value.isEmpty ||
-                                          passwordController.text.isEmpty
-                                      ? null
-                                      : () {
-                                        if (_formKey.currentState!.validate() !=
-                                            true) {
-                                          return;
-                                        }
-                                        if (emailController.text == "") {
-                                          return CustomScaffoldMessanger.showAppSnackBar(
-                                            context,
-                                            message: "Email tidak boleh kosong",
-                                            type: SnackBarType.error,
-                                          );
-                                        }
-                                        
-                                        // Debug: print semua data sebelum register
-                                        final finalReferralCode = referalCode ?? referalController.text;
-                                        print('📤 [Signup] Submitting registration:');
-                                        print('   Name: ${fullNameController.text}');
-                                        print('   Email: ${emailController.text.toLowerCase()}');
-                                        print('   Phone: ${phoneCode.value}${phoneNumber.value}');
-                                        print('   Referral Code: $finalReferralCode');
-                                        
-                                        authController
-                                            .register(
-                                              phoneCode: phoneCode.value,
-                                              phone: phoneNumber.value,
-                                              agree: checkedRead.value,
+                              onPressed: authController.isLoading.value ||
+                                      !checkedRead.value ||
+                                      !isEmailValid.value ||
+                                      fullNameController.text.isEmpty ||
+                                      phoneNumber.value.isEmpty ||
+                                      passwordController.text.isEmpty
+                                  ? null
+                                  : () async {
+                                      if (_formKey.currentState!.validate() != true) return;
+
+                                      final finalReferralCode = referalCode ?? referalController.text;
+                                      
+                                      bool result = await authController.register(
+                                        phoneCode: phoneCode.value,
+                                        phone: phoneNumber.value,
+                                        agree: checkedRead.value,
+                                        password: passwordController.text,
+                                        email: emailController.text.toLowerCase(),
+                                        name: fullNameController.text,
+                                        ibCode: finalReferralCode,
+                                      );
+
+                                      if (result) {
+                                        await _localStorage.write('signup_email', emailController.text.toLowerCase());
+                                        await _localStorage.write('signup_password', passwordController.text);
+
+                                        ModernAlertDialog.show(
+                                          type: AlertType.success,
+                                          title: "Registrasi Berhasil!",
+                                          message: authController.responseMessage.value,
+                                          buttonText: "Lanjutkan",
+                                          onPressed: () async {
+                                            Navigator.of(context).pop();
+                                            await authController.login(
+                                              context,
+                                              email: emailController.text.toLowerCase(),
                                               password: passwordController.text,
-                                              email:
-                                                  emailController.text
-                                                      .toLowerCase(),
-                                              name: fullNameController.text,
-                                              ibCode: finalReferralCode,
-                                            )
-                                            .then((result) async {
-                                              if (result) {
-                                                // Save email and password to local storage
-                                                await _localStorage.write(
-                                                  'signup_email',
-                                                  emailController.text.toLowerCase(),
-                                                );
-                                                await _localStorage.write(
-                                                  'signup_password',
-                                                  passwordController.text,
-                                                );
-
-                                                // Show modern success dialog
-                                                ModernAlertDialog.show(
-                                                  type: AlertType.success,
-                                                  title: "Registrasi Berhasil!",
-                                                  message:
-                                                      authController
-                                                          .responseMessage
-                                                          .value,
-                                                  buttonText: "Lanjutkan",
-                                                  onPressed: () {
-                                                    Navigator.of(context).pop();
-                                                  },
-                                                );
-
-                                                // Perform automatic login
-                                                try {
-                                                  await authController.login(
-                                                    context,
-                                                    email:
-                                                        emailController.text
-                                                            .toLowerCase(),
-                                                    password:
-                                                        passwordController.text,
-                                                  );
-                                                  // If login successful, navigate to OtpPage
-                                                  if (authController
-                                                          .statusAccount
-                                                          .value ==
-                                                      'otp') {
-                                                    Get.off(
-                                                      () => const OtpPage(),
-                                                    );
-                                                  }
-                                                } catch (e) {
-                                                  Get.log(
-                                                    '❌ [Signup] Auto-login failed: $e',
-                                                  );
-                                                  Get.off(
-                                                    () => const SignIn(),
-                                                  );
-                                                }
-                                              } else {
-                                                // Tentukan title dan type berdasarkan pesan error
-                                                String title =
-                                                    "Registrasi Gagal";
-                                                String message =
-                                                    authController
-                                                        .responseMessage
-                                                        .value;
-                                                AlertType alertType =
-                                                    AlertType.error;
-
-                                                // Deteksi jenis error
-                                                if (message.contains(
-                                                  "Koneksi internet",
-                                                )) {
-                                                  title =
-                                                      "Koneksi Internet Terputus";
-                                                  alertType = AlertType.error;
-                                                } else if (message.contains(
-                                                      "lambat",
-                                                    ) ||
-                                                    message.contains(
-                                                      "timeout",
-                                                    )) {
-                                                  title = "Koneksi Lambat";
-                                                  alertType = AlertType.warning;
-                                                } else if (message.contains(
-                                                  "server",
-                                                )) {
-                                                  title = "Masalah Server";
-                                                  alertType = AlertType.error;
-                                                }
-
-                                                // Tampilkan popup error yang sesuai
-                                                ModernAlertDialog.show(
-                                                  type: alertType,
-                                                  title: title,
-                                                  message: message,
-                                                  buttonText: "Coba Lagi",
-                                                  onPressed: () {
-                                                    // Hanya tutup dialog, jangan navigate
-                                                    Navigator.of(context).pop();
-                                                  },
-                                                );
-                                              }
-                                            });
-                                      },
-                              title:
-                                  authController.isLoading.value
-                                      ? "Processing..."
-                                      : LanguageGlobalVar.REGIST_NOW.tr,
+                                            );
+                                            if (authController.statusAccount.value == 'otp') {
+                                              Get.off(() => const OtpPage());
+                                            }
+                                          },
+                                        );
+                                      } else {
+                                        ModernAlertDialog.show(
+                                          type: AlertType.error,
+                                          title: "Registrasi Gagal",
+                                          message: authController.responseMessage.value,
+                                          buttonText: "Coba Lagi",
+                                          onPressed: () => Navigator.of(context).pop(),
+                                        );
+                                      }
+                                    },
+                              title: authController.isLoading.value
+                                  ? "Processing..."
+                                  : LanguageGlobalVar.REGIST_NOW.tr,
                             ),
                           ),
                         ),
@@ -524,8 +342,9 @@ class _SignupState extends State<Signup> {
                   ),
                 ),
               ),
-            ))
-        ],
+            ),
+          ),
+        ),
       ),
     );
   }
