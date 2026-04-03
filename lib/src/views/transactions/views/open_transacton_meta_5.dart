@@ -283,38 +283,30 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
       barrierDismissible: false,
     );
 
-    // Parallel batches of 3 for speed + server stability
-    const batchSize = 3;
+    // Fire all close requests simultaneously for maximum speed
     final tickets = positions.map((p) => '${p.ticket}').toList();
 
-    for (int i = 0; i < tickets.length; i += batchSize) {
-      if (isCancelled.value) break;
-
-      final end = (i + batchSize).clamp(0, tickets.length);
-      final batch = tickets.sublist(i, end);
-
-      await Future.wait(batch.map((ticket) async {
-        if (isCancelled.value) return;
-        try {
-          final result = await tradingController.closingOrder(
-            loginID: loginID,
-            ticketID: ticket,
-          ).timeout(
-            const Duration(seconds: 20),
-            onTimeout: () => throw Exception('Timeout'),
-          );
-          if (result['status'] == true) {
-            completed.value++;
-          } else {
-            failed.add(ticket);
-            completed.value++;
-          }
-        } catch (_) {
+    await Future.wait(tickets.map((ticket) async {
+      if (isCancelled.value) return;
+      try {
+        final result = await tradingController.closingOrder(
+          loginID: loginID,
+          ticketID: ticket,
+        ).timeout(
+          const Duration(seconds: 20),
+          onTimeout: () => throw Exception('Timeout'),
+        );
+        if (result['status'] == true) {
+          completed.value++;
+        } else {
           failed.add(ticket);
           completed.value++;
         }
-      }));
-    }
+      } catch (_) {
+        failed.add(ticket);
+        completed.value++;
+      }
+    }));
 
     if (Get.isDialogOpen ?? false) Get.back();
 
@@ -1523,31 +1515,31 @@ class _LoadingDialogContentState extends State<_LoadingDialogContent> {
                     color: Colors.orange,
                   ),
                 ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: () {
-                      _PositionTile._isClosingPosition = false;
-                      if (Get.isDialogOpen ?? false) Get.back();
-                      AppSnackbar.error("Proses dibatalkan. Silakan coba lagi.");
-                    },
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Colors.red.withOpacity(0.3)),
-                      ),
-                    ),
-                    child: Text(
-                      "Batalkan",
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ),
+                // const SizedBox(height: 12),
+                // SizedBox(
+                //   width: double.infinity,
+                //   child: TextButton(
+                //     onPressed: () {
+                //       _PositionTile._isClosingPosition = false;
+                //       if (Get.isDialogOpen ?? false) Get.back();
+                //       AppSnackbar.error("Proses dibatalkan. Silakan coba lagi.");
+                //     },
+                //     style: TextButton.styleFrom(
+                //       foregroundColor: Colors.red,
+                //       shape: RoundedRectangleBorder(
+                //         borderRadius: BorderRadius.circular(12),
+                //         side: BorderSide(color: Colors.red.withOpacity(0.3)),
+                //       ),
+                //     ),
+                //     child: Text(
+                //       "Batalkan",
+                //       style: GoogleFonts.inter(
+                //         fontWeight: FontWeight.w600,
+                //         fontSize: 13,
+                //       ),
+                //     ),
+                //   ),
+                // ),
               ],
             ],
           ),
@@ -1658,26 +1650,26 @@ class _CloseAllProgressDialog extends StatelessWidget {
               style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
             ),
 
-            if (!isCancelled && completed < total) ...[
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: onCancel,
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: Colors.red.withOpacity(0.3)),
-                    ),
-                  ),
-                  child: Text(
-                    "Batalkan Sisa",
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
-                  ),
-                ),
-              ),
-            ],
+            // if (!isCancelled && completed < total) ...[
+            //   const SizedBox(height: 18),
+            //   SizedBox(
+            //     width: double.infinity,
+            //     child: TextButton(
+            //       onPressed: onCancel,
+            //       style: TextButton.styleFrom(
+            //         foregroundColor: Colors.red,
+            //         shape: RoundedRectangleBorder(
+            //           borderRadius: BorderRadius.circular(12),
+            //           side: BorderSide(color: Colors.red.withOpacity(0.3)),
+            //         ),
+            //       ),
+            //       child: Text(
+            //         "Batalkan Sisa",
+            //         style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
+            //       ),
+            //     ),
+            //   ),
+            // ],
           ],
         ),
       ),

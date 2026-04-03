@@ -72,7 +72,7 @@ class _TicketRoomsState extends State<TicketRooms> {
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverAppBar(
-            expandedHeight: 110,
+            surfaceTintColor: isDark ? Colors.black : Colors.white,
             floating: false,
             pinned: true,
             elevation: 0,
@@ -92,33 +92,30 @@ class _TicketRoomsState extends State<TicketRooms> {
                 ),
               ),
             ),
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(left: 0, bottom: 14),
-              title: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Support Chat",
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : Colors.black87,
-                    ),
+            title: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  "Support Chat",
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
-                  Obx(() {
-                    final count = utilitiesController.listTicketModel.value?.response?.length ?? 0;
-                    return Text(
-                      "$count tiket aktif",
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: CustomColor.secondaryColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    );
-                  }),
-                ],
-              ),
+                ),
+                Obx(() {
+                  final count = utilitiesController.listTicketModel.value?.response?.length ?? 0;
+                  return Text(
+                    "$count tiket aktif",
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: CustomColor.secondaryColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  );
+                }),
+              ],
             ),
             actions: [
               Padding(
@@ -241,7 +238,7 @@ class _TicketRoomsState extends State<TicketRooms> {
 
             /// === LIST DATA ===
             return ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 100),
               itemCount: tickets.length,
               itemBuilder: (_, i) {
                 final item = tickets[i];
@@ -250,7 +247,7 @@ class _TicketRoomsState extends State<TicketRooms> {
                 final icon = _subjectIcon(item.subject);
 
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.only(bottom: 16),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -274,7 +271,7 @@ class _TicketRoomsState extends State<TicketRooms> {
                           ],
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                           child: Row(
                             children: [
                               // Avatar with icon
@@ -753,7 +750,7 @@ class _CreateTicketSheetState extends State<_CreateTicketSheet> {
 
           // ── action button ────────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+            padding: EdgeInsets.fromLTRB(20, 4, 20, 24 + MediaQuery.of(context).padding.bottom),
             child: GestureDetector(
               onTap: _isLoading
                   ? null

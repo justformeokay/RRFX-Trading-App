@@ -21,8 +21,8 @@ class CustomDatePicker {
 
   static Future<DateTime?> material(BuildContext context) async {
     final DateTime now = DateTime.now();
-    final DateTime lastAllowed = DateTime(now.year - 17, now.month, now.day); // minimal 17 tahun
-    final DateTime firstAllowed = DateTime(now.year - 65, now.month, now.day); // maksimal 65 tahun
+    final DateTime lastAllowed = DateTime(now.year - 10, now.month, now.day); // minimal 10 tahun
+    final DateTime firstAllowed = DateTime(now.year - 100, now.month, now.day); // maksimal 100 tahun
 
     final DateTime? pickedDate = await showDatePicker(
       context: context,

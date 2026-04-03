@@ -45,16 +45,9 @@ class ChartExecutionController extends GetxController {
     double? volume,
     int maxRetries = 3,
   }) async {
-    if (isExecuting.value) {
-      throw Exception('Order sedang diproses');
-    }
-
     int retryCount = 0;
     
     try {
-      isExecuting.value = true;
-      executionMessage.value = 'Memproses order...';
-
       final lotVolume = volume ?? lot.value;
 
       while (retryCount <= maxRetries) {
@@ -115,10 +108,7 @@ class ChartExecutionController extends GetxController {
       print('   Error Message: $e');
       print('   Stack Trace: $stackTrace');
       print('====================================');
-      executionMessage.value = 'Error: $e';
       rethrow;
-    } finally {
-      isExecuting.value = false;
     }
   }
 
@@ -173,16 +163,9 @@ class ChartExecutionController extends GetxController {
     int? tp,
     int maxRetries = 3,
   }) async {
-    if (isExecuting.value) {
-      throw Exception('Order sedang diproses');
-    }
-
     int retryCount = 0;
 
     try {
-      isExecuting.value = true;
-      executionMessage.value = 'Memproses pending order...';
-
       final lotVolume = volume ?? lot.value;
 
       while (retryCount <= maxRetries) {
@@ -258,10 +241,7 @@ class ChartExecutionController extends GetxController {
       print('   Error Message: $e');
       print('   Stack Trace: $stackTrace');
       print('==================================');
-      executionMessage.value = 'Error: $e';
       rethrow;
-    } finally {
-      isExecuting.value = false;
     }
   }
 

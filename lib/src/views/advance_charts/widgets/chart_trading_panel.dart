@@ -39,7 +39,6 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   // Queue untuk mengelola multiple executions
   final RxList<Map<String, dynamic>> _executionQueue =
       <Map<String, dynamic>>[].obs;
-  bool _isProcessingQueue = false;
 
   OverlayEntry? _overlayEntry;
 
@@ -425,9 +424,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     // Show overlay entry
     _showQueueOverlay();
 
-    if (!_isProcessingQueue) {
-      _processQueue();
-    }
+    // Fire immediately in parallel — don't wait for previous orders
+    _executeItem(newItem);
   }
 
   void _showQueueOverlay() {
@@ -492,17 +490,10 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     }
   }
 
-  Future<void> _processQueue() async {
-    if (_executionQueue.isEmpty) {
-      _isProcessingQueue = false;
-      return;
-    }
-
-    _isProcessingQueue = true;
-    final item = _executionQueue.first;
+  Future<void> _executeItem(Map<String, dynamic> item) async {
     final operation = item['operation'] as String;
-    // Gunakan symbol dari item, bukan widget.symbol (fix bug: symbol berubah saat pindah market)
     final itemSymbol = item['symbol'] as String? ?? widget.symbol;
+    final itemId = item['id'];
 
     try {
       print('🔄 Processing order: $operation for $itemSymbol');
@@ -530,7 +521,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       final openPrice = response['response']?['openPrice'];
 
       // Update status to success and add openPrice
-      final index = _executionQueue.indexWhere((e) => e['id'] == item['id']);
+      final index = _executionQueue.indexWhere((e) => e['id'] == itemId);
       if (index != -1) {
         _executionQueue[index]['status'] = 'success';
         _executionQueue[index]['openPrice'] = openPrice;
@@ -540,22 +531,9 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       // Play success notification (sound + haptic)
       await _playSuccessNotification();
 
-      // Show success snackbar
-      // if (mounted) {
-      //   Get.snackbar(
-      //     'Order Berhasil',
-      //     '${operation.toUpperCase()} ${item['lot']} lot ${widget.symbol.replaceAll('.db', '')} @ $openPrice',
-      //     backgroundColor: operation == 'buy' ? Colors.green.shade800 : Colors.red.shade800,
-      //     colorText: Colors.white,
-      //     icon: Icon(Iconsax.tick_circle_bold, color: Colors.white),
-      //     snackPosition: SnackPosition.TOP,
-      //     duration: const Duration(seconds: 2),
-      //   );
-      // }
-
       // Remove after 1.5 seconds
       await Future.delayed(const Duration(milliseconds: 1500));
-      _executionQueue.removeWhere((e) => e['id'] == item['id']);
+      _executionQueue.removeWhere((e) => e['id'] == itemId);
 
       if (mounted) {
         widget.onOrderExecuted?.call(operation);
@@ -566,7 +544,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       print('   Error message: $e');
 
       // Update status to error
-      final index = _executionQueue.indexWhere((e) => e['id'] == item['id']);
+      final index = _executionQueue.indexWhere((e) => e['id'] == itemId);
       if (index != -1) {
         _executionQueue[index]['status'] = 'error';
         _executionQueue.refresh();
@@ -574,7 +552,6 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
       // Show error popup dengan ModernAlertDialog
       if (mounted) {
-        // Gunakan message langsung dari response API
         String errorMsg = e.toString().replaceAll('Exception: ', '');
 
         ModernAlertDialog.error(
@@ -588,11 +565,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
       // Remove after 1 second
       await Future.delayed(const Duration(milliseconds: 1000));
-      _executionQueue.removeWhere((e) => e['id'] == item['id']);
+      _executionQueue.removeWhere((e) => e['id'] == itemId);
     }
-
-    // Process next item
-    _processQueue();
   }
 
   Future<void> _executeBuy() async {
