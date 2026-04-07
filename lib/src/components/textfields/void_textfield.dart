@@ -77,7 +77,15 @@ class _VoidTextFieldState extends State<VoidTextField> {
           behavior: HitTestBehavior.opaque,
           child: AbsorbPointer(
             absorbing: true,
-            child: TextFormField(
+            child: TweenAnimationBuilder<Color?>(
+              tween: ColorTween(
+                end: isReadOnly ? disabledBorderColor : CustomColor.textThemeDarkSoftColor,
+              ),
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              builder: (context, animatedColor, _) {
+                final aBorderColor = animatedColor ?? borderColor;
+                return TextFormField(
               readOnly: true,
               controller: widget.controller,
               autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -132,7 +140,7 @@ class _VoidTextFieldState extends State<VoidTextField> {
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.0),
                   borderSide: BorderSide(
-                    color: borderColor,
+                    color: aBorderColor,
                     width: isReadOnly ? 0.8 : 1.2,
                   ),
                 ),
@@ -140,7 +148,7 @@ class _VoidTextFieldState extends State<VoidTextField> {
                   borderRadius: BorderRadius.circular(12.0),
                   borderSide: BorderSide(
                     color: isReadOnly
-                        ? borderColor
+                        ? aBorderColor
                         : CustomColor.secondaryColor,
                     width: isReadOnly ? 0.8 : 1.6,
                   ),
@@ -148,12 +156,14 @@ class _VoidTextFieldState extends State<VoidTextField> {
                 disabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.0),
                   borderSide:
-                      BorderSide(color: borderColor, width: 0.8),
+                      BorderSide(color: aBorderColor, width: 0.8),
                 ),
               ),
 
               onChanged: (value) {
                 isEmail(validateEmailBool(value) == true);
+              },
+            );
               },
             ),
           ),

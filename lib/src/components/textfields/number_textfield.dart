@@ -89,12 +89,26 @@ class _NumberTextFieldState extends State<NumberTextField> {
   Widget build(BuildContext context) {
     final isReadOnly = widget.readOnly ?? false;
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Obx(() {
         if (isLoading.value) return const SizedBox();
 
-        return TextFormField(
+        return TweenAnimationBuilder<Color?>(
+          tween: ColorTween(
+            end: isReadOnly
+                ? colorScheme.onSurface.withOpacity(isDark ? 0.25 : 0.12)
+                : CustomColor.textThemeDarkSoftColor,
+          ),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          builder: (context, animatedColor, _) {
+            final aBorderColor = animatedColor ??
+                (isReadOnly
+                    ? colorScheme.onSurface.withOpacity(isDark ? 0.25 : 0.12)
+                    : CustomColor.textThemeDarkSoftColor);
+            return TextFormField(
           readOnly: isReadOnly,
           controller: widget.controller,
           autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -183,9 +197,7 @@ class _NumberTextFieldState extends State<NumberTextField> {
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.0),
               borderSide: BorderSide(
-                color: isReadOnly
-                    ? colorScheme.onSurface.withOpacity(0.12) // disabled color
-                    : CustomColor.textThemeDarkSoftColor,
+                color: aBorderColor,
                 width: 1.2,
               ),
             ),
@@ -194,9 +206,7 @@ class _NumberTextFieldState extends State<NumberTextField> {
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.0),
               borderSide: BorderSide(
-                color: isReadOnly
-                    ? colorScheme.onSurface.withOpacity(0.12)
-                    : CustomColor.secondaryColor,
+                color: isReadOnly ? aBorderColor : CustomColor.secondaryColor,
                 width: isReadOnly ? 1.0 : 1.6,
               ),
             ),
@@ -240,6 +250,8 @@ class _NumberTextFieldState extends State<NumberTextField> {
             } else {
               isNumber(false);
             }
+          },
+        );
           },
         );
       }),

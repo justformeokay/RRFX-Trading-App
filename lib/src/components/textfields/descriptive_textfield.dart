@@ -48,13 +48,13 @@ class _DescriptiveTextFieldState extends State<DescriptiveTextField> {
   Widget build(BuildContext context) {
     final isReadOnly = widget.readOnly ?? false;
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final fillColor = isReadOnly
-        ? colorScheme.surfaceVariant.withOpacity(
-            Theme.of(context).brightness == Brightness.dark ? 0.25 : 0.5)
+        ? colorScheme.surfaceVariant.withOpacity(isDark ? 0.25 : 0.5)
         : Colors.transparent;
 
-    final disabledBorderColor = colorScheme.onSurface.withOpacity(0.12);
+    final disabledBorderColor = colorScheme.onSurface.withOpacity(isDark ? 0.25 : 0.12);
     final borderColor = isReadOnly
         ? disabledBorderColor
         : CustomColor.textThemeDarkSoftColor;
@@ -64,7 +64,15 @@ class _DescriptiveTextFieldState extends State<DescriptiveTextField> {
       child: Obx(() {
         if (isLoading.value) return const SizedBox();
 
-        return TextFormField(
+        return TweenAnimationBuilder<Color?>(
+          tween: ColorTween(
+            end: isReadOnly ? disabledBorderColor : CustomColor.textThemeDarkSoftColor,
+          ),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          builder: (context, animatedColor, _) {
+            final aBorderColor = animatedColor ?? borderColor;
+            return TextFormField(
           minLines: 5,
           maxLines: 5,
           readOnly: isReadOnly,
@@ -140,50 +148,51 @@ class _DescriptiveTextFieldState extends State<DescriptiveTextField> {
             fillColor: fillColor,
 
             suffix: widget.useValidator == true && !isReadOnly
-                ? AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color:
-                          isValid.value ? CustomColor.secondaryColor : Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      isValid.value ? Icons.done : Icons.close,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                  )
-                : const SizedBox(),
-
+              ? AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color:
+                        isValid.value ? CustomColor.secondaryColor : Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isValid.value ? Icons.done : Icons.close,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                )
+              : const SizedBox(),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.0),
+              borderSide: BorderSide(color: aBorderColor, width: isReadOnly ? 0.8 : 1.2),
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.0),
+              borderSide: BorderSide(color: aBorderColor, width: isReadOnly ? 0.8 : 1.2),
+            ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.0),
               borderSide: BorderSide(
-                color: borderColor,
+                color: aBorderColor,
                 width: isReadOnly ? 0.8 : 1.2,
               ),
             ),
-
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.0),
               borderSide: BorderSide(
-                color:
-                    isReadOnly ? borderColor : CustomColor.secondaryColor,
+                color: isReadOnly
+                    ? aBorderColor
+                    : CustomColor.secondaryColor,
                 width: isReadOnly ? 0.8 : 1.6,
-              ),
-            ),
-
-            disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.0),
-              borderSide: BorderSide(
-                color: borderColor,
-                width: 0.8,
               ),
             ),
           ),
 
           onChanged: (value) {
             isValid(value.trim().length > 2);
+          },
+        );
           },
         );
       }),

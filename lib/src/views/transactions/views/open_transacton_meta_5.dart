@@ -272,15 +272,17 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
     final failed = <String>[].obs;
     final isCancelled = false.obs;
 
-    Get.dialog(
-      Obx(() => _CloseAllProgressDialog(
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (_) => Obx(() => _CloseAllProgressDialog(
         total: total,
         completed: completed.value,
         failed: failed.length,
         isCancelled: isCancelled.value,
         onCancel: () => isCancelled.value = true,
       )),
-      barrierDismissible: false,
     );
 
     // Fire all close requests simultaneously for maximum speed
@@ -308,7 +310,9 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
       }
     }));
 
-    if (Get.isDialogOpen ?? false) Get.back();
+    try {
+      Navigator.of(context, rootNavigator: true).pop();
+    } catch (_) {}
 
     final successCount = completed.value - failed.length;
     if (failed.isEmpty && !isCancelled.value) {
@@ -1008,17 +1012,13 @@ class _PositionTile extends StatelessWidget {
     );
   }
 
-  /// Format openTime to Meta-style format (YYYY.MM.DD HH:mm:ss) with -7 hours offset
+  /// Format openTime to Meta-style format (YYYY.MM.DD HH:mm:ss) using device local timezone
   String _formatOpenTime(String? timeStr) {
     if (timeStr == null || timeStr.isEmpty) return '-';
     
     try {
-      // Parse the DateTime from the string
-      // Assuming format is "2026-02-20 17:51:52" or ISO format
-      DateTime dateTime = DateTime.parse(timeStr);
-      
-      // Subtract 7 hours for timezone offset
-      dateTime = dateTime.subtract(const Duration(hours: 7));
+      // Parse the DateTime from the string and convert to device local timezone
+      DateTime dateTime = DateTime.parse(timeStr).toLocal();
       
       // Format as YYYY.MM.DD HH:mm:ss (Meta-style)
       return DateFormat('yyyy.MM.dd HH:mm:ss').format(dateTime);
@@ -1085,8 +1085,8 @@ class _PositionTile extends StatelessWidget {
             onTimeout: () => throw Exception('Request timeout - koneksi memakan waktu terlalu lama'),
           );
 
-          // Close loading
-          if (Get.isDialogOpen ?? false) Get.back();
+          // Close loading dialog reliably
+          _dismissLoadingDialog(context);
 
           if (result['status'] == true) {
             AppSnackbar.success("Posisi $positionId berhasil ditutup.");
@@ -1095,8 +1095,8 @@ class _PositionTile extends StatelessWidget {
             AppSnackbar.error(msg.toString());
           }
         } catch (e) {
-          // Close loading
-          if (Get.isDialogOpen ?? false) Get.back();
+          // Close loading dialog reliably
+          _dismissLoadingDialog(context);
 
           final errMsg = e.toString().replaceAll('Exception: ', '');
           if (errMsg.contains('timeout') || errMsg.contains('terlalu lama')) {
@@ -1179,8 +1179,8 @@ class _PositionTile extends StatelessWidget {
               isPending: false,
             );
 
-            // Close loading dialog
-            if (Get.isDialogOpen ?? false) Get.back();
+            // Close loading dialog reliably
+            _dismissLoadingDialog(context);
 
             if (result['status'] == true) {
               AppSnackbar.success(
@@ -1199,8 +1199,8 @@ class _PositionTile extends StatelessWidget {
               );
             }
           } catch (e) {
-            // Close loading dialog if still open
-            if (Get.isDialogOpen ?? false) Get.back();
+            // Close loading dialog reliably
+            _dismissLoadingDialog(context);
             // Show user-friendly error dialog
             await ErrorHandler.showErrorDialog(
               e,
@@ -1405,10 +1405,19 @@ class _PositionTile extends StatelessWidget {
 
   /// 🎯 Modern loading dialog dengan force-cancel button
   void _showModernLoadingDialog(BuildContext context, String title) {
-    Get.dialog(
-      _LoadingDialogContent(title: title),
+    showDialog(
+      context: context,
       barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (_) => _LoadingDialogContent(title: title),
     );
+  }
+
+  /// Dismiss loading dialog reliably using Navigator (not GetX)
+  void _dismissLoadingDialog(BuildContext context) {
+    try {
+      Navigator.of(context, rootNavigator: true).pop();
+    } catch (_) {}
   }
 }
 

@@ -67,8 +67,9 @@ class _NameTextFieldNewVersionState extends State<NameTextFieldNewVersion> {
   Widget build(BuildContext context) {
     final bool isReadOnly = widget.readOnly ?? false;
     final colorScheme = Theme.of(context).colorScheme;
-    final fillColor = isReadOnly ? colorScheme.surfaceVariant.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.25 : 0.5) : Colors.transparent;
-    final disabledBorderColor = colorScheme.onSurface.withOpacity(0.12);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fillColor = isReadOnly ? colorScheme.surfaceVariant.withOpacity(isDark ? 0.25 : 0.5) : Colors.transparent;
+    final disabledBorderColor = colorScheme.onSurface.withOpacity(isDark ? 0.25 : 0.12);
     final borderColor = isReadOnly ? disabledBorderColor : CustomColor.textThemeDarkSoftColor;
 
     return Padding(
@@ -76,7 +77,15 @@ class _NameTextFieldNewVersionState extends State<NameTextFieldNewVersion> {
       child: Obx(
         () => isLoading.value
             ? const SizedBox()
-            : TextFormField(
+            : TweenAnimationBuilder<Color?>(
+                tween: ColorTween(
+                  end: isReadOnly ? disabledBorderColor : CustomColor.textThemeDarkSoftColor,
+                ),
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                builder: (context, animatedColor, _) {
+                  final aBorderColor = animatedColor ?? borderColor;
+                  return TextFormField(
                 readOnly: isReadOnly,
                 showCursor: !isReadOnly,
                 controller: widget.controller,
@@ -156,23 +165,23 @@ class _NameTextFieldNewVersionState extends State<NameTextFieldNewVersion> {
 
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12.0),
-                    borderSide: BorderSide(color: borderColor, width: 1),
+                    borderSide: BorderSide(color: aBorderColor, width: isReadOnly ? 0.8 : 1.2),
                   ),
 
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12.0),
                     borderSide: BorderSide(
                       color: isReadOnly
-                          ? disabledBorderColor
+                          ? aBorderColor
                           : CustomColor.secondaryColor,
-                      width: isReadOnly ? 1 : 1.3,
+                      width: isReadOnly ? 0.8 : 1.3,
                     ),
                   ),
 
                   disabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12.0),
                     borderSide:
-                        BorderSide(color: disabledBorderColor, width: 1),
+                        BorderSide(color: aBorderColor, width: 0.8),
                   ),
                 ),
 
@@ -191,6 +200,8 @@ class _NameTextFieldNewVersionState extends State<NameTextFieldNewVersion> {
                   }
                   
                   _updateValidationStatus(filtered);
+                },
+              );
                 },
               ),
       ),

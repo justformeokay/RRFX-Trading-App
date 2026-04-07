@@ -358,7 +358,7 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
   DateTime? _parseDateTime(dynamic dateStr) {
     if (dateStr == null) return null;
     try {
-      return DateTime.parse(dateStr.toString());
+      return DateTime.parse(dateStr.toString()).toLocal();
     } catch (e) {
       return null;
     }
@@ -596,7 +596,7 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                       );
                       if (date != null) {
                         setState(() {
-                          customEndDate = date;
+                          customEndDate = DateTime(date.year, date.month, date.day, 23, 59, 59);
                         });
                       }
                     },
@@ -773,16 +773,13 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
     return value.toStringAsFixed(2);
   }
 
-  /// Format time to Meta-style format (YYYY.MM.DD HH:mm:ss) with -7 hours offset
+  /// Format time to Meta-style format (YYYY.MM.DD HH:mm:ss) using device local timezone
   String _formatTime(String? timeStr) {
     if (timeStr == null || timeStr.isEmpty) return '-';
     
     try {
-      // Parse the DateTime from the string
-      DateTime dateTime = DateTime.parse(timeStr);
-      
-      // Subtract 7 hours for timezone offset
-      dateTime = dateTime.subtract(const Duration(hours: 7));
+      // Parse the DateTime from the string and convert to device local timezone
+      DateTime dateTime = DateTime.parse(timeStr).toLocal();
       
       // Format as YYYY.MM.DD HH:mm:ss (Meta-style)
       return DateFormat('yyyy.MM.dd HH:mm:ss').format(dateTime);
