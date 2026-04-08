@@ -12,9 +12,15 @@ class GlobalVariable {
       ? "wss://${Uri.base.host}"
       : "wss://rrfx.mathlab.id";
 
+  // techcrm.net mainURL
+  // static final mainURL = kIsWeb
+  //     ? (kDebugMode ? "$_devProxy/api" : "$_prodDomain/api")
+  //     : "https://api-rrfx.techcrm.net";
+  
+  // luxurymatrix.com mainURL
   static final mainURL = kIsWeb
       ? (kDebugMode ? "$_devProxy/api" : "$_prodDomain/api")
-      : "https://api-rrfx.techcrm.net";
+      : "https://api-rrfx.luxurymatrix.com";
 
   static final gatewayURL = kIsWeb
       ? (kDebugMode ? "$_devProxy/gateway" : "$_prodDomain/gateway")

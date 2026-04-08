@@ -48,6 +48,11 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   // Execution type tracking
   late RxString _executionType = 'Execution Market'.obs;
 
+  // Market order SL/TP
+  final RxBool _showMarketSlTp = false.obs;
+  final TextEditingController _marketSlController = TextEditingController();
+  final TextEditingController _marketTpController = TextEditingController();
+
   // Track apakah pending order dialog sedang terbuka (cegah numpuk)
   bool _isPendingDialogOpen = false;
   // Track execution type terakhir yang sudah auto-show dialog
@@ -104,6 +109,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     _slPriceController.dispose();
     _tpPointsController.dispose();
     _tpPriceController.dispose();
+    _marketSlController.dispose();
+    _marketTpController.dispose();
     if (_overlayEntry != null) {
       try {
         _overlayEntry?.remove();
@@ -408,12 +415,25 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
   void _addToQueue(String operation) {
     final lot = executionController.lot.value;
+
+    // Capture SL/TP values for market orders
+    double? sl;
+    double? tp;
+    if (_showMarketSlTp.value) {
+      final slText = _marketSlController.text.trim();
+      final tpText = _marketTpController.text.trim();
+      if (slText.isNotEmpty) sl = double.tryParse(slText);
+      if (tpText.isNotEmpty) tp = double.tryParse(tpText);
+    }
+
     final newItem = {
       'operation': operation,
       'lot': lot,
       'symbol': widget.symbol,  // Simpan symbol agar tidak berubah saat pindah market
       'status': 'loading',
       'id': DateTime.now().millisecondsSinceEpoch,
+      if (sl != null) 'sl': sl,
+      if (tp != null) 'tp': tp,
     };
 
     _executionQueue.add(newItem);
@@ -494,21 +514,29 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     final operation = item['operation'] as String;
     final itemSymbol = item['symbol'] as String? ?? widget.symbol;
     final itemId = item['id'];
+    final sl = item['sl'] as double?;
+    final tp = item['tp'] as double?;
 
     try {
       print('🔄 Processing order: $operation for $itemSymbol');
       print('📊 Login: ${widget.login}, Lot: ${item['lot']}');
+      if (sl != null) print('📊 SL: $sl');
+      if (tp != null) print('📊 TP: $tp');
 
       Map<String, dynamic> response;
       if (operation == 'buy') {
         response = await executionController.executeBuy(
           login: widget.login,
           symbol: itemSymbol,
+          sl: sl,
+          tp: tp,
         );
       } else {
         response = await executionController.executeSell(
           login: widget.login,
           symbol: itemSymbol,
+          sl: sl,
+          tp: tp,
         );
       }
 
@@ -1576,6 +1604,228 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     });
   }
 
+  Widget _buildMarketSlTpFields(bool isDark) {
+    return Obx(() {
+      if (_executionType.value != 'Execution Market') {
+        return const SizedBox.shrink();
+      }
+
+      return Column(
+        children: [
+          // Toggle row
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              _showMarketSlTp.value = !_showMarketSlTp.value;
+              if (!_showMarketSlTp.value) {
+                _marketSlController.clear();
+                _marketTpController.clear();
+              }
+            },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withOpacity(0.06)
+                    : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.1)
+                      : Colors.grey.shade300,
+                  width: 0.5,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Iconsax.shield_tick_bold,
+                    size: 14,
+                    color: _showMarketSlTp.value
+                        ? Colors.blue
+                        : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'SL / TP',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: _showMarketSlTp.value
+                          ? Colors.blue
+                          : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                    ),
+                  ),
+                  const Spacer(),
+                  AnimatedRotation(
+                    turns: _showMarketSlTp.value ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 18,
+                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // SL/TP input fields
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            child: _showMarketSlTp.value
+                ? Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        // Stop Loss field
+                        Expanded(
+                          child: Container(
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? Colors.red.shade900.withOpacity(0.2)
+                                  : Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isDark
+                                    ? Colors.red.shade700.withOpacity(0.4)
+                                    : Colors.red.shade200,
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  child: Text(
+                                    'SL',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.red.shade400,
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  width: 0.5,
+                                  height: 20,
+                                  color: isDark
+                                      ? Colors.red.shade700.withOpacity(0.4)
+                                      : Colors.red.shade200,
+                                ),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _marketSlController,
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.jetBrainsMono(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: 'Price',
+                                      hintStyle: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        color: isDark
+                                            ? Colors.grey.shade600
+                                            : Colors.grey.shade400,
+                                      ),
+                                      border: InputBorder.none,
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 0,
+                                      ),
+                                      isDense: true,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Take Profit field
+                        Expanded(
+                          child: Container(
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? Colors.green.shade900.withOpacity(0.2)
+                                  : Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isDark
+                                    ? Colors.green.shade700.withOpacity(0.4)
+                                    : Colors.green.shade200,
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  child: Text(
+                                    'TP',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.green.shade400,
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  width: 0.5,
+                                  height: 20,
+                                  color: isDark
+                                      ? Colors.green.shade700.withOpacity(0.4)
+                                      : Colors.green.shade200,
+                                ),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _marketTpController,
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.jetBrainsMono(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: 'Price',
+                                      hintStyle: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        color: isDark
+                                            ? Colors.grey.shade600
+                                            : Colors.grey.shade400,
+                                      ),
+                                      border: InputBorder.none,
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 0,
+                                      ),
+                                      isDense: true,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      );
+    });
+  }
+
   Widget _buildPendingOrderFields(bool isDark) {
     if (_executionType.value != 'Execution Market') {
       // Hanya auto-show dialog saat execution type BARU berubah,
@@ -1729,6 +1979,9 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
               // Pending Order Fields (shown for non-market execution types)
               _buildPendingOrderFields(isDark),
+
+              // Market order SL/TP fields
+              _buildMarketSlTpFields(isDark),
 
               // Trading Panel Row
               Row(
@@ -1997,49 +2250,45 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       }
     }
 
-    // API menerima SL/TP dalam bentuk POINTS (integer), bukan prices
-    // Prioritas: ambil dari _slPointsController, jika kosong maka konversi dari _slPriceController
-    int? slPoints;
-    int? tpPoints;
+    // API sekarang menerima SL/TP dalam bentuk PRICE (bukan points lagi)
+    // Prioritas: ambil dari _slPriceController, jika kosong maka konversi dari _slPointsController
+    double? slPrice;
+    double? tpPrice;
 
     final slPointsText = _slPointsController.text.replaceAll(',', '');
     final tpPointsText = _tpPointsController.text.replaceAll(',', '');
     final slPriceText = _slPriceController.text.replaceAll(',', '');
     final tpPriceText = _tpPriceController.text.replaceAll(',', '');
 
-    // SL Points
-    if (slPointsText.isNotEmpty) {
-      slPoints = double.tryParse(slPointsText)?.round();
-    } else if (slPriceText.isNotEmpty) {
-      // Konversi dari price ke points
-      final slPrice = double.tryParse(slPriceText);
-      if (slPrice != null && slPrice > 0) {
+    // SL Price
+    if (slPriceText.isNotEmpty) {
+      final parsed = double.tryParse(slPriceText);
+      if (parsed != null && parsed > 0) slPrice = parsed;
+    } else if (slPointsText.isNotEmpty) {
+      // Konversi dari points ke price
+      final slPts = double.tryParse(slPointsText);
+      if (slPts != null && slPts > 0) {
         final pointValue = _getPointValue(capturedSymbol);
         final isBuy = direction == 'buy';
-        final pointsCalc = isBuy
-            ? (entryPrice - slPrice) / pointValue
-            : (slPrice - entryPrice) / pointValue;
-        if (pointsCalc > 0) {
-          slPoints = pointsCalc.round();
-        }
+        slPrice = isBuy
+            ? entryPrice - (slPts * pointValue)
+            : entryPrice + (slPts * pointValue);
       }
     }
 
-    // TP Points
-    if (tpPointsText.isNotEmpty) {
-      tpPoints = double.tryParse(tpPointsText)?.round();
-    } else if (tpPriceText.isNotEmpty) {
-      // Konversi dari price ke points
-      final tpPrice = double.tryParse(tpPriceText);
-      if (tpPrice != null && tpPrice > 0) {
+    // TP Price
+    if (tpPriceText.isNotEmpty) {
+      final parsed = double.tryParse(tpPriceText);
+      if (parsed != null && parsed > 0) tpPrice = parsed;
+    } else if (tpPointsText.isNotEmpty) {
+      // Konversi dari points ke price
+      final tpPts = double.tryParse(tpPointsText);
+      if (tpPts != null && tpPts > 0) {
         final pointValue = _getPointValue(capturedSymbol);
         final isBuy = direction == 'buy';
-        final pointsCalc = isBuy
-            ? (tpPrice - entryPrice) / pointValue
-            : (entryPrice - tpPrice) / pointValue;
-        if (pointsCalc > 0) {
-          tpPoints = pointsCalc.round();
-        }
+        tpPrice = isBuy
+            ? entryPrice + (tpPts * pointValue)
+            : entryPrice - (tpPts * pointValue);
       }
     }
 
@@ -2078,8 +2327,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       'lot': lot,
       'symbol': capturedSymbol,  // Gunakan captured symbol
       'price': entryPrice,
-      'sl': slPoints,
-      'tp': tpPoints,
+      'sl': slPrice,
+      'tp': tpPrice,
       'status': 'loading',
       'openPrice': null,
     });
@@ -2100,8 +2349,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
         operation: operation,
         price: entryPrice,
         volume: lot,
-        sl: slPoints,
-        tp: tpPoints,
+        sl: slPrice,
+        tp: tpPrice,
       );
 
       print('✅ Pending order response: $response');

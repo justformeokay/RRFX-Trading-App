@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 import 'package:rrfx/src/controllers/two_factory_auth.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
 import 'package:rrfx/src/models/trades/candle_model.dart';
@@ -7,6 +9,7 @@ import 'package:rrfx/src/models/trades/open_order_model.dart';
 import 'package:rrfx/src/models/trades/symbol_model.dart';
 import 'package:rrfx/src/models/trades/trading_account_model_v2.dart';
 import 'package:rrfx/src/models/trades/trading_account_models.dart';
+import 'package:rrfx/src/service/account_credentials_service.dart';
 import 'package:rrfx/src/service/auth_service.dart';
 import '../models/trades/trading_order_history_model.dart';
 
@@ -711,29 +714,94 @@ class TradingController extends GetxController {
     required String? ticketID,
   }) async {
     try {
-      Map<String, dynamic> result = await authService.post(
-        'market/execution/close',
-        {'login': loginID, 'ticket': ticketID},
-      );
-      
-      // ✅ Check result status and throw on failure
-      // authService.post never throws - it always returns a Map
-      if (result['status'] != true) {
-        final message = result['message'] ?? 'Gagal menutup posisi';
-        throw Exception(message);
+      // Get token (auto-fetch if missing)
+      String? token = AccountCredentialsService.getTokenByLogin(loginID);
+      if (token == null || token.isEmpty) {
+        if (!AccountCredentialsService.hasCachedData()) {
+          await AccountCredentialsService.fetchAndCache(forceRefresh: true);
+        } else {
+          token = await AccountCredentialsService.refreshTokenForLogin(loginID);
+        }
+        token ??= AccountCredentialsService.getTokenByLogin(loginID);
+        if (token == null || token.isEmpty) {
+          throw Exception('Gagal mendapatkan koneksi MT5 untuk login $loginID.');
+        }
       }
+
+      // First attempt
+      var result = await _callOrderCloseSafe(token: token, ticket: ticketID ?? '');
+
+      // Handle INVALID_TOKEN → refresh token and retry once
+      if (result.containsKey('code') && result['code'] == 'INVALID_TOKEN') {
+        Get.log('🔄 [CLOSE] INVALID_TOKEN → refreshing token for login $loginID...');
+        final newToken = await AccountCredentialsService.refreshTokenForLogin(loginID);
+        if (newToken == null || newToken.isEmpty) {
+          throw Exception('Koneksi MT5 gagal. Silakan login ulang.');
+        }
+        result = await _callOrderCloseSafe(token: newToken, ticket: ticketID ?? '');
+      }
+
+      // Handle other error codes
+      if (result.containsKey('code') && result['code'] != null) {
+        final errorMsg = result['message'] ?? 'Close order gagal';
+        throw Exception(errorMsg);
+      }
+
+      // Validate ticket in response
+      final responseTicket = result['ticket'];
+      if (responseTicket == null || responseTicket == 0) {
+        final errorMsg = result['message'] ?? 'Close order gagal: tidak mendapat ticket.';
+        throw Exception(errorMsg);
+      }
+
+      Get.log('✅ [CLOSE] Position closed successfully! Ticket: $responseTicket');
 
       // Signal the chart WebView to refresh (position was closed)
       chartRefreshTrigger.value++;
-      
-      return result;
+
+      return {
+        'status': true,
+        'message': 'Position berhasil ditutup',
+        'data': result,
+      };
     } catch (e) {
       isLoading(false);
-      // Re-throw with cleaner message
       final errMsg = e.toString().replaceAll('Exception: ', '');
       throw Exception(errMsg);
     }
   }
+
+  /// Internal: call OrderCloseSafe API
+  Future<Map<String, dynamic>> _callOrderCloseSafe({
+    required String token,
+    required String ticket,
+  }) async {
+    final uri = Uri.parse(
+      '$_mt5ApiBase/OrderCloseSafe'
+      '?id=$token'
+      '&ticket=$ticket'
+      '&lots=0'
+      '&price=0'
+      '&slippage=0',
+    );
+
+    Get.log('📦 [CLOSE] Request URL: $uri');
+
+    final response = await http.get(
+      uri,
+      headers: {'accept': 'text/json'},
+    ).timeout(
+      const Duration(seconds: 30),
+      onTimeout: () => throw Exception('Close order timeout, coba lagi.'),
+    );
+
+    Get.log('📥 [CLOSE] Response status: ${response.statusCode}');
+    Get.log('📥 [CLOSE] Response body: ${response.body}');
+
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
+  static const String _mt5ApiBase = 'https://mt5-api-v3.techcrm.online';
 
   Future<Map<String, dynamic>> modifyPosition({
     required String login,
@@ -743,22 +811,99 @@ class TradingController extends GetxController {
     bool isPending = false,
   }) async {
     try {
-      Map<String, dynamic> result = await authService.post(
-        'market/execution/modify',
-        {
-          'login': login,
-          'ticket': ticket,
-          'tp': takeProfit.toString(),
-          'sl': stopLoss.toString(),
-          'is_pending': isPending ? '1' : '0',
-        },
+      // Get token (auto-fetch if missing)
+      String? token = AccountCredentialsService.getTokenByLogin(login);
+      if (token == null || token.isEmpty) {
+        if (!AccountCredentialsService.hasCachedData()) {
+          await AccountCredentialsService.fetchAndCache(forceRefresh: true);
+        } else {
+          token = await AccountCredentialsService.refreshTokenForLogin(login);
+        }
+        token ??= AccountCredentialsService.getTokenByLogin(login);
+        if (token == null || token.isEmpty) {
+          throw Exception('Gagal mendapatkan koneksi MT5 untuk login $login.');
+        }
+      }
+
+      // First attempt
+      var result = await _callOrderModifySafe(
+        token: token,
+        ticket: ticket,
+        stopLoss: stopLoss,
+        takeProfit: takeProfit,
       );
-      Get.log("INI RESULT MODIFY POSITION => $result");
-      return result;
+
+      // Handle INVALID_TOKEN → refresh token and retry once
+      if (result.containsKey('code') && result['code'] == 'INVALID_TOKEN') {
+        Get.log('🔄 [MODIFY] INVALID_TOKEN → refreshing token for login $login...');
+        final newToken = await AccountCredentialsService.refreshTokenForLogin(login);
+        if (newToken == null || newToken.isEmpty) {
+          throw Exception('Koneksi MT5 gagal. Silakan login ulang.');
+        }
+        result = await _callOrderModifySafe(
+          token: newToken,
+          ticket: ticket,
+          stopLoss: stopLoss,
+          takeProfit: takeProfit,
+        );
+      }
+
+      // Handle other error codes
+      if (result.containsKey('code') && result['code'] != null) {
+        final errorMsg = result['message'] ?? 'Modify order gagal';
+        throw Exception(errorMsg);
+      }
+
+      // Validate ticket in response
+      final responseTicket = result['ticket'];
+      if (responseTicket == null || responseTicket == 0) {
+        final errorMsg = result['message'] ?? 'Modify order gagal: tidak mendapat ticket.';
+        throw Exception(errorMsg);
+      }
+
+      Get.log('✅ [MODIFY] Position modified successfully! Ticket: $responseTicket');
+      return {
+        'status': true,
+        'message': 'Position berhasil dimodifikasi',
+        'response': result,
+      };
     } catch (e) {
       isLoading(false);
-      throw Exception("modifyPosition error: $e");
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
+  }
+
+  /// Internal: call OrderModifySafe API
+  Future<Map<String, dynamic>> _callOrderModifySafe({
+    required String token,
+    required String ticket,
+    required double stopLoss,
+    required double takeProfit,
+  }) async {
+    final uri = Uri.parse(
+      '$_mt5ApiBase/OrderModifySafe'
+      '?id=$token'
+      '&ticket=$ticket'
+      '&stoploss=$stopLoss'
+      '&takeprofit=$takeProfit'
+      '&price=0'
+      '&stoplimit=0',
+    );
+
+    Get.log('📦 [MODIFY] Request URL: $uri');
+
+    final response = await http.get(
+      uri,
+      headers: {'accept': 'text/json'},
+    ).timeout(
+      const Duration(seconds: 30),
+      onTimeout: () => throw Exception('Modify order timeout, coba lagi.'),
+    );
+
+    Get.log('📥 [MODIFY] Response status: ${response.statusCode}');
+    Get.log('📥 [MODIFY] Response body: ${response.body}');
+
+    return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
   Future<bool> getAllTradingAccount({bool forceRefresh = false}) async {

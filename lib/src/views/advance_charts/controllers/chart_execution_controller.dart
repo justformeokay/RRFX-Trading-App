@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'package:get/get.dart';
-import 'package:rrfx/src/service/auth_service.dart';
+import 'package:http/http.dart' as http;
+import 'package:rrfx/src/service/account_credentials_service.dart';
 
 class ChartExecutionController extends GetxController {
-  final AuthService _authService = AuthService();
+  static const String _mt5ApiBase = 'https://mt5-api-v3.techcrm.online';
 
   // State
   final RxDouble lot = 0.1.obs;
@@ -28,79 +30,188 @@ class ChartExecutionController extends GetxController {
     }
   }
 
-  /// Execute buy or sell order
-  /// 
+  /// Get MT5 token for the given login.
+  /// If token not found, auto-fetch credentials + reconnect MT5.
+  Future<String> _getToken(String login) async {
+    // 1. Cek token yang sudah ada di cache
+    final existing = AccountCredentialsService.getTokenByLogin(login);
+    if (existing != null && existing.isNotEmpty) return existing;
+
+    print('⚠️ Token belum ada untuk login $login, auto-fetching...');
+
+    // 2. Jika credentials belum ada di cache, fetch dari API dulu
+    if (!AccountCredentialsService.hasCachedData()) {
+      print('📡 Credentials belum ada, fetch dari market/account/list...');
+      await AccountCredentialsService.fetchAndCache(forceRefresh: true);
+    } else {
+      // 3. Credentials ada tapi token belum → langsung refresh token saja
+      print('🔗 Credentials ada, fetch token via /Connect...');
+      final newToken = await AccountCredentialsService.refreshTokenForLogin(login);
+      if (newToken != null && newToken.isNotEmpty) return newToken;
+    }
+
+    // 4. Cek lagi setelah fetch
+    final token = AccountCredentialsService.getTokenByLogin(login);
+    if (token != null && token.isNotEmpty) return token;
+
+    throw Exception('Gagal mendapatkan koneksi MT5 untuk login $login.');
+  }
+
+  /// Map operation string to API-friendly format
+  String _mapOperation(String operation) {
+    switch (operation.toLowerCase()) {
+      case 'buy': return 'Buy';
+      case 'sell': return 'Sell';
+      case 'buylimit': return 'BuyLimit';
+      case 'selllimit': return 'SellLimit';
+      case 'buystop': return 'BuyStop';
+      case 'sellstop': return 'SellStop';
+      default: return operation;
+    }
+  }
+
+  /// Unified order execution via MT5 OrderSendSafe API
+  ///
+  /// Used for all order types: Market (Buy/Sell) and Pending orders.
   /// Parameters:
-  /// - [login]: Account login number
-  /// - [symbol]: Market symbol (e.g., "AUDCAD.db")
-  /// - [operation]: "buy" or "sell"
+  /// - [login]: Account login (used to lookup MT5 token)
+  /// - [symbol]: Market symbol (e.g., "XAUUSD.db")
+  /// - [operation]: "buy", "sell", "buylimit", "selllimit", "buystop", "sellstop"
   /// - [volume]: Lot size (default uses current lot.value)
-  /// - [maxRetries]: Maximum retry attempts for "No prices" error (default: 3)
-  /// 
-  /// Returns API response Map or throws exception on error
+  /// - [price]: Entry price (0 for market orders)
+  /// - [sl]: Stop Loss price (0 or null = no SL)
+  /// - [tp]: Take Profit price (0 or null = no TP)
+  /// - [stopLimitPrice]: Stop Limit Price (default 0)
+  /// - [slippage]: Slippage (default 0)
+  /// - [maxRetries]: Max retries for transient errors
   Future<Map<String, dynamic>> executeOrder({
     required String login,
     required String symbol,
-    required String operation, // "buy" or "sell"
+    required String operation,
     double? volume,
+    double price = 0,
+    double? sl,
+    double? tp,
+    double stopLimitPrice = 0,
+    int slippage = 0,
     int maxRetries = 3,
   }) async {
     int retryCount = 0;
-    
+    bool tokenRefreshed = false;
+
     try {
+      String token = await _getToken(login);
       final lotVolume = volume ?? lot.value;
+      final apiOperation = _mapOperation(operation);
 
       while (retryCount <= maxRetries) {
         print('📤 ===== EXECUTING ORDER ${retryCount > 0 ? "(Retry $retryCount)" : ""} =====');
-        print('   Operation: ${operation.toUpperCase()}');
+        print('   Operation: $apiOperation');
         print('   Symbol: $symbol');
         print('   Volume: $lotVolume lot');
-        print('   Login: $login');
+        print('   Price: $price');
+        print('   SL: ${sl ?? 0}');
+        print('   TP: ${tp ?? 0}');
+        print('   Token: ${token.substring(0, 8)}...');
         print('==============================');
 
-        final requestBody = {
-          'login': login,
-          'symbol': symbol,
-          'operation': operation.toLowerCase(),
-          'volume': lotVolume.toString(),
-        };
-
-        print('📦 Request Body: $requestBody');
-
-        final response = await _authService.post(
-          'market/execution/open',
-          requestBody,
+        final uri = Uri.parse(
+          '$_mt5ApiBase/OrderSend'
+          '?id=$token'
+          '&symbol=$symbol'
+          '&operation=$apiOperation'
+          '&volume=$lotVolume'
+          '&price=$price'
+          '&slippage=$slippage'
+          '&stoploss=${sl ?? 0}'
+          '&takeprofit=${tp ?? 0}'
+          '&stopLimitPrice=$stopLimitPrice',
         );
 
-        print('📥 Response received:');
-        print('   Status: ${response['status']}');
-        print('   Status Code: ${response['statusCode']}');
-        print('   Message: ${response['message']}');
-        print('   Response Data: ${response['response']}');
+        print('📦 Request URL: $uri');
 
-        if (response['status'] == true) {
+        final response = await http.get(
+          uri,
+          headers: {'accept': 'text/json'},
+        ).timeout(
+          const Duration(seconds: 30),
+          onTimeout: () => throw Exception('Order timeout, coba lagi.'),
+        );
+
+        print('📥 Response status: ${response.statusCode}');
+        print('📥 Response body: ${response.body}');
+
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+        // Check for INVALID_TOKEN — refresh token and retry once
+        if (data.containsKey('code') && data['code'] == 'INVALID_TOKEN' && !tokenRefreshed) {
+          print('🔄 INVALID_TOKEN detected — refreshing token for login $login...');
+          executionMessage.value = 'Token expired, reconnecting...';
+          tokenRefreshed = true;
+
+          final newToken = await AccountCredentialsService.refreshTokenForLogin(login);
+          if (newToken != null && newToken.isNotEmpty) {
+            token = newToken;
+            print('✅ Token refreshed successfully, retrying order...');
+            continue; // Retry with new token (don't increment retryCount)
+          } else {
+            print('❌ Token refresh failed');
+            throw Exception('Koneksi MT5 gagal. Silakan login ulang.');
+          }
+        }
+
+        // Check for other error codes
+        if (data.containsKey('code') && data['code'] != null) {
+          final errorMsg = data['message'] ?? 'Order gagal dieksekusi';
+          executionMessage.value = errorMsg;
+          print('❌ Order failed (error code ${data['code']}): $errorMsg');
+          throw Exception(errorMsg);
+        }
+
+        if (response.statusCode == 200) {
+          // Validate ticket — null or 0 means order failed
+          final ticket = data['ticket'];
+          if (ticket == null || ticket == 0) {
+            final errorMsg = data['message'] ?? 'Order gagal: tidak mendapat ticket.';
+            executionMessage.value = errorMsg;
+            print('❌ Order failed: ticket is $ticket');
+            throw Exception(errorMsg);
+          }
+
+          // Success — response has valid "ticket" field
           executionMessage.value = 'Order berhasil dieksekusi!';
-          print('✅ Order executed successfully!');
-          return response;
+          print('✅ Order executed successfully! Ticket: ${data['ticket']}');
+
+          return {
+            'status': true,
+            'message': 'Order berhasil dieksekusi',
+            'response': data,
+          };
         } else {
-          final errorMsg = response['message'] ?? 'Order gagal dieksekusi';
-          
-          // Check if "No prices" error and still have retries left
+          final errorMsg = data['message'] ?? 'Order gagal (HTTP ${response.statusCode})';
+
+          // Retry on "No prices" type errors
           if (errorMsg.toString().toLowerCase().contains('no prices') && retryCount < maxRetries) {
             retryCount++;
             print('⏳ "No prices" error - waiting 1.5s before retry ($retryCount/$maxRetries)...');
             executionMessage.value = 'Menunggu harga... (percobaan $retryCount)';
             await Future.delayed(const Duration(milliseconds: 1500));
-            continue; // Retry the loop
+            continue;
           }
-          
+
+          if (retryCount < maxRetries) {
+            retryCount++;
+            print('⏳ HTTP ${response.statusCode} - waiting 1.5s before retry ($retryCount/$maxRetries)...');
+            await Future.delayed(const Duration(milliseconds: 1500));
+            continue;
+          }
+
           executionMessage.value = errorMsg;
           print('❌ Order failed: $errorMsg');
           throw Exception(errorMsg);
         }
       }
-      
-      // If we exit the loop without returning, throw error
+
       throw Exception('Order gagal setelah $maxRetries percobaan');
     } catch (e, stackTrace) {
       print('❌ ===== ORDER EXECUTION ERROR =====');
@@ -112,137 +223,65 @@ class ChartExecutionController extends GetxController {
     }
   }
 
-  /// Execute BUY order
+  /// Execute BUY market order
   Future<Map<String, dynamic>> executeBuy({
     required String login,
     required String symbol,
     double? volume,
+    double? sl,
+    double? tp,
   }) async {
     return executeOrder(
       login: login,
       symbol: symbol,
       operation: 'buy',
       volume: volume,
+      sl: sl,
+      tp: tp,
     );
   }
 
-  /// Execute SELL order
+  /// Execute SELL market order
   Future<Map<String, dynamic>> executeSell({
     required String login,
     required String symbol,
     double? volume,
+    double? sl,
+    double? tp,
   }) async {
     return executeOrder(
       login: login,
       symbol: symbol,
       operation: 'sell',
       volume: volume,
+      sl: sl,
+      tp: tp,
     );
   }
 
-  /// Execute Pending Order (Buy Limit, Sell Limit, Buy Stop, Sell Stop)
-  /// 
-  /// Parameters:
-  /// - [login]: Account login number
-  /// - [symbol]: Market symbol (e.g., "EURJPY.db")
-  /// - [operation]: "buylimit", "selllimit", "buystop", "sellstop"
-  /// - [volume]: Lot size (default uses current lot.value)
-  /// - [price]: Entry price (required)
-  /// - [sl]: Stop Loss (optional)
-  /// - [tp]: Take Profit (optional)
-  /// - [maxRetries]: Maximum retry attempts for "No prices" error (default: 3)
-  /// 
-  /// Returns API response Map or throws exception on error
+  /// Execute Pending Order (BuyLimit, SellLimit, BuyStop, SellStop)
+  ///
+  /// SL and TP are now in PRICE (not points).
   Future<Map<String, dynamic>> executePendingOrder({
     required String login,
     required String symbol,
     required String operation,
     required double price,
     double? volume,
-    int? sl,
-    int? tp,
+    double? sl,
+    double? tp,
     int maxRetries = 3,
   }) async {
-    int retryCount = 0;
-
-    try {
-      final lotVolume = volume ?? lot.value;
-
-      while (retryCount <= maxRetries) {
-        print('📤 ===== EXECUTING PENDING ORDER ${retryCount > 0 ? "(Retry $retryCount)" : ""} =====');
-        print('   Operation: ${operation.toUpperCase()}');
-        print('   Symbol: $symbol');
-        print('   Volume: $lotVolume lot');
-        print('   Price: $price');
-        print('   SL: ${sl ?? "Not set"}');
-        print('   TP: ${tp ?? "Not set"}');
-        print('   Login: $login');
-        print('======================================');
-
-
-        final Map<String, String> requestBody = {
-          'login': login,
-          'symbol': symbol,
-          'operation': operation.toLowerCase(),
-          'volume': lotVolume.toString(),
-          'price': price.toString(),
-        };
-
-        print("INI REQUEST BODY: $requestBody");
-
-        // Add optional SL/TP if provided
-        if (sl != null && sl > 0) {
-          requestBody['sl'] = sl.toString();
-        }
-        if (tp != null && tp > 0) {
-          requestBody['tp'] = tp.toString();
-        }
-
-        print('📦 Request Body: $requestBody');
-
-        final response = await _authService.post(
-          'market/execution/open',
-          requestBody,
-        );
-
-        print('📥 Response received:');
-        print('   Status: ${response['status']}');
-        print('   Status Code: ${response['statusCode']}');
-        print('   Message: ${response['message']}');
-        print('   Response Data: ${response['response']}');
-
-        if (response['status'] == true) {
-          executionMessage.value = 'Pending order berhasil dibuat!';
-          print('✅ Pending order created successfully!');
-          return response;
-        } else {
-          final errorMsg = response['message'] ?? 'Pending order gagal dibuat';
-          
-          // Check if "No prices" error and still have retries left
-          if (errorMsg.toString().toLowerCase().contains('no prices') && retryCount < maxRetries) {
-            retryCount++;
-            print('⏳ "No prices" error - waiting 1.5s before retry ($retryCount/$maxRetries)...');
-            executionMessage.value = 'Menunggu harga... (percobaan $retryCount)';
-            await Future.delayed(const Duration(milliseconds: 1500));
-            continue; // Retry the loop
-          }
-          
-          executionMessage.value = errorMsg;
-          print('❌ Pending order failed: $errorMsg');
-          throw Exception(errorMsg);
-        }
-      }
-      
-      // If we exit the loop without returning, throw error
-      throw Exception('Pending order gagal setelah $maxRetries percobaan');
-    } catch (e, stackTrace) {
-      print('❌ ===== PENDING ORDER ERROR =====');
-      print('   Error Type: ${e.runtimeType}');
-      print('   Error Message: $e');
-      print('   Stack Trace: $stackTrace');
-      print('==================================');
-      rethrow;
-    }
+    return executeOrder(
+      login: login,
+      symbol: symbol,
+      operation: operation,
+      volume: volume,
+      price: price,
+      sl: sl,
+      tp: tp,
+      maxRetries: maxRetries,
+    );
   }
 
   /// Execute BUY LIMIT order
@@ -251,8 +290,8 @@ class ChartExecutionController extends GetxController {
     required String symbol,
     required double price,
     double? volume,
-    int? sl,
-    int? tp,
+    double? sl,
+    double? tp,
   }) async {
     return executePendingOrder(
       login: login,
@@ -271,8 +310,8 @@ class ChartExecutionController extends GetxController {
     required String symbol,
     required double price,
     double? volume,
-    int? sl,
-    int? tp,
+    double? sl,
+    double? tp,
   }) async {
     return executePendingOrder(
       login: login,
@@ -291,8 +330,8 @@ class ChartExecutionController extends GetxController {
     required String symbol,
     required double price,
     double? volume,
-    int? sl,
-    int? tp,
+    double? sl,
+    double? tp,
   }) async {
     return executePendingOrder(
       login: login,
@@ -311,8 +350,8 @@ class ChartExecutionController extends GetxController {
     required String symbol,
     required double price,
     double? volume,
-    int? sl,
-    int? tp,
+    double? sl,
+    double? tp,
   }) async {
     return executePendingOrder(
       login: login,

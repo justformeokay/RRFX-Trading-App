@@ -15,6 +15,7 @@ import 'package:rrfx/src/controllers/two_factory_auth.dart';
 import 'package:get/get.dart';
 import 'package:rrfx/src/controllers/home.dart';
 import 'package:rrfx/src/service/auth_service.dart';
+import 'package:rrfx/src/service/account_credentials_service.dart';
 
 class Splashscreen extends StatefulWidget {
   const Splashscreen({super.key});
@@ -128,6 +129,9 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
       }
 
       Get.log("✅ [SPLASH] Profile fetched successfully");
+
+      // Fetch & cache kredensial akun trading jika belum ada di lokal
+      await AccountCredentialsService.fetchAndCache();
 
       // ✅ Cek apakah akun terkunci dari API response
       final isLocked = profileData.isLocked ?? false;

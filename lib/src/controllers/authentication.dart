@@ -10,6 +10,7 @@ import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
 import 'package:rrfx/src/controllers/device_utilities_controller.dart';
 import 'package:rrfx/src/models/auth/country_code_model.dart';
 import 'package:rrfx/src/service/auth_service.dart';
+import 'package:rrfx/src/service/account_credentials_service.dart';
 import 'package:rrfx/src/service/passcode_service.dart';
 import 'package:rrfx/src/views/authentications/locked_page.dart';
 import 'package:rrfx/src/views/authentications/otp_page.dart';
@@ -253,6 +254,10 @@ class AuthController extends GetxController {
       Get.log(
         "👤 [AUTH] Profile data: ${homeController.profileModel.value?.toJson()}",
       );
+
+      // Fetch & cache kredensial akun trading (login, password, server)
+      // Hanya fetch jika belum ada data lokal
+      await AccountCredentialsService.fetchAndCache();
 
       Get.log(
         "🚀 [AUTH] Routing based on status: $status and passcode: $hasPasscode",
@@ -855,6 +860,10 @@ class AuthController extends GetxController {
       // Clear passcode data
       await PasscodeService.deletePasscode();
       Get.log("💾 [AUTH] Cleared passcode data");
+
+      // Clear cached account credentials
+      await AccountCredentialsService.clearCache();
+      Get.log("💾 [AUTH] Cleared account credentials cache");
 
       // Clear controllers
       if (Get.isRegistered<AccountController>()) {

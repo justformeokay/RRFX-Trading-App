@@ -1311,7 +1311,6 @@ class _PositionTile extends StatelessWidget {
     // ✅ Get.find() — controller sudah terdaftar, tidak perlu Get.put() lagi
     final tradingController = Get.find<TradingController>();
     final accountController = Get.find<AccountController>();
-    final marketWS = Get.find<MarketWebSocketController>();
 
     String? loginID = accountController.selectedAccount.value?.login;
     if (loginID == null) {
@@ -1327,14 +1326,19 @@ class _PositionTile extends StatelessWidget {
       double.tryParse(currentPrice ?? "0") ?? 0.0,
     );
 
-    // Listen to WebSocket updates for this symbol
-    final worker = ever(marketWS.marketData, (data) {
-      final symbolData = data[cleanSymbol];
-      if (symbolData != null) {
-        // Use bid for sell positions, ask for buy positions
-        final newPrice =
-            direction?.toLowerCase() == 'buy' ? symbolData.bid : symbolData.ask;
-        currentPriceObs.value = newPrice;
+    // Listen to open positions updates from AccountBalanceWSController
+    // which receives realtime current_price per position
+    final worker = ever(tradingController.openOrderModel, (model) {
+      final positions = model?.response;
+      if (positions == null) return;
+      final match = positions.firstWhereOrNull(
+        (p) => p.ticket?.toString() == positionId,
+      );
+      if (match != null && match.currentPrice != null) {
+        final newPrice = double.tryParse(match.currentPrice.toString()) ?? 0.0;
+        if (newPrice > 0) {
+          currentPriceObs.value = newPrice;
+        }
       }
     });
 
