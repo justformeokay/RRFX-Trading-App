@@ -32,12 +32,12 @@ class _MainpageState extends State<Mainpage> {
   NetworkController network = Get.put(NetworkController());
   ThemeController themeController = Get.put(ThemeController());
 
-  static final List<Widget> _widgetOptions = <Widget>[
-    const IndexV2(),
-    const MarketsMeta5View(),
-    const WebViewChartView(),
-    const TransactionTab(),
-    const Settings(),
+  final List<Widget> _widgetOptions = const <Widget>[
+    IndexV2(),
+    MarketsMeta5View(),
+    WebViewChartView(),
+    TransactionTab(),
+    Settings(),
   ];
 
   void _onItemTapped(int index) {
@@ -62,7 +62,10 @@ class _MainpageState extends State<Mainpage> {
       return GestureDetector(
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         child: Scaffold(
-          body: _widgetOptions.elementAt(_selectedIndex),
+          body: IndexedStack(
+            index: _selectedIndex,
+            children: _widgetOptions,
+          ),
           bottomNavigationBar: Container(
             color: scaffoldBg,
             child: BottomNavigationBar(

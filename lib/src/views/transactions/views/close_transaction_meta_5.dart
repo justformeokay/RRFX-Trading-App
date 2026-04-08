@@ -15,9 +15,16 @@ class CloseTransactionMeta5 extends StatefulWidget {
   State<CloseTransactionMeta5> createState() => _CloseTransactionMeta5State();
 }
 
-class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
-  final TradingController tradingController = Get.put(TradingController());
-  final AccountController controller = Get.put(AccountController());
+class _CloseTransactionMeta5State extends State<CloseTransactionMeta5>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  late final TradingController tradingController;
+  late final AccountController controller;
+
+  Worker? _accountListener;
+  String? _lastLoadedLogin;
 
   // Filter & Sort state
   String selectedSymbol = 'All';
@@ -34,11 +41,40 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
   @override
   void initState() {
     super.initState();
-    _loadClosedOrders();
+
+    tradingController = Get.isRegistered<TradingController>()
+        ? Get.find<TradingController>()
+        : Get.put(TradingController());
+    controller = Get.isRegistered<AccountController>()
+        ? Get.find<AccountController>()
+        : Get.put(AccountController());
+
+    // Listen for account changes — reload closed orders for new account
+    _accountListener = ever(controller.selectedAccount, (account) {
+      if (account != null) {
+        final newLogin = account.login;
+        if (_lastLoadedLogin != newLogin) {
+          // Reset filters when account changes
+          selectedSymbol = 'All';
+          _cachedSymbols = const ['All'];
+          _lastRawOrders = null;
+
+          _loadClosedOrders();
+          _lastLoadedLogin = newLogin;
+        }
+      }
+    });
+
+    // Initial load
+    if (controller.selectedAccount.value != null) {
+      _lastLoadedLogin = controller.selectedAccount.value!.login;
+      _loadClosedOrders();
+    }
   }
 
   @override
   void dispose() {
+    _accountListener?.dispose();
     super.dispose();
   }
 
@@ -53,7 +89,15 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Obx(() {
+      if (controller.isInitialLoading.value) {
+        return Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(color: CustomColor.secondaryColor),
+          ),
+        );
+      }
       if (!controller.hasAccounts) return noAccountDetected();
 
       final closed = tradingController.tradingHistoryModel.value?.response;
@@ -72,8 +116,10 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
       }
 
       return Scaffold(
-        body: CustomScrollView(
-          slivers: [
+        body: RefreshIndicator(
+          onRefresh: _loadClosedOrders,
+          child: CustomScrollView(
+            slivers: [
             if (closed != null)
               SliverToBoxAdapter(child: _buildFilterBar(context)),
 
@@ -255,6 +301,7 @@ class _CloseTransactionMeta5State extends State<CloseTransactionMeta5> {
                 }, childCount: filteredOrders.length),
               ),
           ],
+        ),
         ),
       );
     });

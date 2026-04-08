@@ -248,7 +248,7 @@ class AuthController extends GetxController {
 
       Get.log("📡 [AUTH] Fetching user profile...");
       // Tunggu profile selesai di-fetch sebelum routing
-      final profileSuccess = await homeController.profile();
+      final profileSuccess = await homeController.profile(forceRefresh: true);
       Get.log("📥 [AUTH] Profile fetch completed. Success: $profileSuccess");
       Get.log(
         "👤 [AUTH] Profile data: ${homeController.profileModel.value?.toJson()}",

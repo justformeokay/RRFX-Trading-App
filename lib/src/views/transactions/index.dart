@@ -122,6 +122,7 @@ class _TransactionState extends State<Transaction> {
 
 
   void fetchOrdersForSelected() {
+    if (!mounted) return;
     if(allAccountTrading.isEmpty){
       print("FETCH ORDERS tidak dijalankan karena all akun trading 0");
       return;
@@ -135,16 +136,18 @@ class _TransactionState extends State<Transaction> {
     });
   }
 
-  void onSelectAccount(int index) {
-    selectedIndex.value = index;
+  void _restartRefreshTimer() {
     _refreshTimer?.cancel();
     bool isHoliday = isForexHoliday(now);
-    if(isHoliday){
-      return;
-    }
+    if (isHoliday) return;
     _refreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
       fetchOrdersForSelected();
     });
+  }
+
+  void onSelectAccount(int index) {
+    selectedIndex.value = index;
+    _restartRefreshTimer();
     fetchOrdersForSelected();
   }
   
@@ -154,16 +157,7 @@ class _TransactionState extends State<Transaction> {
     super.initState();
     getAndSetAccountTradingV2().then((result) {
       fetchOrdersForSelected();
-      bool isHoliday = isForexHoliday(now);
-      if(isHoliday){
-        return;
-      }
-      _refreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
-        fetchOrdersForSelected();
-      });
-      ever(selectedIndex, (_) {
-        fetchOrdersForSelected();
-      });
+      _restartRefreshTimer();
     });
   }
 

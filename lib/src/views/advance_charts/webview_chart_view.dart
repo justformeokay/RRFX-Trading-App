@@ -691,7 +691,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
           buttonText: 'OK',
           onPressed: () {
             // Refresh account data
-            accountController.fetchAccountInfo().then((_) {
+            accountController.fetchAccountInfo(forceRefresh: true).then((_) {
               // Refresh page
               setState(() {
                 _isCreatingDemoAccount = false;

@@ -49,6 +49,11 @@ class UtilitiesController extends GetxController {
   Rxn<TradingSignalsModel> tradingSignal = Rxn<TradingSignalsModel>();
   Rxn<InviteLinkModel> inviteLinkModel = Rxn<InviteLinkModel>();
 
+  // ── Trading Signals caching ──
+  DateTime? _signalsFetchedAt;
+  Future<bool>? _signalsFetchInProgress;
+  static const Duration _signalsCacheTTL = Duration(seconds: 55);
+
   // Ticket
   Rxn<ListOfTicketsModel> listTicketModel = Rxn<ListOfTicketsModel>();
   Rxn<MessagesModel> messagesModel = Rxn<MessagesModel>();
@@ -526,7 +531,29 @@ class UtilitiesController extends GetxController {
     }
   }
 
-  Future<bool> getTradingSignals({String? timeFrame}) async {
+  Future<bool> getTradingSignals({String? timeFrame, bool forceRefresh = false}) async {
+    // Return cached data jika masih fresh
+    if (!forceRefresh &&
+        tradingSignal.value != null &&
+        _signalsFetchedAt != null &&
+        DateTime.now().difference(_signalsFetchedAt!) < _signalsCacheTTL) {
+      return true;
+    }
+
+    // Deduplicate concurrent calls
+    if (_signalsFetchInProgress != null) {
+      return _signalsFetchInProgress!;
+    }
+
+    _signalsFetchInProgress = _doGetTradingSignals(timeFrame: timeFrame);
+    try {
+      return await _signalsFetchInProgress!;
+    } finally {
+      _signalsFetchInProgress = null;
+    }
+  }
+
+  Future<bool> _doGetTradingSignals({String? timeFrame}) async {
     try {
       isLoading(true);
       http.Response response = await http.get(
@@ -539,6 +566,7 @@ class UtilitiesController extends GetxController {
       isLoading(false);
       if (response.statusCode == 200) {
         tradingSignal(TradingSignalsModel.fromJson(result));
+        _signalsFetchedAt = DateTime.now();
         return true;
       }
       responseMessage.value = result['result'];

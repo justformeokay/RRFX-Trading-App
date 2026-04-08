@@ -21,7 +21,7 @@ class _VerificationSuccessPageState extends State<VerificationSuccessPage> {
   @override
   void initState() {
     super.initState();
-    homeController.profile().then((resultProfile){
+    homeController.profile(forceRefresh: true).then((resultProfile){
       if(!resultProfile){
         CustomScaffoldMessanger.showAppSnackBar(context, message: homeController.responseMessage.value, type: SnackBarType.error);
         Get.offAll(() => const SignIn());

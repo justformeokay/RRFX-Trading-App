@@ -81,7 +81,7 @@ class _IndexV2State extends State<IndexV2> {
   void startTradingSignalTimer() {
     final now = DateTime.now();
     if (now.weekday >= 1 && now.weekday <= 5) {
-      _timer = Timer.periodic(const Duration(seconds: 20), (timer) {
+      _timer = Timer.periodic(const Duration(seconds: 60), (timer) {
         _runTradingSignal();
       });
     } else {
@@ -166,6 +166,7 @@ class _IndexV2State extends State<IndexV2> {
   void initState() {
     super.initState();
     Future.delayed(Duration.zero, () async {
+      if (!mounted) return;
       _runTradingSignal();
       contentController.fetchNews();
       contentController.fetchMarketAnalysis();
@@ -358,7 +359,7 @@ class _IndexV2State extends State<IndexV2> {
                       ? null
                       : () async {
                         isLoadingAccount.value = true;
-                        await controller.fetchAccountInfo().then((result) {
+                        await controller.fetchAccountInfo(forceRefresh: true).then((result) {
                           isLoadingAccount.value = false;
                           if (controller.hasAccounts) {
                             AccountSelectionBottomSheet.show();
@@ -439,7 +440,45 @@ class _IndexV2State extends State<IndexV2> {
               Obx(
                 () =>
                     !controller.hasAccounts
-                        ? const SizedBox()
+                        ? controller.isInitialLoading.value
+                            // Tampilkan placeholder card saat loading pertama kali
+                            ? Container(
+                                margin: const EdgeInsets.all(16.0),
+                                width: double.infinity,
+                                height: kIsWeb ? 200.0 : size.width / 2.3,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).cardColor,
+                                  borderRadius: BorderRadius.circular(10.0),
+                                  border: Border.all(
+                                    color: Theme.of(context).dividerColor,
+                                    width: 0.1,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      SizedBox(
+                                        width: 28,
+                                        height: 28,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          color: CustomColor.secondaryColor,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'Memuat data akun...',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          color: Theme.of(context).textTheme.bodySmall?.color,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : const SizedBox()
                         : Container(
                           margin: const EdgeInsets.all(16.0),
                           width: double.infinity,
@@ -1718,8 +1757,8 @@ class _IndexV2State extends State<IndexV2> {
           regolController.createDemoAccount().then((result) async {
             if (result) {
               SuccessDemoAccountPopup.show();
-              final success = await tradingController.getTradingAccount();
-              await controller.fetchAccountInfo();
+              final success = await tradingController.getTradingAccount(forceRefresh: true);
+              await controller.fetchAccountInfo(forceRefresh: true);
               if (success) {
                 haveDemoAccount(true);
               } else {

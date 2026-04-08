@@ -41,6 +41,17 @@ class TradingController extends GetxController {
   RxDouble minPrice = 0.0.obs;
   RxDouble maxPrice = 0.0.obs;
   RxList allTradingAccounts = [].obs;
+
+  // ── Caching untuk getTradingAccount (account/info) ──
+  DateTime? _accountInfoFetchedAt;
+  Future<bool>? _accountInfoFetchInProgress;
+  static const Duration _accountInfoCacheTTL = Duration(minutes: 2);
+
+  // ── Caching untuk getTradingAccountV2 (market/account/list) ──
+  DateTime? _accountListFetchedAt;
+  Future<List<Map<String, dynamic>>>? _accountListFetchInProgress;
+  static const Duration _accountListCacheTTL = Duration(minutes: 2);
+  List<Map<String, dynamic>>? _cachedAccountList;
   // static final Random _random = Random(42);
 
   // WebSocket controller untuk realtime updates
@@ -446,19 +457,47 @@ class TradingController extends GetxController {
   // }
 
   // Create Demo Trading API
-  Future<bool> getTradingAccount() async {
+  /// Fetch trading accounts (account/info) dengan caching.
+  /// [forceRefresh] = true untuk bypass cache.
+  Future<bool> getTradingAccount({bool forceRefresh = false}) async {
+    // Return cached data jika masih fresh
+    if (!forceRefresh &&
+        tradingAccountModels.value != null &&
+        _accountInfoFetchedAt != null &&
+        DateTime.now().difference(_accountInfoFetchedAt!) < _accountInfoCacheTTL) {
+      Get.log("✅ [TRADING] getTradingAccount() using cache (age: ${DateTime.now().difference(_accountInfoFetchedAt!).inSeconds}s)");
+      return true;
+    }
+
+    // Deduplicate: jika fetch sedang berjalan, tunggu yang sudah ada
+    if (_accountInfoFetchInProgress != null) {
+      Get.log("⏳ [TRADING] getTradingAccount() already in progress, waiting...");
+      return _accountInfoFetchInProgress!;
+    }
+
+    _accountInfoFetchInProgress = _doGetTradingAccount();
+    try {
+      return await _accountInfoFetchInProgress!;
+    } finally {
+      _accountInfoFetchInProgress = null;
+    }
+  }
+
+  Future<bool> _doGetTradingAccount() async {
     try {
       isLoading(true);
       Map<String, dynamic> result = await authService.get("account/info");
       isLoading(false);
       if (result['statusCode'] == 200) {
         tradingAccountModels(TradingAccountModels.fromJson(result['response']));
+        allTradingAccounts.clear();
         if (result['response']['demo'].toList().isNotEmpty) {
           allTradingAccounts.add(result['response']['demo']);
         }
         if (result['response']['real'].toList().isNotEmpty) {
           allTradingAccounts.add(result['response']['real']);
         }
+        _accountInfoFetchedAt = DateTime.now();
         return true;
       }
       responseMessage(result['message']);
@@ -470,7 +509,33 @@ class TradingController extends GetxController {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getTradingAccountV2() async {
+  /// Fetch trading account list (market/account/list) dengan caching.
+  /// [forceRefresh] = true untuk bypass cache.
+  Future<List<Map<String, dynamic>>> getTradingAccountV2({bool forceRefresh = false}) async {
+    // Return cached data jika masih fresh
+    if (!forceRefresh &&
+        _cachedAccountList != null &&
+        _accountListFetchedAt != null &&
+        DateTime.now().difference(_accountListFetchedAt!) < _accountListCacheTTL) {
+      Get.log("✅ [TRADING] getTradingAccountV2() using cache (age: ${DateTime.now().difference(_accountListFetchedAt!).inSeconds}s)");
+      return _cachedAccountList!;
+    }
+
+    // Deduplicate: jika fetch sedang berjalan, tunggu yang sudah ada
+    if (_accountListFetchInProgress != null) {
+      Get.log("⏳ [TRADING] getTradingAccountV2() already in progress, waiting...");
+      return _accountListFetchInProgress!;
+    }
+
+    _accountListFetchInProgress = _doGetTradingAccountV2();
+    try {
+      return await _accountListFetchInProgress!;
+    } finally {
+      _accountListFetchInProgress = null;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _doGetTradingAccountV2() async {
     try {
       Map<String, dynamic> result = await authService.get(
         "market/account/list",
@@ -482,10 +547,21 @@ class TradingController extends GetxController {
       List<dynamic> rawList = result['response'];
       List<Map<String, dynamic>> json =
           rawList.map((e) => Map<String, dynamic>.from(e)).toList();
+      _cachedAccountList = json;
+      _accountListFetchedAt = DateTime.now();
       return json;
     } catch (e) {
       throw Exception("getTradingAccount error: $e");
     }
+  }
+
+  /// Invalidate semua trading account cache.
+  /// Panggil setelah add/delete/connect account.
+  void invalidateTradingAccountCache() {
+    _accountInfoFetchedAt = null;
+    _accountListFetchedAt = null;
+    _cachedAccountList = null;
+    Get.log("🗑️ [TRADING] Trading account cache invalidated");
   }
 
   // Create Demo Trading API
@@ -519,7 +595,7 @@ class TradingController extends GetxController {
         "market/account/add",
         {'account_id': accountId},
       );
-
+      invalidateTradingAccountCache();
       return result;
     } catch (e) {
       throw Exception("addTradingAccount error: $e");
@@ -536,6 +612,7 @@ class TradingController extends GetxController {
         {'account_id': accountId},
       );
       isLoadingConnct(false);
+      invalidateTradingAccountCache();
       return result;
     } catch (e) {
       throw Exception("addTradingAccount error: $e");
@@ -565,7 +642,7 @@ class TradingController extends GetxController {
         'market/account/delete',
         {'trade_id': accountId},
       );
-
+      invalidateTradingAccountCache();
       return result;
     } catch (e) {
       throw Exception("deleteTradingAccount error: $e");
@@ -679,39 +756,44 @@ class TradingController extends GetxController {
     }
   }
 
-  Future<bool> getAllTradingAccount() async {
+  Future<bool> getAllTradingAccount({bool forceRefresh = false}) async {
+    // Use getTradingAccount cache for the raw data, then convert format
+    final success = await getTradingAccount(forceRefresh: forceRefresh);
+    if (!success || tradingAccountModels.value == null) {
+      return false;
+    }
+
     try {
-      isLoading(true);
-      final result = await authService.get("account/info");
-      isLoading(false);
+      final rawReal = tradingAccountModels.value!.response.real ?? [];
+      final rawDemo = tradingAccountModels.value!.response.demo ?? [];
 
-      if (result['status'] == true && result['response'] != null) {
-        final response = result['response'] ?? {};
-
-        // Bisa kosong
-        final List<dynamic> realList = response['real'] ?? [];
-        final List<dynamic> demoList = response['demo'] ?? [];
-
-        // Gabungkan & konversi ke model
-        final allList = [
-          ...realList.map(
-            (e) => TradingAccountModelV2.fromJson(Map<String, dynamic>.from(e)),
-          ),
-          ...demoList.map(
-            (e) => TradingAccountModelV2.fromJson(Map<String, dynamic>.from(e)),
-          ),
-        ];
-
-        allAccounts.assignAll(allList);
-
-        responseMessage('Berhasil memuat akun trading');
-        return true;
+      // Convert Real/Demo objects to Map then to TradingAccountModelV2
+      final allList = <TradingAccountModelV2>[];
+      for (final r in rawReal) {
+        allList.add(TradingAccountModelV2(
+          id: r.id, login: r.login, type: r.type,
+          namaTipeAkun: r.namaTipeAkun, rate: r.rate,
+          marginFree: r.marginFree, balance: r.balance,
+          leverage: r.leverage, pnl: r.pnl, currency: r.currency,
+          minDeposit: r.minDeposit, minTopup: r.minTopup,
+          minWithdrawal: r.minWithdrawal, maxWithdrawal: r.maxWithdrawal,
+        ));
+      }
+      for (final d in rawDemo) {
+        allList.add(TradingAccountModelV2(
+          id: d.id, login: d.login, type: d.type,
+          namaTipeAkun: d.namaTipeAkun, rate: d.rate,
+          marginFree: d.marginFree, balance: d.balance,
+          leverage: d.leverage, pnl: d.pnl, currency: d.currency,
+          minDeposit: d.minDeposit, minTopup: d.minTopup,
+          minWithdrawal: d.minWithdrawal, maxWithdrawal: d.maxWithdrawal,
+        ));
       }
 
-      responseMessage(result['message'] ?? 'Gagal memuat data');
-      return false;
+      allAccounts.assignAll(allList);
+      responseMessage('Berhasil memuat akun trading');
+      return true;
     } catch (e) {
-      isLoading(false);
       responseMessage(e.toString());
       return false;
     }

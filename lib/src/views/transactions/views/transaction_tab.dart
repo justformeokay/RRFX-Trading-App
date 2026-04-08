@@ -1,5 +1,3 @@
-import 'dart:async';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -20,14 +18,9 @@ class TransactionTab extends StatefulWidget {
 
 class _TransactionTabState extends State<TransactionTab>
     with SingleTickerProviderStateMixin {
-  final AudioPlayer _audioPlayer = AudioPlayer();
   final AccountController controller = Get.put(AccountController());
   late TabController _tabController;
   int _currentIndex = 0;
-
-  Future<void> playSuccessSound() async {
-    await _audioPlayer.play(AssetSource("sounds/applepay.mp3"));
-  }
 
   @override
   void initState() {
@@ -51,6 +44,25 @@ class _TransactionTabState extends State<TransactionTab>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Obx(() {
+      // Saat initial loading (koneksi lambat), tampilkan loading — bukan "no account"
+      if (controller.isInitialLoading.value) {
+        return Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(color: CustomColor.secondaryColor),
+                const SizedBox(height: 16),
+                Text(
+                  'Memuat data akun...',
+                  style: GoogleFonts.inter(fontSize: 14, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
       final bool canPress = controller.hasAccounts;
       if (!canPress) return noAccountDetected();
 

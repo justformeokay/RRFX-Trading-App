@@ -324,7 +324,7 @@ class _DepositState extends State<Deposit> {
                                 iconData: Iconsax.wallet_2_bold, 
                                 onPressed: isLoading.value ? null : () async {
                                   isLoading(true);
-                                  accountController.fetchAccountInfo().then((result){
+                                  accountController.fetchAccountInfo(forceRefresh: true).then((result){
                                     isLoading(false);
                                     if(!accountController.hasAccounts){
                                       AppSnackbar.error("Akun trading tidak ditemukan. Silakan pilih akun yang valid.");

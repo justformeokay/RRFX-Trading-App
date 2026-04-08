@@ -142,7 +142,7 @@ class _VerificationAccountPageState extends State<VerificationAccountPage> {
       Get.log("📡 [VERIFICATION_PAGE] Calling homeController.profile()...");
 
       // Force refresh profile untuk memastikan data terbaru
-      final success = await homeController.profile();
+      final success = await homeController.profile(forceRefresh: true);
 
       Get.log("📥 [VERIFICATION_PAGE] profile() completed. Success: $success");
       Get.log(

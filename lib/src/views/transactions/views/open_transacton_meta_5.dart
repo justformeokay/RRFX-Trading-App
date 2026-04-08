@@ -24,7 +24,11 @@ class OpenTransactonMeta5 extends StatefulWidget {
   State<OpenTransactonMeta5> createState() => _OpenTransactonMeta5State();
 }
 
-class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
+class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   // ✅ Gunakan Get.find() karena controller sudah di-register saat login/main
   // Get.put() akan re-trigger onInit() jika controller pernah di-delete,
   // yang menyebabkan GET /account/info dipanggil berulang-ulang.
@@ -326,10 +330,18 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     // Force rebuild when account changes to prevent showing old data
     final currentLogin = controller.selectedAccount.value?.login ?? '';
 
     return Obx(() {
+      if (controller.isInitialLoading.value) {
+        return Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(color: CustomColor.secondaryColor),
+          ),
+        );
+      }
       if (!controller.hasAccounts) return noAccountDetected();
 
       var opened = tradingController.openOrderModel.value?.response;

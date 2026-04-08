@@ -230,7 +230,7 @@ class _AllMarketPageState extends State<AllMarketPage> {
                           regolController.createDemoAccount().then((result) {
                             if(result){
                               CustomScaffoldMessanger.showAppSnackBar(context, message: "Akun demo berhasil dibuat", type: SnackBarType.success);
-                              tradingController.getTradingAccount().then((result) {
+                              tradingController.getTradingAccount(forceRefresh: true).then((result) {
                                 
                               });
                             }else{

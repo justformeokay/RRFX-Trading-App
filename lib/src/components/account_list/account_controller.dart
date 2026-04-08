@@ -15,6 +15,15 @@ class AccountController extends GetxController {
   final Rxn<AccountDetailModel> selectedAccount = Rxn<AccountDetailModel>(null);
   final isLoading = true.obs;
 
+  /// true saat fetch pertama kali belum selesai (belum pernah berhasil load data).
+  /// Digunakan UI untuk membedakan "sedang loading" vs "benar-benar tidak punya akun".
+  final isInitialLoading = true.obs;
+
+  // ── Caching ──
+  DateTime? _lastFetchedAt;
+  Future<void>? _fetchInProgress;
+  static const Duration _cacheTTL = Duration(seconds: 30);
+
   // LIST REAL
   List<AccountDetailModel> get realAccounts => _allAccounts.where((acc) => acc.type?.toLowerCase() == 'real').toList();
 
@@ -82,7 +91,35 @@ class AccountController extends GetxController {
     }
   }
 
-  Future<void> fetchAccountInfo() async {
+  /// Fetch account info dengan caching + deduplication.
+  /// [forceRefresh] = true untuk bypass cache (setelah add/delete akun, pull-to-refresh).
+  Future<void> fetchAccountInfo({bool forceRefresh = false}) async {
+    // Return cached data jika masih fresh
+    if (!forceRefresh &&
+        _allAccounts.isNotEmpty &&
+        _lastFetchedAt != null &&
+        DateTime.now().difference(_lastFetchedAt!) < _cacheTTL) {
+      Get.log("✅ [AccountController] Using cached accounts (age: ${DateTime.now().difference(_lastFetchedAt!).inSeconds}s)");
+      isLoading.value = false;
+      return;
+    }
+
+    // Deduplicate: jika fetch sedang berjalan, tunggu yang sudah ada
+    if (_fetchInProgress != null) {
+      Get.log("⏳ [AccountController] Fetch already in progress, waiting...");
+      await _fetchInProgress;
+      return;
+    }
+
+    _fetchInProgress = _doFetchAccountInfo();
+    try {
+      await _fetchInProgress;
+    } finally {
+      _fetchInProgress = null;
+    }
+  }
+
+  Future<void> _doFetchAccountInfo() async {
     isLoading.value = true;
     try {
       String accessToken = await _accountService.getAccessToken();
@@ -90,6 +127,7 @@ class AccountController extends GetxController {
       isLoading.value = false;
       _allAccounts.clear(); 
       _allAccounts.addAll(accountModel.allAccounts); 
+      _lastFetchedAt = DateTime.now();
       _loadDefaultAccount();
 
     } catch (e) {
@@ -100,12 +138,21 @@ class AccountController extends GetxController {
       selectedAccount.value = null; 
     } finally {
       isLoading.value = false;
+      isInitialLoading.value = false;
     }
+  }
+
+  /// Invalidate cache (panggil setelah add/delete account, atau logout).
+  void invalidateCache() {
+    _lastFetchedAt = null;
+    Get.log("🗑️ [AccountController] Cache invalidated");
   }
 
   void resetAccountsState() {
     _allAccounts.clear(); 
     selectedAccount.value = null; 
+    isInitialLoading.value = true;
+    invalidateCache();
   }
 
   void _loadDefaultAccount() {

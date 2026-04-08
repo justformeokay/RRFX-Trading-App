@@ -381,6 +381,13 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Obx(() {
+      if (!_accountController.hasAccounts && _accountController.isInitialLoading.value) {
+        return Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(color: CustomColor.secondaryColor),
+          ),
+        );
+      }
       if (!_accountController.hasAccounts) return noAccountDetected();
 
       return Scaffold(

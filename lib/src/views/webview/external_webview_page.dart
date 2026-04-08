@@ -35,6 +35,12 @@ class _ExternalWebViewPageState extends State<ExternalWebViewPage> {
   }
 
   @override
+  void dispose() {
+    _webViewController = null;
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 

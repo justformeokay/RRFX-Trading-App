@@ -176,7 +176,7 @@ class _WithdrawalState extends State<Withdrawal> {
                       Obx(
                         () => VoidTextField(requiredField: true, readOnly: widget.idLogin != null || isLoadingAcc.value || isLoading.value ? true : false, controller: myAccountTrading, fieldName: "Akun Trading", hintText: isLoadingAcc.value ? "Getting Akun Trading" : "Akun Trading", labelText: isLoadingAcc.value ? "Getting Akun Trading" : "Akun Trading", onPressed: isLoadingAcc.value ? null : () async {
                           isLoadingAcc.value = true;
-                          await accountController.fetchAccountInfo();
+                          await accountController.fetchAccountInfo(forceRefresh: true);
                           isLoadingAcc.value = false;
                           if(widget.idLogin == null){
                             CustomMaterialBottomSheets.defaultBottomSheet(context, title: "Pilih Akun Trading", size: size, children: List.generate(accountController.realAccounts.length, (i){
@@ -348,7 +348,7 @@ class _WithdrawalState extends State<Withdrawal> {
                         isLoading(true);
 
                         try {
-                          accountController.fetchAccountInfo().then((result){
+                          accountController.fetchAccountInfo(forceRefresh: true).then((result){
                             if(!accountController.hasAccounts){
                               AppSnackbar.error("Akun trading tidak ditemukan. Silakan pilih akun yang valid.");
                               isLoading(false);

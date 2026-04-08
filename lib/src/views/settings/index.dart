@@ -118,7 +118,7 @@ class _SettingsState extends State<Settings> {
                   ? () async {}
                   : () async {
                     haveRealAccount.value = false;
-                    await _accountController.fetchAccountInfo().then((result) {
+                    await _accountController.fetchAccountInfo(forceRefresh: true).then((result) {
                       if (_accountController.allAccounts.any(
                         (account) => account.type == 'real',
                       )) {
@@ -127,7 +127,7 @@ class _SettingsState extends State<Settings> {
                         haveRealAccount.value = false;
                       }
                     });
-                    await homeController.profile();
+                    await homeController.profile(forceRefresh: true);
                   },
           child: CustomScrollView(
             physics: const BouncingScrollPhysics(),
@@ -438,7 +438,7 @@ class _SettingsState extends State<Settings> {
                                       urlImage: pickedImage);
                                   if (result) {
                                     userController.photoVersion.value++;
-                                    await homeController.profile();
+                                    await homeController.profile(forceRefresh: true);
                                   }
                                 }
                               },
