@@ -2,7 +2,7 @@ name: rrfx
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 1.9.46+26
+version: 1.9.47+27
 
 environment:
   sdk: ^3.7.2
