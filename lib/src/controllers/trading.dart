@@ -31,6 +31,8 @@ class TradingController extends GetxController {
   Rxn<TradingAccountModels> tradingAccountModels = Rxn<TradingAccountModels>();
   Rxn<ClosedOrderModel> tradingHistoryModel = Rxn<ClosedOrderModel>();
   Rxn<OpenOrderModel> openOrderModel = Rxn<OpenOrderModel>();
+  /// Incremented when a position is closed, so the chart WebView can detect it and reload.
+  RxInt chartRefreshTrigger = 0.obs;
   TwoFactoryAuth twoFactoryAuth = Get.put(TwoFactoryAuth());
   AuthController authController = Get.put(AuthController());
   AuthService authService = AuthService();
@@ -720,6 +722,9 @@ class TradingController extends GetxController {
         final message = result['message'] ?? 'Gagal menutup posisi';
         throw Exception(message);
       }
+
+      // Signal the chart WebView to refresh (position was closed)
+      chartRefreshTrigger.value++;
       
       return result;
     } catch (e) {

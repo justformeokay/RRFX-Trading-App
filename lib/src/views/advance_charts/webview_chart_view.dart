@@ -10,6 +10,7 @@ import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/helpers/variables/global_variables.dart';
+import 'package:rrfx/src/controllers/trading.dart';
 import 'package:rrfx/src/views/chart/controllers/chart_controller.dart';
 import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -34,6 +35,8 @@ class _WebViewChartViewState extends State<WebViewChartView> {
   final chartController = Get.put(ChartControllers());
   final accountController = Get.put(AccountController());
   final symbolsController = Get.put(SymbolsController());
+  late final TradingController _tradingController;
+  Worker? _chartRefreshWorker;
 
   InAppWebViewController? webViewController;
   bool isLoading = true;
@@ -47,6 +50,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
   bool _isCreatingDemoAccount = false; // Track demo account creation
   late StreamSubscription _connectionSubscription;
   Timer? _timeoutTimer;
+  Timer? _chartRefreshDebounce;
   
   // Current price from chart
   final RxnDouble currentPrice = RxnDouble(null);
@@ -63,6 +67,18 @@ class _WebViewChartViewState extends State<WebViewChartView> {
     } else {
       _currentSymbol = chartController.selectedMarket.value;
     }
+
+    // Listen for position closes from other tabs and reload the chart
+    // Debounce agar: (1) server punya waktu proses close, (2) Close All hanya trigger 1x reload
+    _tradingController = Get.find<TradingController>();
+    _chartRefreshWorker = ever(_tradingController.chartRefreshTrigger, (_) {
+      _chartRefreshDebounce?.cancel();
+      _chartRefreshDebounce = Timer(const Duration(milliseconds: 1500), () {
+        if (webViewController != null && mounted) {
+          _reloadChart();
+        }
+      });
+    });
 
     // Monitor connection
     _checkConnection();
@@ -638,6 +654,8 @@ class _WebViewChartViewState extends State<WebViewChartView> {
 
   @override
   void dispose() {
+    _chartRefreshWorker?.dispose();
+    _chartRefreshDebounce?.cancel();
     _connectionSubscription.cancel();
     _cancelTimeoutTimer();
     webViewController = null;

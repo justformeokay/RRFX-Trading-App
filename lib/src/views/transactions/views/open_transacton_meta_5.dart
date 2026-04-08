@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:get/get.dart';
@@ -139,6 +140,138 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
   }
 
   // ── Close All Positions ────────────────────────────────────────────────────
+
+  /// Dialog hasil Close All — menampilkan total P&L
+  void _showCloseAllResultDialog({
+    required int total,
+    required double totalPnl,
+    required double totalSwap,
+  }) {
+    final ctx = Get.context;
+    if (ctx == null) return;
+    final theme = Theme.of(ctx);
+    final isDark = theme.brightness == Brightness.dark;
+    final onSurface = theme.colorScheme.onSurface;
+    final bool isProfit = totalPnl >= 0;
+    final netPnl = totalPnl + totalSwap;
+    final Color accentColor = isProfit ? Colors.greenAccent.shade400 : Colors.redAccent.shade200;
+
+    final sheetColor = theme.bottomSheetTheme.backgroundColor ??
+        (isDark ? const Color(0xFF121212) : Colors.white);
+
+    showModalBottomSheet(
+      context: ctx,
+      useRootNavigator: true,
+      backgroundColor: sheetColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 34),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 45, height: 4,
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: onSurface.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            Container(
+              width: 64, height: 64,
+              decoration: BoxDecoration(
+                color: accentColor.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isProfit ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                size: 32, color: accentColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Semua Posisi Ditutup',
+              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: onSurface),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '$total posisi berhasil ditutup',
+              style: GoogleFonts.inter(fontSize: 12, color: onSurface.withOpacity(0.5)),
+            ),
+            const SizedBox(height: 24),
+            // Container(
+            //   width: double.infinity,
+            //   padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            //   decoration: BoxDecoration(
+            //     color: accentColor.withOpacity(0.10),
+            //     borderRadius: BorderRadius.circular(16),
+            //     border: Border.all(color: accentColor.withOpacity(0.25)),
+            //   ),
+            //   child: Column(
+            //     children: [
+            //       Text(
+            //         'TOTAL ${isProfit ? 'PROFIT' : 'LOSS'}',
+            //         style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: accentColor, letterSpacing: 1.5),
+            //       ),
+            //       const SizedBox(height: 8),
+            //       Text(
+            //         '${totalPnl >= 0 ? '+' : ''}${totalPnl.toStringAsFixed(2)} USD',
+            //         style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w900, color: accentColor),
+            //       ),
+            //       if (totalSwap != 0.0) ...[
+            //         const SizedBox(height: 12),
+            //         Divider(color: accentColor.withOpacity(0.2), height: 1),
+            //         const SizedBox(height: 12),
+            //         Row(
+            //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //           children: [
+            //             Text('Total Swap', style: GoogleFonts.inter(fontSize: 13, color: onSurface.withOpacity(0.6))),
+            //             Text(
+            //               '${totalSwap >= 0 ? '+' : ''}${totalSwap.toStringAsFixed(2)} USD',
+            //               style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: onSurface),
+            //             ),
+            //           ],
+            //         ),
+            //         const SizedBox(height: 8),
+            //         Row(
+            //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //           children: [
+            //             Text('Net P&L', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: onSurface.withOpacity(0.7))),
+            //             Text(
+            //               '${netPnl >= 0 ? '+' : ''}${netPnl.toStringAsFixed(2)} USD',
+            //               style: GoogleFonts.inter(
+            //                 fontSize: 13, fontWeight: FontWeight.w800,
+            //                 color: netPnl >= 0 ? Colors.greenAccent.shade400 : Colors.redAccent.shade200,
+            //               ),
+            //             ),
+            //           ],
+            //         ),
+            //       ],
+            //     ],
+            //   ),
+            // ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () => Get.back(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: CustomColor.secondaryColor,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: Text('OK', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   void _showCloseAllConfirmation(BuildContext context, List<dynamic> positions) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -319,8 +452,28 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
     } catch (_) {}
 
     final successCount = completed.value - failed.length;
+
+    // Play profit/loss sound setelah close all selesai
+    // Hitung total profit & swap dari semua posisi
+    double totalPnl = 0.0;
+    double totalSwap = 0.0;
+    for (final p in positions) {
+      totalPnl += (double.tryParse(p.profit?.toString() ?? '0') ?? 0.0);
+      totalSwap += (double.tryParse(p.swap?.toString() ?? '0') ?? 0.0);
+    }
+
+    if (successCount > 0) {
+      try {
+        final soundFile = totalPnl >= 0 ? 'sounds/profit.mp3' : 'sounds/loss.mp3';
+        final player = AudioPlayer();
+        await player.play(AssetSource(soundFile));
+        player.onPlayerComplete.listen((_) => player.dispose());
+      } catch (_) {}
+    }
+
     if (failed.isEmpty && !isCancelled.value) {
-      AppSnackbar.success("Semua $total posisi berhasil ditutup.");
+      // Tampilkan dialog hasil Close All
+      _showCloseAllResultDialog(total: total, totalPnl: totalPnl, totalSwap: totalSwap);
     } else if (isCancelled.value) {
       AppSnackbar.error("Dibatalkan. $successCount dari $total posisi berhasil ditutup.");
     } else {
@@ -1101,7 +1254,30 @@ class _PositionTile extends StatelessWidget {
           _dismissLoadingDialog(context);
 
           if (result['status'] == true) {
-            AppSnackbar.success("Posisi $positionId berhasil ditutup.");
+            // Ambil profit dari response server jika tersedia (paling akurat),
+            // fallback ke realtimeProfit dari WebSocket
+            final serverProfit = result['data']?['profit'];
+            final double pnl = serverProfit != null
+                ? (double.tryParse(serverProfit.toString()) ?? double.tryParse(realtimeProfit.value) ?? 0.0)
+                : (double.tryParse(realtimeProfit.value) ?? 0.0);
+            final double swapValue = double.tryParse(swap.toString()) ?? 0.0;
+
+            // Play profit/loss sound based on P&L
+            try {
+              final soundFile = pnl >= 0 ? 'sounds/profit.mp3' : 'sounds/loss.mp3';
+              final player = AudioPlayer();
+              await player.play(AssetSource(soundFile));
+              player.onPlayerComplete.listen((_) => player.dispose());
+            } catch (_) {}
+
+            // Tampilkan dialog hasil close position
+            _showCloseResultDialog(
+              symbol: symbol ?? '-',
+              lot: volume ?? '0.0',
+              profit: pnl,
+              swap: swapValue,
+              positionId: positionId ?? '-',
+            );
           } else {
             final msg = result['message'] ?? 'Gagal menutup posisi';
             AppSnackbar.error(msg.toString());
@@ -1413,6 +1589,164 @@ class _PositionTile extends StatelessWidget {
     if (symbolUpper.contains('JPY')) return 3;
     if (symbolUpper.contains('XAU') || symbolUpper.contains('GOLD')) return 2;
     return 5;
+  }
+
+  /// 🎯 Dialog hasil close position — menampilkan profit/loss yang akurat
+  void _showCloseResultDialog({
+    required String symbol,
+    required String lot,
+    required double profit,
+    required double swap,
+    required String positionId,
+  }) {
+    final ctx = Get.context;
+    if (ctx == null) return;
+    final theme = Theme.of(ctx);
+    final isDark = theme.brightness == Brightness.dark;
+    final onSurface = theme.colorScheme.onSurface;
+    final bool isProfit = profit >= 0;
+    final netPnl = profit + swap;
+
+    final Color accentColor = isProfit ? Colors.greenAccent.shade400 : Colors.redAccent.shade200;
+    final IconData resultIcon = isProfit ? Icons.trending_up_rounded : Icons.trending_down_rounded;
+    final String resultLabel = isProfit ? 'PROFIT' : 'LOSS';
+
+    final sheetColor = theme.bottomSheetTheme.backgroundColor ??
+        (isDark ? const Color(0xFF121212) : Colors.white);
+
+    showModalBottomSheet(
+      context: ctx,
+      useRootNavigator: true,
+      backgroundColor: sheetColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 34),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag handle
+            Container(
+              width: 45, height: 4,
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: onSurface.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+
+            // Result icon
+            Container(
+              width: 64, height: 64,
+              decoration: BoxDecoration(
+                color: accentColor.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(resultIcon, size: 32, color: accentColor),
+            ),
+            const SizedBox(height: 16),
+
+            // Title
+            Text(
+              'Posisi Berhasil Ditutup',
+              style: GoogleFonts.inter(
+                fontSize: 18, fontWeight: FontWeight.w800, color: onSurface,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${symbol.replaceAll('.db', '')}  •  $lot lot  •  #$positionId',
+              style: GoogleFonts.inter(
+                fontSize: 12, color: onSurface.withOpacity(0.5), fontWeight: FontWeight.w500,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // P&L Card
+            // Container(
+            //   width: double.infinity,
+            //   padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            //   decoration: BoxDecoration(
+            //     color: accentColor.withOpacity(0.10),
+            //     borderRadius: BorderRadius.circular(16),
+            //     border: Border.all(color: accentColor.withOpacity(0.25)),
+            //   ),
+            //   child: Column(
+            //     children: [
+            //       Text(
+            //         resultLabel,
+            //         style: GoogleFonts.inter(
+            //           fontSize: 12, fontWeight: FontWeight.w700,
+            //           color: accentColor, letterSpacing: 1.5,
+            //         ),
+            //       ),
+            //       const SizedBox(height: 8),
+            //       Text(
+            //         '${profit >= 0 ? '+' : ''}${profit.toStringAsFixed(2)} USD',
+            //         style: GoogleFonts.inter(
+            //           fontSize: 28, fontWeight: FontWeight.w900, color: accentColor,
+            //         ),
+            //       ),
+            //       // Tampilkan detail swap & net jika ada swap
+            //       if (swap != 0.0) ...[
+            //         const SizedBox(height: 12),
+            //         Divider(color: accentColor.withOpacity(0.2), height: 1),
+            //         const SizedBox(height: 12),
+            //         Row(
+            //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //           children: [
+            //             Text('Swap', style: GoogleFonts.inter(fontSize: 13, color: onSurface.withOpacity(0.6))),
+            //             Text(
+            //               '${swap >= 0 ? '+' : ''}${swap.toStringAsFixed(2)} USD',
+            //               style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: onSurface),
+            //             ),
+            //           ],
+            //         ),
+            //         const SizedBox(height: 8),
+            //         Row(
+            //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //           children: [
+            //             Text('Net P&L', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: onSurface.withOpacity(0.7))),
+            //             Text(
+            //               '${netPnl >= 0 ? '+' : ''}${netPnl.toStringAsFixed(2)} USD',
+            //               style: GoogleFonts.inter(
+            //                 fontSize: 13, fontWeight: FontWeight.w800,
+            //                 color: netPnl >= 0 ? Colors.greenAccent.shade400 : Colors.redAccent.shade200,
+            //               ),
+            //             ),
+            //           ],
+            //         ),
+            //       ],
+            //     ],
+            //   ),
+            // ),
+
+            const SizedBox(height: 24),
+
+            // Close button
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () => Get.back(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: CustomColor.secondaryColor,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: Text(
+                  'OK',
+                  style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// 🎯 Modern loading dialog dengan force-cancel button
