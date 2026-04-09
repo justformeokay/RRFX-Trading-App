@@ -11,6 +11,7 @@ import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/controllers/trading.dart';
+import 'package:rrfx/src/service/account_credentials_service.dart';
 import 'package:rrfx/src/views/chart/controllers/chart_controller.dart';
 import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -48,6 +49,8 @@ class _WebViewChartViewState extends State<WebViewChartView> {
   bool _hasConnection = true;
   bool _isTimeout = false;
   bool _isCreatingDemoAccount = false; // Track demo account creation
+  bool _waitingForAccount = false; // Guard untuk _waitForAccount
+  Worker? _accountWorker;
   late StreamSubscription _connectionSubscription;
   Timer? _timeoutTimer;
   Timer? _chartRefreshDebounce;
@@ -87,6 +90,9 @@ class _WebViewChartViewState extends State<WebViewChartView> {
         _hasConnection = !result.contains(ConnectivityResult.none);
       });
     });
+
+    // Pre-fetch MT5 token agar sudah siap saat user klik Buy/Sell
+    AccountCredentialsService.fetchAndCache();
   }
 
   Future<void> _checkConnection() async {
@@ -116,6 +122,24 @@ class _WebViewChartViewState extends State<WebViewChartView> {
     _timeoutTimer = null;
   }
 
+  /// Jika chart dimuat sebelum account tersedia (login kosong),
+  /// tunggu account lalu reload chart dengan login yang benar.
+  void _waitForAccount() {
+    if (_waitingForAccount) return;
+    _waitingForAccount = true;
+    _accountWorker?.dispose();
+    _accountWorker = ever(accountController.selectedAccount, (account) {
+      if (account != null && account.login != null && account.login!.isNotEmpty) {
+        _waitingForAccount = false;
+        _accountWorker?.dispose();
+        _accountWorker = null;
+        if (mounted) {
+          _reloadChart();
+        }
+      }
+    });
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -133,7 +157,12 @@ class _WebViewChartViewState extends State<WebViewChartView> {
     final login = widget.login ?? accountController.selectedAccount.value?.login ?? '';
     final theme = Get.isDarkMode ? 'dark' : 'light';
 
-    // final baseUrl = 'https://chart-rrfx.techcrm.dev/chart.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
+    // Jika login masih kosong (account belum loaded), gunakan placeholder
+    // Chart akan di-reload saat account tersedia
+    if (login.isEmpty) {
+      _waitForAccount();
+    }
+
     final baseUrl = 'https://webchart-rrfx.techcrm.dev/?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
 
     // Untuk iOS, tambahkan parameter khusus (skip untuk web)
@@ -150,6 +179,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
       hasError = false;
       _isTimeout = false;
       errorMessage = null;
+      loadingProgress = 0;
     });
     _startTimeoutTimer();
     webViewController?.loadUrl(
@@ -330,13 +360,8 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                 }
         
                 // Set timeout untuk iOS (skip untuk web)
-                if (!kIsWeb && Platform.isIOS) {
-                  Future.delayed(Duration(seconds: 10), () {
-                    if (mounted && isLoading) {
-                      _reloadChart();
-                    }
-                  });
-                }
+                // Jika setelah 15s masih loading, timeout timer akan handle
+                // (dihapus auto-reload 10s karena conflict dengan timeout timer)
               },
               onLoadStart: (controller, url) {
                 _startTimeoutTimer();
@@ -346,6 +371,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                     hasError = false;
                     _isTimeout = false;
                     errorMessage = null;
+                    loadingProgress = 0;
                   });
                 }
               },
@@ -658,6 +684,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
     _chartRefreshDebounce?.cancel();
     _connectionSubscription.cancel();
     _cancelTimeoutTimer();
+    _accountWorker?.dispose();
     webViewController = null;
     super.dispose();
   }

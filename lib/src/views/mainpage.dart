@@ -8,6 +8,7 @@ import 'package:rrfx/src/components/languages/language_variable.dart';
 import 'package:rrfx/src/controllers/network_controller.dart';
 import 'package:rrfx/src/controllers/theme_controller.dart';
 import 'package:rrfx/src/controllers/trading_account_controller.dart';
+import 'package:rrfx/src/service/account_credentials_service.dart';
 import 'package:rrfx/src/service/auth_service.dart';
 import 'package:rrfx/src/views/advance_charts/webview_chart_view.dart';
 import 'package:rrfx/src/views/beranda/index_v2.dart';
@@ -31,6 +32,15 @@ class _MainpageState extends State<Mainpage> {
   AuthService authServiceController = Get.put(AuthService());
   NetworkController network = Get.put(NetworkController());
   ThemeController themeController = Get.put(ThemeController());
+
+  @override
+  void initState() {
+    super.initState();
+    // Cek jika ada pending INVALID_ACCOUNT dari saat login
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AccountCredentialsService.checkPendingInvalidAccount();
+    });
+  }
 
   final List<Widget> _widgetOptions = const <Widget>[
     IndexV2(),

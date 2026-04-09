@@ -175,6 +175,27 @@ class _SettingsState extends State<Settings> {
                 ),
               ),
 
+              // ─── DEVELOPER SECTION ───
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                  child: _buildSectionCard(
+                    context, isDark, colorScheme,
+                    title: "Developer Options",
+                    icon: Iconsax.shield_tick_outline,
+                    items: [
+                      _MenuItemData(
+                        icon: Iconsax.lock_outline,
+                        iconColor: Colors.blue,
+                        title: "Base URL",
+                        subtitle: "Change the base URL for API requests",
+                        onTap: () => Get.to(() => const ManageBaseUrlPage()),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
               // ─── ACCOUNT & FINANCE ───
               SliverToBoxAdapter(
                 child: Padding(

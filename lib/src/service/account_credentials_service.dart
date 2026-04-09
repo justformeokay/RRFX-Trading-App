@@ -17,6 +17,25 @@ class AccountCredentialsService {
   static const String _mt5ConnectBase = 'https://mt5-api-v3.techcrm.online';
   static final GetStorage _storage = GetStorage();
 
+  /// In-memory cache agar tidak perlu base64 decode setiap kali lookup
+  static List<Map<String, dynamic>>? _memoryCache;
+
+  /// Flag untuk INVALID_ACCOUNT yang tertunda redirect
+  /// Disimpan di sini, di-consume oleh main page setelah user benar-benar masuk
+  static String? _pendingInvalidAccount;
+
+  /// Cek apakah ada pending INVALID_ACCOUNT redirect.
+  /// Jika ada, navigate ke ChangeMT5PasswordPage dan clear flag.
+  /// Panggil ini dari main page onInit/initState.
+  static void checkPendingInvalidAccount() {
+    final user = _pendingInvalidAccount;
+    if (user != null) {
+      _pendingInvalidAccount = null;
+      Get.log('🔒 [AcctCreds] Pending INVALID_ACCOUNT → arahkan ke ubah password untuk $user');
+      Get.to(() => ChangeMT5PasswordPage(mt5AccountId: user));
+    }
+  }
+
   /// Fetch kredensial dari API, simpan ke lokal, lalu fetch token MT5 per akun.
   /// Jika sudah ada data lokal dan [forceRefresh] false, skip fetch credentials.
   /// Setelah itu, cek apakah tiap akun sudah punya token — jika belum, fetch.
@@ -50,47 +69,61 @@ class AccountCredentialsService {
     return true;
   }
 
-  /// Fetch token MT5 Connect untuk akun-akun yang belum punya token
+  /// Fetch token MT5 Connect untuk akun-akun yang belum punya token (parallel)
   static Future<void> _fetchMissingTokens() async {
     final credentials = getCachedCredentials();
     if (credentials == null || credentials.isEmpty) return;
 
-    bool updated = false;
-
+    // Kumpulkan index akun yang perlu fetch token
+    final pending = <int>[];
     for (int i = 0; i < credentials.length; i++) {
       final cred = credentials[i];
-
-      // Skip jika sudah punya token
       if (cred['token'] != null && cred['token'].toString().isNotEmpty) {
         Get.log('✅ [AcctCreds] Token sudah ada untuk login ${cred['login']}, skip.');
         continue;
       }
-
       final login = cred['login']?.toString() ?? '';
       final password = cred['password']?.toString() ?? '';
       final server = cred['server']?.toString() ?? '';
-
       if (login.isEmpty || password.isEmpty || server.isEmpty) {
         Get.log('⚠️ [AcctCreds] Data tidak lengkap untuk index $i, skip.');
         continue;
       }
+      pending.add(i);
+    }
 
-      try {
-        final token = await _connectMT5(
-          user: login,
-          password: password,
-          host: server,
-        );
+    if (pending.isEmpty) return;
 
-        if (token != null && token.isNotEmpty) {
-          credentials[i]['token'] = token;
-          updated = true;
-          Get.log('✅ [AcctCreds] Token berhasil didapat untuk login $login');
-        } else {
-          Get.log('⚠️ [AcctCreds] Token kosong untuk login $login');
+    Get.log('🔗 [AcctCreds] Fetching ${pending.length} token(s) in parallel...');
+
+    // Fetch semua token secara parallel
+    final results = await Future.wait(
+      pending.map((i) async {
+        final cred = credentials[i];
+        final login = cred['login'].toString();
+        try {
+          final token = await _connectMT5(
+            user: login,
+            password: cred['password'].toString(),
+            host: cred['server'].toString(),
+          );
+          return MapEntry(i, token);
+        } catch (e) {
+          Get.log('❌ [AcctCreds] Gagal fetch token untuk login $login: $e');
+          return MapEntry(i, null);
         }
-      } catch (e) {
-        Get.log('❌ [AcctCreds] Gagal fetch token untuk login $login: $e');
+      }),
+      eagerError: false,
+    );
+
+    // Update credentials dengan token yang berhasil
+    bool updated = false;
+    for (final entry in results) {
+      final token = entry.value;
+      if (token != null && token.isNotEmpty) {
+        credentials[entry.key]['token'] = token;
+        updated = true;
+        Get.log('✅ [AcctCreds] Token berhasil didapat untuk login ${credentials[entry.key]['login']}');
       }
     }
 
@@ -124,7 +157,7 @@ class AccountCredentialsService {
       uri,
       headers: {'accept': 'text/plain'},
     ).timeout(
-      const Duration(seconds: 35),
+      const Duration(seconds: 15),
       onTimeout: () => throw Exception('MT5 Connect timeout'),
     );
 
@@ -143,11 +176,8 @@ class AccountCredentialsService {
       try {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         if (data['code'] == 'INVALID_ACCOUNT') {
-          Get.log('🔒 [AcctCreds] INVALID_ACCOUNT untuk user $user → arahkan ke ubah password');
-          // Delay sedikit agar tidak conflict dengan navigasi lain
-          Future.delayed(const Duration(milliseconds: 300), () {
-            Get.to(() => ChangeMT5PasswordPage(mt5AccountId: user));
-          });
+          Get.log('🔒 [AcctCreds] INVALID_ACCOUNT untuk user $user → simpan flag');
+          _pendingInvalidAccount = user;
         }
       } catch (_) {}
 
@@ -155,22 +185,28 @@ class AccountCredentialsService {
     }
   }
 
-  /// Simpan data ke GetStorage dengan encoding base64
+  /// Simpan data ke GetStorage dengan encoding base64 + update memory cache
   static Future<void> _saveToStorage(List<dynamic> accounts) async {
     final jsonStr = jsonEncode(accounts);
     final encoded = base64Encode(utf8.encode(jsonStr));
     await _storage.write(_storageKey, encoded);
+    // Update in-memory cache
+    _memoryCache = accounts.map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
-  /// Baca data dari GetStorage
+  /// Baca data — prioritas dari memory cache, fallback ke GetStorage
   static List<Map<String, dynamic>>? getCachedCredentials() {
+    // Return memory cache jika ada
+    if (_memoryCache != null && _memoryCache!.isNotEmpty) return _memoryCache;
+
     try {
       final encoded = _storage.read<String>(_storageKey);
       if (encoded == null || encoded.isEmpty) return null;
 
       final jsonStr = utf8.decode(base64Decode(encoded));
       final List<dynamic> decoded = jsonDecode(jsonStr);
-      return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+      _memoryCache = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+      return _memoryCache;
     } catch (e) {
       Get.log('❌ [AcctCreds] Error reading cached credentials: $e');
       return null;
@@ -247,6 +283,7 @@ class AccountCredentialsService {
   /// Hapus data lokal (untuk logout)
   static Future<void> clearCache() async {
     try {
+      _memoryCache = null;
       await _storage.remove(_storageKey);
       Get.log('✅ [AcctCreds] Cache cleared.');
     } catch (e) {
