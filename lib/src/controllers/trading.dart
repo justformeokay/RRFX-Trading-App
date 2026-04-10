@@ -10,6 +10,7 @@ import 'package:rrfx/src/models/trades/symbol_model.dart';
 import 'package:rrfx/src/models/trades/trading_account_model_v2.dart';
 import 'package:rrfx/src/models/trades/trading_account_models.dart';
 import 'package:rrfx/src/service/account_credentials_service.dart';
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/service/auth_service.dart';
 import '../models/trades/trading_order_history_model.dart';
 
@@ -777,7 +778,7 @@ class TradingController extends GetxController {
     required String ticket,
   }) async {
     final uri = Uri.parse(
-      '$_mt5ApiBase/OrderCloseSafe'
+      '$_mt5ApiBase/OrderClose'
       '?id=$token'
       '&ticket=$ticket'
       '&lots=0'
@@ -801,7 +802,7 @@ class TradingController extends GetxController {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
-  static const String _mt5ApiBase = 'https://mt5-api-v3.techcrm.online';
+  String get _mt5ApiBase => GlobalVariable.tradingApiBase;
 
   Future<Map<String, dynamic>> modifyPosition({
     required String login,
@@ -881,7 +882,7 @@ class TradingController extends GetxController {
     required double takeProfit,
   }) async {
     final uri = Uri.parse(
-      '$_mt5ApiBase/OrderModifySafe'
+      '$_mt5ApiBase/OrderModify'
       '?id=$token'
       '&ticket=$ticket'
       '&stoploss=$stopLoss'

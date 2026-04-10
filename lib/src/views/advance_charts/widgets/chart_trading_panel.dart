@@ -9,6 +9,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
 import 'package:rrfx/src/components/colors/default.dart';
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import '../controllers/chart_execution_controller.dart';
 
 class ChartTradingPanel extends StatefulWidget {
@@ -307,6 +308,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     final status = item['status'] as String; // 'loading', 'success', 'error'
     final openPrice = item['openPrice']; // Can be null
     final pendingPrice = item['price']; // For pending orders
+    final execMs = item['execMs'] as int?; // Execution time in ms
 
     // Determine color based on operation type
     final isBuyOperation = operation.toLowerCase().contains('buy');
@@ -392,7 +394,22 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                 valueColor: AlwaysStoppedAnimation<Color>(operationColor),
               ),
             )
-          else if (status == 'success')
+          else if (status == 'success') ...[
+            if (execMs != null && GlobalVariable.showExecutionSpeed) ...[
+              Text(
+                '${execMs}ms',
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  color: execMs < 3000
+                      ? Colors.green
+                      : execMs < 5000
+                          ? Colors.orange
+                          : Colors.red,
+                ),
+              ),
+              const SizedBox(width: 6),
+            ],
             Container(
               width: 16,
               height: 16,
@@ -405,7 +422,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                 color: Colors.white,
                 size: 12,
               ),
-            )
+            ),
+          ]
           else if (status == 'error')
             const Icon(Icons.close_rounded, color: Colors.red, size: 16),
         ],
@@ -523,6 +541,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       if (sl != null) print('📊 SL: $sl');
       if (tp != null) print('📊 TP: $tp');
 
+      final stopwatch = Stopwatch()..start();
+
       Map<String, dynamic> response;
       if (operation == 'buy') {
         response = await executionController.executeBuy(
@@ -545,6 +565,10 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       print('   Message: ${response['message']}');
       print('   Response: ${response['response']}');
 
+      stopwatch.stop();
+      final execMs = stopwatch.elapsedMilliseconds;
+      print('⏱️ Execution time: ${execMs}ms');
+
       // Extract openPrice from response
       final openPrice = response['response']?['openPrice'];
 
@@ -553,6 +577,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       if (index != -1) {
         _executionQueue[index]['status'] = 'success';
         _executionQueue[index]['openPrice'] = openPrice;
+        _executionQueue[index]['execMs'] = execMs;
         _executionQueue.refresh();
       }
 
@@ -2342,6 +2367,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     // print('📊 TP Points: ${tpPoints ?? "Not set"}');
     // Get.snackbar("Data", "Entry Price: $entryPrice, SL: ${slPoints ?? "Not set"}, TP: ${tpPoints ?? "Not set"}", backgroundColor: Colors.white);
     try {
+      final stopwatch = Stopwatch()..start();
 
       final response = await executionController.executePendingOrder(
         login: widget.login,
@@ -2352,6 +2378,10 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
         sl: slPrice,
         tp: tpPrice,
       );
+
+      stopwatch.stop();
+      final execMs = stopwatch.elapsedMilliseconds;
+      print('⏱️ Pending order execution time: ${execMs}ms');
 
       print('✅ Pending order response: $response');
 
@@ -2364,6 +2394,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       if (index != -1) {
         _executionQueue[index]['status'] = 'success';
         _executionQueue[index]['ticket'] = orderTicket;
+        _executionQueue[index]['execMs'] = execMs;
         _executionQueue.refresh();
       }
 

@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
+import 'package:get_storage/get_storage.dart';
 import 'package:rrfx/src/components/languages/language_variable.dart';
 
 class GlobalVariable {
@@ -12,15 +13,57 @@ class GlobalVariable {
       ? "wss://${Uri.base.host}"
       : "wss://rrfx.mathlab.id";
 
-  // techcrm.net mainURL
-  // static final mainURL = kIsWeb
-  //     ? (kDebugMode ? "$_devProxy/api" : "$_prodDomain/api")
-  //     : "https://api-rrfx.techcrm.net";
+  // ═══════════════════════════════════════════════════════════════════════
+  // SWITCHABLE URLs (via GetStorage for Developer Options)
+  // ═══════════════════════════════════════════════════════════════════════
   
-  // luxurymatrix.com mainURL
-  static final mainURL = kIsWeb
-      ? (kDebugMode ? "$_devProxy/api" : "$_prodDomain/api")
-      : "https://api-rrfx.luxurymatrix.com";
+  // Main API URL options
+  static const mainUrlProduction = 'https://api-rrfx.techcrm.net';
+  static const mainUrlStaging = 'https://api-rrfx.luxurymatrix.com';
+  
+  // Trading API URL options
+  static const tradingUrlProduction = 'https://mt5-api-v3.techcrm.online';
+  static const tradingUrlStaging = 'https://mt5api.gaintactics.com';
+  
+  // GetStorage keys
+  static const _keyMainUrl = 'dev_main_url';
+  static const _keyTradingUrl = 'dev_trading_url';
+
+  /// Runtime-switchable mainURL. 
+  /// Default: production (api-rrfx.techcrm.net)
+  static String get mainURL {
+    if (kIsWeb) {
+      return kDebugMode ? "$_devProxy/api" : "$_prodDomain/api";
+    }
+    final stored = GetStorage().read<String>(_keyMainUrl);
+    return stored ?? mainUrlProduction;
+  }
+
+  /// Runtime-switchable Trading API URL.
+  /// Default: production (mt5-api-v3.techcrm.online)
+  static String get tradingApiBase {
+    final stored = GetStorage().read<String>(_keyTradingUrl);
+    return stored ?? tradingUrlProduction;
+  }
+
+  static Future<void> setMainUrl(String url) async {
+    await GetStorage().write(_keyMainUrl, url);
+  }
+
+  static Future<void> setTradingUrl(String url) async {
+    await GetStorage().write(_keyTradingUrl, url);
+  }
+
+  // Execution speed toggle
+  static const _keyShowExecSpeed = 'dev_show_exec_speed';
+
+  static bool get showExecutionSpeed {
+    return GetStorage().read<bool>(_keyShowExecSpeed) ?? false;
+  }
+
+  static Future<void> setShowExecutionSpeed(bool value) async {
+    await GetStorage().write(_keyShowExecSpeed, value);
+  }
 
   static final gatewayURL = kIsWeb
       ? (kDebugMode ? "$_devProxy/gateway" : "$_prodDomain/gateway")

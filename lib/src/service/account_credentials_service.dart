@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/service/auth_service.dart';
 import 'package:rrfx/src/views/accounts/components/change_mt5_password.dart';
 
@@ -14,7 +15,7 @@ import 'package:rrfx/src/views/accounts/components/change_mt5_password.dart';
 /// - Dipaksa via [forceRefresh]
 class AccountCredentialsService {
   static const String _storageKey = 'acct_creds_enc';
-  static const String _mt5ConnectBase = 'https://mt5-api-v3.techcrm.online';
+  static String get _mt5ConnectBase => GlobalVariable.tradingApiBase;
   static final GetStorage _storage = GetStorage();
 
   /// In-memory cache agar tidak perlu base64 decode setiap kali lookup

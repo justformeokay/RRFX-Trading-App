@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/service/account_credentials_service.dart';
 
 class ChartExecutionController extends GetxController {
-  static const String _mt5ApiBase = 'https://mt5-api-v3.techcrm.online';
+  String get _mt5ApiBase => GlobalVariable.tradingApiBase;
 
   // State
   final RxDouble lot = 0.1.obs;
@@ -99,6 +100,8 @@ class ChartExecutionController extends GetxController {
     int retryCount = 0;
     bool tokenRefreshed = false;
 
+    String comment = _mt5ApiBase.contains('techcrm') ? 'techcrm' : (_mt5ApiBase.contains('gaintactics') ? 'gaintactics' : 'unknown');
+
     try {
       String token = await _getToken(login);
       final lotVolume = volume ?? lot.value;
@@ -113,6 +116,7 @@ class ChartExecutionController extends GetxController {
         print('   SL: ${sl ?? 0}');
         print('   TP: ${tp ?? 0}');
         print('   Token: ${token.substring(0, 8)}...');
+        print('   Comment: $comment'); // comment jika API Base nya adalah mt5-api-v3.techcrm.online = techcrm, jika mt5api.gaintactics.com = gaintactics, jika lainnya = unknown
         print('==============================');
 
         final uri = Uri.parse(
@@ -125,6 +129,7 @@ class ChartExecutionController extends GetxController {
           '&slippage=$slippage'
           '&stoploss=${sl ?? 0}'
           '&takeprofit=${tp ?? 0}'
+          '&comment=$comment'
           '&stopLimitPrice=$stopLimitPrice',
         );
 

@@ -38,6 +38,7 @@ import 'package:rrfx/src/views/trade/deposit.dart';
 import 'package:rrfx/src/views/trade/internal_transfer.dart';
 import 'package:rrfx/src/views/trade/withdrawal.dart';
 import 'about_app.dart';
+import 'manage_base_url_page.dart';
 
 class Settings extends StatefulWidget {
   const Settings({super.key});
@@ -56,6 +57,7 @@ class _SettingsState extends State<Settings> {
   TradingAccountController tradingAccountController = Get.find();
   RxBool haveRealAccount = false.obs;
   RxBool isLoading = false.obs;
+  RxBool showExecSpeed = GlobalVariable.showExecutionSpeed.obs;
 
   String buildCacheBustedImageUrl(String? url, int version) {
     if (url == null) return '';
@@ -189,7 +191,21 @@ class _SettingsState extends State<Settings> {
                         iconColor: Colors.blue,
                         title: "Base URL",
                         subtitle: "Change the base URL for API requests",
-                        onTap: () => Get.to(() => const ManageBaseUrlPage()),
+                        onTap: () => _showDevPasswordDialog(),
+                      ),
+                      _MenuItemData(
+                        icon: Iconsax.timer_1_outline,
+                        iconColor: Colors.orange,
+                        title: "Execution Speed",
+                        subtitle: "Tampilkan kecepatan eksekusi (ms)",
+                        trailing: Obx(() => CupertinoSwitch(
+                          activeTrackColor: CustomColor.secondaryColor,
+                          value: showExecSpeed.value,
+                          onChanged: (value) {
+                            showExecSpeed.value = value;
+                            GlobalVariable.setShowExecutionSpeed(value);
+                          },
+                        )),
                       ),
                     ],
                   ),
@@ -945,6 +961,119 @@ class _SettingsState extends State<Settings> {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
+  // DEVELOPER PASSWORD DIALOG
+  // ════════════════════════════════════════════════════════════════════════════
+  void _showDevPasswordDialog() {
+    final controller = TextEditingController();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        bool obscure = true;
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) => AlertDialog(
+            backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                Icon(Iconsax.lock_outline, color: CustomColor.secondaryColor, size: 22),
+                const SizedBox(width: 10),
+                Text(
+                  'Developer Access',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Masukkan password developer untuk melanjutkan.',
+                  style: GoogleFonts.inter(fontSize: 13, color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  obscureText: obscure,
+                  autofocus: true,
+                  style: GoogleFonts.inter(fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Password',
+                    hintStyle: GoogleFonts.inter(fontSize: 13, color: Colors.grey.shade400),
+                    prefixIcon: const Icon(Iconsax.key_outline, size: 18),
+                    suffixIcon: IconButton(
+                      icon: Icon(obscure ? Iconsax.eye_slash_outline : Iconsax.eye_outline, size: 18),
+                      onPressed: () => setDialogState(() => obscure = !obscure),
+                    ),
+                    filled: true,
+                    fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: CustomColor.secondaryColor, width: 1.5),
+                    ),
+                  ),
+                  onSubmitted: (_) {
+                    if (controller.text == 'KetikApaSajaYa') {
+                      Navigator.of(ctx).pop();
+                      Get.to(() => const ManageBaseUrlPage());
+                    }
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text(
+                  'Batal',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.grey),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (controller.text == 'KetikApaSajaYa') {
+                    Navigator.of(ctx).pop();
+                    Get.to(() => const ManageBaseUrlPage());
+                  } else {
+                    Navigator.of(ctx).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Password salah', style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
+                        backgroundColor: Colors.red,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        margin: const EdgeInsets.all(16),
+                      ),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: CustomColor.secondaryColor,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
+                ),
+                child: Text(
+                  'Masuk',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
   // LOGOUT BUTTON
   // ════════════════════════════════════════════════════════════════════════════
   Widget _buildLogoutButton(BuildContext context, bool isDark) {
@@ -994,6 +1123,9 @@ class _SettingsState extends State<Settings> {
               final storage = GetStorage();
 
               final savedPasscodeData = storage.read('app_passcode');
+              final savedMainUrl = storage.read<String>('dev_main_url');
+              final savedTradingUrl = storage.read<String>('dev_trading_url');
+              final savedExecSpeed = storage.read<bool>('dev_show_exec_speed');
               Get.log(
                 "💾 [LOGOUT] Saving passcode data before erase: $savedPasscodeData",
               );
@@ -1004,7 +1136,16 @@ class _SettingsState extends State<Settings> {
                 await storage.write('app_passcode', savedPasscodeData);
                 Get.log("✅ [LOGOUT] Passcode restored after erase");
               }
-              Get.log("✅ [LOGOUT] GetStorage cleared (passcode preserved)");
+              if (savedMainUrl != null) {
+                await storage.write('dev_main_url', savedMainUrl);
+              }
+              if (savedTradingUrl != null) {
+                await storage.write('dev_trading_url', savedTradingUrl);
+              }
+              if (savedExecSpeed != null) {
+                await storage.write('dev_show_exec_speed', savedExecSpeed);
+              }
+              Get.log("✅ [LOGOUT] GetStorage cleared (passcode & dev settings preserved)");
 
               Get.log("🗑️ [LOGOUT] Disposing controllers...");
               _accountController.clearDefaultAccount();
