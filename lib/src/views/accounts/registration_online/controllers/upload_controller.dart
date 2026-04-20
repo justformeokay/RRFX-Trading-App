@@ -31,6 +31,14 @@ class MultiUploadController extends GetxController {
   var photoList = <String>[].obs;
   var isOnlineList = <bool>[].obs;
   var fileSizeList = <String>[].obs; // List untuk menyimpan ukuran file
+
+  final List<String> photoDescriptions = [
+    "NPWP / Rekening Koran / Rekening Listrik / Tagihan Kartu Kredit",
+    "Foto KTP",
+    "Foto Selfi",
+    "Dokumen Lainnya 1 (Opsional)",
+    "Dokumen Lainnya 2 (Opsional)",
+  ];
   
   final List<String> photoTitles = [
     "NPWP / Rekening Koran / Rekening Listrik / Tagihan Kartu Kredit *",

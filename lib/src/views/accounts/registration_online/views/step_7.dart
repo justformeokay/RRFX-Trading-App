@@ -1717,7 +1717,37 @@ class _Step7State extends State<Step7> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(multipleController.photoTitles[index], style: Get.textTheme.labelLarge),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Flexible(child: Text(multipleController.photoTitles[index], style: Get.textTheme.labelLarge)),
+                              GestureDetector(
+                                onTap: (){
+                                  if(multipleController.photoTitles[index].contains("Selfi")){
+                                    CustomScaffoldMessanger.showAppSnackBar(
+                                      context,
+                                      message: "- Minimal ukuran file 100kb dan maksimal 4mb.\n- Pastikan foto jelas dan terbaru.\n- Minimal dimensi 480x640 pixel.",
+                                      type: SnackBarType.info,
+                                    );
+                                    return;
+                                  }
+                                  if(multipleController.photoTitles[index].contains("KTP")){
+                                    CustomScaffoldMessanger.showAppSnackBar(
+                                      context,
+                                      message: "- Minimal ukuran file 100kb dan maksimal 2mb.\n- Pastikan foto terlihat jelas\n- Minimal dimensi 480x320 pixel.",
+                                      type: SnackBarType.info,
+                                    );
+                                    return;
+                                  }
+                                  CustomScaffoldMessanger.showAppSnackBar(
+                                    context,
+                                    message: "Dokumen ini digunakan untuk ${multipleController.photoDescriptions[index]}",
+                                    type: SnackBarType.info,
+                                  );
+                                },
+                                child: Icon(Icons.info_outline, color: Colors.blueGrey, size: 20)),
+                            ],
+                          ),
                           const SizedBox(height: 5.0),
                           UtilitiesWidget.uploadPhotoV2(
                             context,

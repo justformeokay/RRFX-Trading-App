@@ -278,7 +278,7 @@ class _ManageBaseUrlPageState extends State<ManageBaseUrlPage> {
                 _selectedMainUrl = url;
                 _checkChanges();
               },
-              showUrl: false,
+              showUrl: true,
             ),
             const SizedBox(height: 20),
 

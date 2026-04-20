@@ -93,7 +93,7 @@ class _Step3State extends State<Step3> with SingleTickerProviderStateMixin {
               'Nama': 'PT. RRFX Investasi Berjangka',
               'Alamat': 'Alamat: Ruko Soho Rodeo Drive Blok. A No. 20 (SRD-020), Desa/Kelurahan Kamal Muara, Kec. Penjaringan, Kota Adm. Jakarta Utara, Provinsi DKI Jakarta, Kode Pos: 14470',
               'No. Telepon': '021-50322008',
-              'Faksimili': '(021) 252 6501',
+              'Faksimili': '021 50322008',
               'E-mail': 'cs@rrfx.co.id',
               'Home-page': 'https://rrfx.co.id',
             }),
@@ -106,8 +106,8 @@ class _Step3State extends State<Step3> with SingleTickerProviderStateMixin {
               'Direktur Operasional': 'Asep Sujana',
             }),
             TableListDirector(title: "Dewan Komisaris", data: {
-              'Komisaris Utama': 'William',
-              'Komisaris': 'Jeymy Yaputra Yapadi',
+              'Komisaris Utama': 'Ernita',
+              'Komisaris': 'Rudi Darwin Swigo',
             }),
             NumberedTextList(
               title: 'Susunan Pemegang Saham Perusahaan',
@@ -120,10 +120,15 @@ class _Step3State extends State<Step3> with SingleTickerProviderStateMixin {
             const Divider(color: Colors.white30),
             TableListDirector(title: "Kontrak Berjangka Yang Diperdagangkan", withIndex: false, removeTitle: true, data: {
               'Nomor dan Tanggal Izin Usaha dari Bappebti': 'No. 192/BAPPEBTI/SI/II/2003 Tanggal: 2003-02-24',
-              'Nomor dan Tanggal Keanggotaan Bursa Berjangka': 'No. SPAB-043/BBJ/02/2002 Tanggal: 2002-02-13 00:00:00',
-              'Nomor dan Tanggal Keanggotaan Lembaga Kliring Berjangka': 'No. 22/AK-KBI/V/2004 Tanggal: 2004-05-18 00:00:00',
-              'Nomor dan Tanggal Persetujuan sebagai Peserta Sistem Perdagangan Alternatif': 'No. 1519/BAPPEBTI/SP/4/2007 Tanggal: 2007-04-18 00:00:00',
-              'Nama Penyelenggara Sistem Perdagangan Alternatif': 'PT. Capital Megah Mandiri',
+              'Nomor dan Tanggal Keanggotaan Bursa Berjangka': 'SPAB-169/JFX/05/2018 Tanggal: 2002-02-13',
+              'Nomor dan Tanggal Keanggotaan Lembaga Kliring Berjangka': '53/AK-KBI/PN/VII/2025 Tanggal: 2004-05-18',
+              'Nomor dan Tanggal Persetujuan sebagai Peserta Sistem Perdagangan Alternatif': 'No. 1519/BAPPEBTI/SP/4/2007 Tanggal: 2007-04-18',
+              'Nomor Keanggotaan ICDX': 'No. 063/SK/ICDX/DIR/VIII/2025',
+              'Keanggotaan ICH': 'No. 066/SK/ICH/DIR/VIII/2025',
+              'Nomor Anggota Aspebtindo' : '1240/ASPEBTINDO/ANG-B/07/2015',
+              'Nomor Izin usaha BI': '28/141/DPPK/Srt/B tanggal 28 Januari 2026',
+              'Nomor Izin usaha OJK': 'S-223.PM.02.2025 tanggal 21 April 2025',
+              'Nama Penyelenggara Sistem Perdagangan Alternatif' : "PT. Capital Megah Mandiri"
             }),
             TableListDirector(title: "Kontrak Berjangka Yang Diperdagangkan", withIndex: false, data: {
               'Kontrak berjangka Emas': '( GOL, GOL 250, GOL 100 )',
@@ -158,8 +163,8 @@ class _Step3State extends State<Step3> with SingleTickerProviderStateMixin {
             ),
             TableListDirector(title: "Nomor atau Alamat Email jika terjadi keluhan", withIndex: false, data: {
               'Email': 'pengaduan@rrfx.co.id',
-              'No. Telepon': '021-50322008',
-              'Fax': '0212526501',
+              'No. Telepon': '021-5032200700',
+              'Fax': '021-50011233200',
             }),
             NumberedTextList(
               withIndex: true,
@@ -175,12 +180,13 @@ class _Step3State extends State<Step3> with SingleTickerProviderStateMixin {
               title: 'Nama-Nama Wakil Pialang Berjangka yang Bekerja di Perusahaan Pialang Berjangka :',
               subtitle: '',
               items: [
-                'Candra Jaya Palatehan',
-                'Rachmat Setiyadi',
-                'Sri Subaktiyani',
-                'Eko Mulyono',
                 'Setiyoko',
+                'Eko Mulyono',
+                'Rachmat Setiyadi',
                 'Wargianto'
+                'Sri Subaktiyani',
+                'Candra Jaya Palatehan',
+                'Asep Sujana',
               ],
             ),
             NumberedTextList(
@@ -188,12 +194,13 @@ class _Step3State extends State<Step3> with SingleTickerProviderStateMixin {
               title: 'Nama-Nama Wakil Pialang Berjangka yang secara khusus ditunjuk oleh Pialang Berjangka untuk melakukan verifikasi dalam rangka penerimaan Nasabah elektronik online',
               subtitle: '',
               items: [
-                'Candra Jaya Palatehan',
-                'Rachmat Setiyadi',
-                'Sri Subaktiyani',
-                'Eko Mulyono',
                 'Setiyoko',
+                'Eko Mulyono',
+                'Rachmat Setiyadi',
                 'Wargianto'
+                'Sri Subaktiyani',
+                'Candra Jaya Palatehan',
+                'Asep Sujana',
               ],
             ),
             TableListDirector(title: "Nomor Rekening Terpisah (Segregated Account) Perusahaan Pialang Berjangka", withIndex: true, data: {
@@ -202,6 +209,12 @@ class _Step3State extends State<Step3> with SingleTickerProviderStateMixin {
               'PT BANK CENTRAL ASIA Tbk ': '0353288111 (USD)',
               'PT BANK MANDIRI (PERSERO) Tbk ': '1220013916773 (USD)',
               'Bank CCB': '1010862333 (USD)',
+              'PT BANK RAKYAT INDONESIA (PERSERO) Tbk' : "020601181818306 (IDR)",
+              'PT BANK NEGARA INDONESIA (PERSERO) Tbk ' : '6668881350 (IDR)',
+              'PT BANK CIMB NIAGA Tbk' : '832181818100 (IDR)',
+              'PT BANK NEGARA INDONESIA (PERSERO) Tbk' : '6668881394 (USD)',
+              'PT BANK RAKYAT INDONESIA (PERSERO) Tbk ' : '020602118888301 (USD)',
+              'PT BANK CIMB NIAGA Tbk ' : '815181818140 (USD)'
             }),
             StatementWidget.pernyataanTelahMembaca(dynamicTitlePart: "PROFIL PERUSAHAAN PIALANG BERJANGKA"),
             const SizedBox(height: 10.0),

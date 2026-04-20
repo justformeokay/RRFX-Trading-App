@@ -58,7 +58,7 @@ class GlobalVariable {
   static const _keyShowExecSpeed = 'dev_show_exec_speed';
 
   static bool get showExecutionSpeed {
-    return GetStorage().read<bool>(_keyShowExecSpeed) ?? false;
+    return GetStorage().read<bool>(_keyShowExecSpeed) ?? true;
   }
 
   static Future<void> setShowExecutionSpeed(bool value) async {

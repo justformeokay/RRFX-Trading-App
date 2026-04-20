@@ -239,6 +239,10 @@ class AuthController extends GetxController {
       authService.refreshToken = refreshToken;
 
       Get.log("💾 [AUTH] Tokens saved successfully");
+
+      // Fetch trading API URL — harus paling awal sebelum API lain
+      await fetchAndSetTradingUrl();
+
       Get.log("🎮 [AUTH] Initializing controllers...");
       Get.put(AccountController());
       // Ensure HomeController exists and is permanent (won't be deleted on navigation)
@@ -327,6 +331,29 @@ class AuthController extends GetxController {
         message: errorMessage,
         buttonText: "OK",
       );
+    }
+  }
+
+  /// Fetch trading API URL dari server dan simpan ke GetStorage.
+  /// Dipanggil paling awal setelah login berhasil dan token tersimpan.
+  /// Juga dipanggil dari splashscreen saat user sudah pernah login.
+  Future<void> fetchAndSetTradingUrl() async {
+    try {
+      Get.log("📡 [AUTH] Fetching trading endpoint URL...");
+      final result = await authService.get('market/trading-endpoint');
+      if (result['status'] == true || result['status'] == 200) {
+        final url = result['response'];
+        if (url is String && url.isNotEmpty) {
+          await GlobalVariable.setTradingUrl(url);
+          Get.log("✅ [AUTH] Trading URL set: $url");
+        } else {
+          Get.log("⚠️ [AUTH] Trading endpoint response tidak valid: $url");
+        }
+      } else {
+        Get.log("⚠️ [AUTH] Gagal fetch trading endpoint: ${result['message']}");
+      }
+    } catch (e) {
+      Get.log("❌ [AUTH] Error fetching trading endpoint: $e");
     }
   }
 

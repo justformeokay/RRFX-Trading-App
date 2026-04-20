@@ -95,7 +95,10 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
       // Ensure auth tokens are loaded before making API calls
       await authService.init();
       print('🔑 [SPLASH] AuthService tokens after init: accessToken=${authService.accessToken != null ? "EXISTS" : "NULL"}, refreshToken=${authService.refreshToken != null ? "EXISTS" : "NULL"}');
-      
+
+      // Fetch trading API URL — paling awal sebelum API lain
+      await authController.fetchAndSetTradingUrl();
+
       // Fetch profile dari API
       bool resultProfile = await homeController.profile();
       
