@@ -473,7 +473,7 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
 
     if (failed.isEmpty && !isCancelled.value) {
       // Tampilkan dialog hasil Close All
-      _showCloseAllResultDialog(total: total, totalPnl: totalPnl, totalSwap: totalSwap);
+      // _showCloseAllResultDialog(total: total, totalPnl: totalPnl, totalSwap: totalSwap);
     } else if (isCancelled.value) {
       AppSnackbar.error("Dibatalkan. $successCount dari $total posisi berhasil ditutup.");
     } else {
@@ -1271,13 +1271,13 @@ class _PositionTile extends StatelessWidget {
             } catch (_) {}
 
             // Tampilkan dialog hasil close position
-            _showCloseResultDialog(
-              symbol: symbol ?? '-',
-              lot: volume ?? '0.0',
-              profit: pnl,
-              swap: swapValue,
-              positionId: positionId ?? '-',
-            );
+            // _showCloseResultDialog(
+            //   symbol: symbol ?? '-',
+            //   lot: volume ?? '0.0',
+            //   profit: pnl,
+            //   swap: swapValue,
+            //   positionId: positionId ?? '-',
+            // );
           } else {
             final msg = result['message'] ?? 'Gagal menutup posisi';
             AppSnackbar.error(msg.toString());

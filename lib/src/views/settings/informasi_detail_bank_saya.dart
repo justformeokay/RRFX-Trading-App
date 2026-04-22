@@ -107,7 +107,7 @@ class _InformasiDetailBankSayaState extends State<InformasiDetailBankSaya> {
                               );
                             }));
                           }),
-                          NameTextFieldNewVersion(controller: ownerController, fieldName: "Nama Pemilik Rekening", hintText: "Nama Pemilik Rekening", labelText: "Nama Pemilik Rekening", readOnly: true, useValidator: true),
+                          NameTextFieldNewVersion(controller: ownerController, fieldName: "Nama Pemilik Rekening", hintText: "Nama Pemilik Rekening", labelText: "Nama Pemilik Rekening", readOnly: false, useValidator: true),
                           NumberTextField(controller: nomorRekening, fieldName: "Nomor Rekening", hintText: "Nomor Rekening", labelText: "Nomor Rekening", maxLength: 16, minLength: 10, useValidator: false, readOnly: !widget.editingMode),
                           widget.editDitolakMode == true || widget.editingMode == true ? Obx(
                             () => utilitiesController.isLoading.value ? const SizedBox() : UtilitiesWidget.uploadPhotoV2(context, isImageOnline: false, title: "Foto Buku rekening", onPressed: () async {
@@ -136,6 +136,7 @@ class _InformasiDetailBankSayaState extends State<InformasiDetailBankSaya> {
                   }
                   if (widget.editingMode == true && widget.editDitolakMode == true) {
                     userController.editBankRegol(
+                      bankHolder: ownerController.text,
                       account: nomorRekening.text,
                       bankID: widget.idBankEditingMode,
                       bankName: bankNameController.text,

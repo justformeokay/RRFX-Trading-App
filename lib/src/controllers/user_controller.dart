@@ -289,13 +289,30 @@ class UserController extends GetxController {
   }
 
 
-  Future<bool> editBankRegol({String? bankName, String? account, String? urlBukuRekening, String? bankID}) async {
+  Future<bool> editBankRegol({String? bankName, String? account, String? urlBukuRekening, String? bankID, String? bankHolder}) async {
     try {
+      if(bankID == null) {
+        responseMessage("ID bank tidak ditemukan");
+        return false;
+      }
+      if(bankHolder == null) {
+        responseMessage("Nama pemilik bank tidak ditemukan");
+        return false;
+      }
+      if(bankName == null) {
+        responseMessage("Nama bank tidak ditemukan");
+        return false;
+      }
+      if(account == null) {
+        responseMessage("Nomor rekening tidak ditemukan");
+        return false;
+      }
       isLoading(true);
       Map<String, String> body = {
-        'id': bankID!,
-        'bank-name': bankName!,
-        'bank-number': account!,
+        'id': bankID,
+        'bank-holder': bankHolder,
+        'bank-name': bankName,
+        'bank-number': account,
       };
 
       Map<String, String> file = {};

@@ -735,6 +735,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
           message: 'Akun demo berhasil dibuat! Silakan refresh halaman ini untuk melihat akun demo Anda.',
           buttonText: 'OK',
           onPressed: () {
+            Get.back(); // Close dialog
             // Refresh account data
             accountController.fetchAccountInfo(forceRefresh: true).then((_) {
               // Refresh page
