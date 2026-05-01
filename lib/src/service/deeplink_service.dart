@@ -30,7 +30,7 @@ class DeepLinkService {
     // Setelah 5 detik, app sudah bukan fresh start lagi
     Future.delayed(const Duration(seconds: 5), () {
       _isFreshStart = false;
-      print('⏰ [DeepLink] Fresh start period ended');
+      // print('⏰ [DeepLink] Fresh start period ended');
     });
 
     // 🔹 Listen untuk link yang masuk saat app sedang terbuka (background/foreground)
@@ -40,26 +40,26 @@ class DeepLinkService {
     try {
       final initialUri = await _appLinks.getInitialLink();
       if (initialUri != null) {
-        print('🔗 [DeepLink] Initial link detected: $initialUri');
+        // print('🔗 [DeepLink] Initial link detected: $initialUri');
         _handleIncomingUri(initialUri, isInitial: true);
       }
     } catch (e) {
-      print('❌ [DeepLink] Failed to get initial link: $e');
+      // print('❌ [DeepLink] Failed to get initial link: $e');
     }
   }
 
   void _handleIncomingUri(Uri uri, {bool isInitial = false}) {
-    print('📥 [DeepLink] Incoming link: $uri (initial: $isInitial)');
+    // print('📥 [DeepLink] Incoming link: $uri (initial: $isInitial)');
     
     // Prevent duplicate handling of same URI
     if (_lastProcessedUri == uri) {
-      print('⚠️ [DeepLink] Duplicate URI detected, ignoring');
+      // print('⚠️ [DeepLink] Duplicate URI detected, ignoring');
       return;
     }
     
     // Prevent concurrent processing
     if (_isProcessingLink) {
-      print('⚠️ [DeepLink] Already processing a link, ignoring');
+      // print('⚠️ [DeepLink] Already processing a link, ignoring');
       return;
     }
     
@@ -68,13 +68,13 @@ class DeepLinkService {
     
     // 🔹 CHECK: Apakah URL ini perlu dibuka di WebView (bukan handle di app)
     if (_shouldOpenInWebView(uri)) {
-      print('🌐 [DeepLink] Opening in WebView: $uri');
+      // print('🌐 [DeepLink] Opening in WebView: $uri');
       
       if (isInitial || _isFreshStart) {
         // Cold start / fresh start: jangan navigate sekarang, simpan URL
         // dan biarkan Splashscreen yang handle navigasinya setelah app siap
         _storePendingWebView(uri.toString());
-        print('📌 [DeepLink] Stored pending WebView URL (initial=$isInitial, freshStart=$_isFreshStart)');
+        // print('📌 [DeepLink] Stored pending WebView URL (initial=$isInitial, freshStart=$_isFreshStart)');
         _isProcessingLink = false;
       } else {
         // App sudah terbuka dan bukan fresh start: navigate langsung
@@ -89,7 +89,7 @@ class DeepLinkService {
     // 📊 Extract UTM parameters dari URL
     final utmParams = _extractUtmParameters(uri);
     if (utmParams.isNotEmpty) {
-      print('📊 [DeepLink] UTM parameters detected: $utmParams');
+      // print('📊 [DeepLink] UTM parameters detected: $utmParams');
 
       // 🔥 Log UTM to Firebase Analytics
       UtmTrackingService().logCampaignFromLink(
@@ -103,14 +103,14 @@ class DeepLinkService {
         final authController = Get.find<AuthController>();
         authController.setUtmParameters(utmParams);
       } catch (e) {
-        print('⚠️ [DeepLink] AuthController not found yet, will save later: $e');
+        // print('⚠️ [DeepLink] AuthController not found yet, will save later: $e');
         // AuthController belum diinisialisasi, simpan ke cache sementara
         Future.delayed(const Duration(milliseconds: 500), () {
           try {
             final authController = Get.find<AuthController>();
             authController.setUtmParameters(utmParams);
           } catch (e) {
-            print('❌ [DeepLink] Failed to save UTM parameters: $e');
+            // print('❌ [DeepLink] Failed to save UTM parameters: $e');
           }
         });
       }
@@ -119,19 +119,19 @@ class DeepLinkService {
     // Cek apakah URL-nya mengarah ke signup page
     if (uri.path.contains('signup')) {
       final referralCode = uri.queryParameters['referral'];
-      print('🎯 [DeepLink] Signup path detected, referral code: $referralCode');
+      // print('🎯 [DeepLink] Signup path detected, referral code: $referralCode');
 
       if (referralCode != null && referralCode.isNotEmpty) {
         // Beri jeda sedikit agar GetMaterialApp siap melakukan navigasi
         Future.delayed(const Duration(milliseconds: 800), () {
           // Cek apakah sudah di signup page
           if (Get.currentRoute == '/signup') {
-            print('✅ [DeepLink] Already at signup page, skipping navigation');
+            // print('✅ [DeepLink] Already at signup page, skipping navigation');
             _isProcessingLink = false;
             return;
           }
           
-          print('🚀 [DeepLink] Navigating to signup with referral: $referralCode');
+          // print('🚀 [DeepLink] Navigating to signup with referral: $referralCode');
           Get.offAllNamed(
             '/signup',
             arguments: {'code': referralCode},
@@ -166,7 +166,7 @@ class DeepLinkService {
     
     for (final webViewPath in webViewPaths) {
       if (path.startsWith(webViewPath)) {
-        print('🔍 [DeepLink] Path "$path" matched WebView pattern "$webViewPath"');
+        // print('🔍 [DeepLink] Path "$path" matched WebView pattern "$webViewPath"');
         return true;
       }
     }
@@ -186,7 +186,7 @@ class DeepLinkService {
   void _storePendingWebView(String url) {
     pendingWebViewUrl = url;
     pendingWebViewTitle = _getTitleForUrl(url);
-    print('📌 [DeepLink] Pending WebView stored: $url (title: $pendingWebViewTitle)');
+    // print('📌 [DeepLink] Pending WebView stored: $url (title: $pendingWebViewTitle)');
   }
 
   /// Cek apakah ada pending WebView URL dari cold-start deeplink
@@ -201,14 +201,14 @@ class DeepLinkService {
     };
     pendingWebViewUrl = null;
     pendingWebViewTitle = null;
-    print('✅ [DeepLink] Consumed pending WebView: ${result['url']}');
+    // print('✅ [DeepLink] Consumed pending WebView: ${result['url']}');
     return result;
   }
 
   /// Buka URL di WebView page (navigasi ke Login → WebView)
   /// Digunakan saat app sudah terbuka (bukan cold start)
   void _openInWebView(String url) {
-    print('🌐 [DeepLink] Opening WebView for: $url');
+    // print('🌐 [DeepLink] Opening WebView for: $url');
     
     final title = _getTitleForUrl(url);
     
@@ -226,7 +226,7 @@ class DeepLinkService {
           ),
           transition: Transition.rightToLeft,
         );
-        print('✅ [DeepLink] Navigated to WebView: $url');
+        // print('✅ [DeepLink] Navigated to WebView: $url');
       });
     });
   }

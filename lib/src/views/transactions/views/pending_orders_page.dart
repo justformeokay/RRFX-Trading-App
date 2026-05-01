@@ -7,12 +7,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:icons_plus/icons_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/containers/no_account.dart';
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
+import 'package:rrfx/src/service/account_credentials_service.dart';
 import 'package:rrfx/src/service/auth_service.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -128,6 +131,7 @@ class PendingOrdersPage extends StatefulWidget {
 class _PendingOrdersPageState extends State<PendingOrdersPage>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   late final AccountController _accountController;
+  String get _mt5ApiBase => GlobalVariable.tradingApiBase;
 
   WebSocketChannel? _channel;
   Timer? _reconnectTimer;
@@ -1093,7 +1097,7 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return _EditPositionDialog(
+        return EditPositionDialog(
           order: order,
           authService: _authService,
           currentLogin: _currentLogin,
@@ -1229,6 +1233,7 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
+                          color: Get.isDarkMode ? Colors.white : Colors.black87,
                         ),
                       ),
                     ),
@@ -1280,11 +1285,16 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
                 color: CustomColor.secondaryColor,
               ),
               const SizedBox(height: 16),
-              Text(
-                'Cancelling order...',
+              DefaultTextStyle(
                 style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+                  color: Get.isDarkMode ? Colors.white : Colors.black87,
+                ),
+                child: Text(
+                  'Cancelling order...',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],
@@ -1295,52 +1305,26 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
     );
 
     try {
-      _isCancelling.value = true;
-
-      final requestBody = {
-        'login': _currentLogin ?? '',
-        'ticket': order.ticket.toString(),
-        'is_pending': '1',  // Convert to string
-      };
-
-      debugPrint('📤 Cancelling pending order: $requestBody');
-
-      final response = await _authService.post(
-        'market/execution/close',
-        requestBody,
-      );
-
-      // Close loading dialog
-      if (Get.isDialogOpen ?? false) Get.back();
-
-      debugPrint('📥 Cancel response: $response');
-
-      if (response['status'] == true) {
-        // Play success sound with error handling
-        try {
-          debugPrint('🔊 [Cancel] Playing success sound...');
-          await _audioPlayer.play(AssetSource('sounds/applepay.mp3'));
-          debugPrint('✅ [Cancel] Sound played successfully');
-        } catch (audioError) {
-          debugPrint('❌ [Cancel] Audio error: $audioError');
+      closingOrder(loginID: _currentLogin ?? '', ticketID: order.ticket.toString())
+          .then((result) {
+        if (Get.isDialogOpen ?? false) Get.back();
+        if (result['status'] == true) {
+          AppSnackbar.success(
+            result['message'] ?? 'Pending order cancelled successfully',
+          );
+          // Optimistically remove from list; WebSocket will sync real state
+          pendingOrders.removeWhere((item) => item.ticket == order.ticket);
+        } else {
+          final errorMessage = result['message'] ?? 'Failed to cancel pending order';
+          AppSnackbar.error(errorMessage);
         }
-        
-        AppSnackbar.success(
-          response['message'] ?? 'Pending order cancelled successfully',
-        );
-
-        // Remove from local list immediately for better UX
-        // WebSocket will sync the real state
-        pendingOrders.removeWhere((item) => item.ticket == order.ticket);
-      } else {
-        final errorMessage = response['message'] ?? 'Failed to cancel pending order';
-        AppSnackbar.error(errorMessage);
-      }
+      }).catchError((e) {
+        if (Get.isDialogOpen ?? false) Get.back();
+        final errorMsg = e.toString().replaceAll('Exception: ', '');
+        AppSnackbar.error(errorMsg);
+      });
     } catch (e) {
-      // Close loading dialog if still open
       if (Get.isDialogOpen ?? false) Get.back();
-
-      debugPrint('❌ Cancel pending order error: $e');
       AppSnackbar.error(
         'Failed to cancel pending order. Please try again.',
       );
@@ -1348,1199 +1332,354 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
       _isCancelling.value = false;
     }
   }
+
+
+  Future<Map<String, dynamic>> closingOrder({
+    required String loginID,
+    required String? ticketID,
+  }) async {
+    try {
+      // Get token (auto-fetch if missing)
+      String? token = AccountCredentialsService.getTokenByLogin(loginID);
+      if (token == null || token.isEmpty) {
+        if (!AccountCredentialsService.hasCachedData()) {
+          await AccountCredentialsService.fetchAndCache(forceRefresh: true);
+        } else {
+          token = await AccountCredentialsService.refreshTokenForLogin(loginID);
+        }
+        token ??= AccountCredentialsService.getTokenByLogin(loginID);
+        if (token == null || token.isEmpty) {
+          throw Exception('Gagal mendapatkan koneksi MT5 untuk login $loginID.');
+        }
+      }
+
+      // First attempt
+      var result = await _callOrderCloseSafe(token: token, ticket: ticketID ?? '');
+
+      // Handle INVALID_TOKEN → refresh token and retry once
+      if (result.containsKey('code') && result['code'] == 'INVALID_TOKEN') {
+        // Get.log('🔄 [CLOSE] INVALID_TOKEN → refreshing token for login $loginID...');
+        final newToken = await AccountCredentialsService.refreshTokenForLogin(loginID);
+        if (newToken == null || newToken.isEmpty) {
+          throw Exception('Koneksi MT5 gagal. Silakan login ulang.');
+        }
+        result = await _callOrderCloseSafe(token: newToken, ticket: ticketID ?? '');
+      }
+
+      // Handle other error codes
+      if (result.containsKey('code') && result['code'] != null) {
+        final errorMsg = result['message'] ?? 'Close order gagal';
+        throw Exception(errorMsg);
+      }
+
+      // Validate ticket in response
+      final responseTicket = result['ticket'];
+      if (responseTicket == null || responseTicket == 0) {
+        final errorMsg = result['message'] ?? 'Close order gagal: tidak mendapat ticket.';
+        throw Exception(errorMsg);
+      }
+
+      // Get.log('✅ [CLOSE] Position closed successfully! Ticket: $responseTicket');
+
+      // Signal the chart WebView to refresh (position was closed)
+
+      return {
+        'status': true,
+        'message': 'Position berhasil ditutup',
+        'data': result,
+      };
+    } catch (e) {
+      final errMsg = e.toString().replaceAll('Exception: ', '');
+      throw Exception(errMsg);
+    }
+  }
+
+  /// Internal: call OrderCloseSafe API
+  Future<Map<String, dynamic>> _callOrderCloseSafe({
+    required String token,
+    required String ticket,
+  }) async {
+    final uri = Uri.parse(
+      '$_mt5ApiBase/OrderClose'
+      '?id=$token'
+      '&ticket=$ticket'
+      '&lots=0'
+      '&price=0'
+      '&slippage=0',
+    );
+
+    Get.log('📦 [CLOSE] Request URL: $uri');
+
+    final response = await http.get(
+      uri,
+      headers: {'accept': 'text/json'},
+    ).timeout(
+      const Duration(seconds: 30),
+      onTimeout: () => throw Exception('Close order timeout, coba lagi.'),
+    );
+
+    Get.log('📥 [CLOSE] Response status: ${response.statusCode}');
+    Get.log('📥 [CLOSE] Response body: ${response.body}');
+
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
 }
 
-// ─────────────────────────────────────────────────────────
-// Edit Position Dialog Widget
-// ─────────────────────────────────────────────────────────
-
-class _EditPositionDialog extends StatefulWidget {
+class EditPositionDialog extends StatefulWidget {
   final PendingOrderItem order;
   final AuthService authService;
   final String? currentLogin;
 
-  const _EditPositionDialog({
+  const EditPositionDialog({super.key, 
+
     required this.order,
     required this.authService,
     required this.currentLogin,
   });
 
   @override
-  State<_EditPositionDialog> createState() => _EditPositionDialogState();
+  State<EditPositionDialog> createState() => _EditPositionDialogState();
 }
 
-class _EditPositionDialogState extends State<_EditPositionDialog> {
-  late TextEditingController tpController;
-  late TextEditingController slController;
-  late TextEditingController tpPriceController;
-  late TextEditingController slPriceController;
-  late TextEditingController volumeController;
+class _EditPositionDialogState extends State<EditPositionDialog> {
   late TextEditingController priceController;
-
-  bool _isSyncingSl = false;
-  bool _isSyncingTp = false;
+  late TextEditingController volumeController;
+  late TextEditingController slController;
+  late TextEditingController tpController;
+  String get _mt5ApiBase => GlobalVariable.tradingApiBase;
 
   final isSaving = RxBool(false);
-  final tpError = RxString('');
-  final slError = RxString('');
-  final volumeError = RxString('');
-  final priceError = RxString('');
-
-  // Static audio player for success sound
-  static final AudioPlayer _staticAudioPlayer = AudioPlayer();
-
-  static Future<void> _playSuccessSound() async {
-    try {
-      debugPrint('🔊 [Edit] Playing success sound...');
-      await _staticAudioPlayer.play(AssetSource('sounds/applepay.mp3'));
-      debugPrint('✅ [Edit] Sound played successfully');
-    } catch (e) {
-      debugPrint('❌ [Edit] Audio play error: $e');
-      // Try fallback path
-      try {
-        debugPrint('🔄 [Edit] Trying fallback path: assets/sounds/applepay.mp3');
-        await _staticAudioPlayer.play(AssetSource('assets/sounds/applepay.mp3'));
-        debugPrint('✅ [Edit] Fallback sound played successfully');
-      } catch (fallbackError) {
-        debugPrint('❌ [Edit] Fallback also failed: $fallbackError');
-      }
-    }
-  }
-
-  int _getDigitsForSymbol(String symbol) {
-    final s = symbol.toUpperCase();
-    if (s.contains('XAU') || s.contains('GOLD')) return 2;
-    if (s.contains('XAG') || s.contains('SILVER')) return 3;
-    if (s.contains('JPY')) return 3;
-    if (s.contains('US30') || s.contains('NAS') || s.contains('SPX') ||
-        s.contains('DAX') || s.contains('UK100')) return 2;
-    return 5;
-  }
-
-  double _getPointValue(String symbol) {
-    final digits = _getDigitsForSymbol(symbol);
-    double v = 1.0;
-    for (int i = 0; i < digits; i++) {
-      v /= 10.0;
-    }
-    return v;
-  }
-
-  String _formatPrice(double price, String symbol) {
-    return price.toStringAsFixed(_getDigitsForSymbol(symbol));
-  }
-
-  String _formatPriceWithLeadingZeros(double price, String symbol, {double? referencePrice}) {
-    final digits = _getDigitsForSymbol(symbol);
-    int intDigits = 4;
-    if (referencePrice != null && referencePrice > 0) {
-      intDigits = referencePrice.truncate().toString().length;
-    }
-    String formatted = price.toStringAsFixed(digits);
-    List<String> parts = formatted.split('.');
-    String intPart = parts[0].padLeft(intDigits, '0');
-    String decPart = parts.length > 1 ? parts[1] : ''.padRight(digits, '0');
-    return '$intPart.$decPart';
-  }
-
-  void _syncSlPriceFromPoints(String value) {
-    if (_isSyncingSl) return;
-    final points = double.tryParse(value);
-    if (points == null || points <= 0) {
-      _isSyncingSl = true;
-      slPriceController.text = _formatPriceWithLeadingZeros(
-        0.0, widget.order.symbol, referencePrice: widget.order.priceCurrent);
-      _isSyncingSl = false;
-      return;
-    }
-    final entryPrice = widget.order.priceOrder;
-    if (entryPrice <= 0) return;
-    final pointValue = _getPointValue(widget.order.symbol);
-    final isBuy = widget.order.orderType.toLowerCase().contains('buy');
-    final slPrice = isBuy ? entryPrice - (points * pointValue) : entryPrice + (points * pointValue);
-    _isSyncingSl = true;
-    slPriceController.text = _formatPrice(slPrice, widget.order.symbol);
-    _isSyncingSl = false;
-  }
-
-  void _syncSlPointsFromPrice(String value) {
-    if (_isSyncingSl) return;
-    final slPrice = double.tryParse(value.replaceAll(',', ''));
-    if (slPrice == null || slPrice <= 0) {
-      _isSyncingSl = true;
-      slController.clear();
-      _isSyncingSl = false;
-      return;
-    }
-    final entryPrice = widget.order.priceOrder;
-    if (entryPrice <= 0) return;
-    final pointValue = _getPointValue(widget.order.symbol);
-    final isBuy = widget.order.orderType.toLowerCase().contains('buy');
-    final points = isBuy ? (entryPrice - slPrice) / pointValue : (slPrice - entryPrice) / pointValue;
-    if (points < 0) {
-      _isSyncingSl = true;
-      slController.clear();
-      _isSyncingSl = false;
-      return;
-    }
-    _isSyncingSl = true;
-    slController.text = points.round().toString();
-    _isSyncingSl = false;
-  }
-
-  void _syncTpPriceFromPoints(String value) {
-    if (_isSyncingTp) return;
-    final points = double.tryParse(value);
-    if (points == null || points <= 0) {
-      _isSyncingTp = true;
-      tpPriceController.text = _formatPriceWithLeadingZeros(
-        0.0, widget.order.symbol, referencePrice: widget.order.priceCurrent);
-      _isSyncingTp = false;
-      return;
-    }
-    final entryPrice = widget.order.priceOrder;
-    if (entryPrice <= 0) return;
-    final pointValue = _getPointValue(widget.order.symbol);
-    final isBuy = widget.order.orderType.toLowerCase().contains('buy');
-    final tpPrice = isBuy ? entryPrice + (points * pointValue) : entryPrice - (points * pointValue);
-    _isSyncingTp = true;
-    tpPriceController.text = _formatPrice(tpPrice, widget.order.symbol);
-    _isSyncingTp = false;
-  }
-
-  void _syncTpPointsFromPrice(String value) {
-    if (_isSyncingTp) return;
-    final tpPrice = double.tryParse(value.replaceAll(',', ''));
-    if (tpPrice == null || tpPrice <= 0) {
-      _isSyncingTp = true;
-      tpController.clear();
-      _isSyncingTp = false;
-      return;
-    }
-    final entryPrice = widget.order.priceOrder;
-    if (entryPrice <= 0) return;
-    final pointValue = _getPointValue(widget.order.symbol);
-    final isBuy = widget.order.orderType.toLowerCase().contains('buy');
-    final points = isBuy ? (tpPrice - entryPrice) / pointValue : (entryPrice - tpPrice) / pointValue;
-    if (points < 0) {
-      _isSyncingTp = true;
-      tpController.clear();
-      _isSyncingTp = false;
-      return;
-    }
-    _isSyncingTp = true;
-    tpController.text = points.round().toString();
-    _isSyncingTp = false;
-  }
 
   @override
   void initState() {
     super.initState();
-    tpController = TextEditingController(text: '');
-    slController = TextEditingController(text: '');
-    final zeroPrice = _formatPriceWithLeadingZeros(
-      0.0, widget.order.symbol, referencePrice: widget.order.priceCurrent);
-    tpPriceController = TextEditingController(text: zeroPrice);
-    slPriceController = TextEditingController(text: zeroPrice);
-    volumeController = TextEditingController(text: widget.order.volume.toString());
+    // Inisialisasi dengan data awal dari order
     priceController = TextEditingController(text: widget.order.priceOrder.toString());
-
-    // Bidirectional sync listeners
-    slController.addListener(() => _syncSlPriceFromPoints(slController.text));
-    tpController.addListener(() => _syncTpPriceFromPoints(tpController.text));
-    slPriceController.addListener(() => _syncSlPointsFromPrice(slPriceController.text));
-    tpPriceController.addListener(() => _syncTpPointsFromPrice(tpPriceController.text));
+    volumeController = TextEditingController(text: widget.order.volume.toString());
+    // Change .sl to .stopLoss and .tp to .takeProfit
+    slController = TextEditingController(
+      text: widget.order.stopLoss != 0 ? widget.order.stopLoss.toString() : ''
+    );
+    tpController = TextEditingController(
+      text: widget.order.takeProfit != 0 ? widget.order.takeProfit.toString() : ''
+    );
   }
 
   @override
   void dispose() {
-    tpController.dispose();
-    slController.dispose();
-    tpPriceController.dispose();
-    slPriceController.dispose();
-    volumeController.dispose();
     priceController.dispose();
+    volumeController.dispose();
+    slController.dispose();
+    tpController.dispose();
     super.dispose();
+  }
+
+  // --- LOGIKA VALIDASI PENDING ORDER ---
+  String? _validatePendingOrder(double entry, double current, String type) {
+    final t = type.toLowerCase();
+    if (t.contains('buy limit') && entry >= current) return "Buy Limit: Price must be BELOW current price";
+    if (t.contains('sell limit') && entry <= current) return "Sell Limit: Price must be ABOVE current price";
+    if (t.contains('buy stop') && entry <= current) return "Buy Stop: Price must be ABOVE current price";
+    if (t.contains('sell stop') && entry >= current) return "Sell Stop: Price must be BELOW current price";
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final order = widget.order;
-
-    return SingleChildScrollView(
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
+    
+    return Container(
+      padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        border: Border.all(
+          color: isDark ? Colors.grey.shade800.withOpacity(0.5) : Colors.grey.shade200,
         ),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            24,
-            24,
-            24,
-            24 + MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text("Edit ${widget.order.symbol}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 20),
+          
+          // Input Price & Volume
+          Row(
             children: [
-              // Header
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: CustomColor.secondaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Iconsax.edit_bold,
-                      color: CustomColor.secondaryColor,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Edit Position',
-                          style: GoogleFonts.inter(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: isDark ? Colors.white : Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${order.symbol} • Ticket #${order.ticket}',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: isDark
-                                ? Colors.grey.shade500
-                                : Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Icon(
-                      Iconsax.close_square_bold,
-                      color: isDark
-                          ? Colors.grey.shade600
-                          : Colors.grey.shade400,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // Order Info Card
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.grey.shade900.withOpacity(0.5)
-                      : Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark
-                        ? Colors.grey.shade800
-                        : Colors.grey.shade200,
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildInfoBadge(
-                      label: 'Order Price',
-                      value: NumberFormat('#,##0.${'0' * order.digits}', 'en_US')
-                          .format(order.priceOrder),
-                      isDark: isDark,
-                    ),
-                    Container(
-                      width: 1,
-                      height: 40,
-                      color: isDark
-                          ? Colors.grey.shade700
-                          : Colors.grey.shade300,
-                    ),
-                    _buildInfoBadge(
-                      label: 'Volume',
-                      value: '${order.volume} lot',
-                      isDark: isDark,
-                    ),
-                    Container(
-                      width: 1,
-                      height: 40,
-                      color: isDark
-                          ? Colors.grey.shade700
-                          : Colors.grey.shade300,
-                    ),
-                    _buildInfoBadge(
-                      label: 'Current Price',
-                      value: NumberFormat('#,##0.${'0' * order.digits}', 'en_US')
-                          .format(order.priceCurrent),
-                      isDark: isDark,
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Modify Position Title
-              Text(
-                'Modify Position',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
-              ),
-
-              const SizedBox(height: 14),
-
-              // Volume Field
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Volume (Lot)',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isDark
-                          ? Colors.grey.shade400
-                          : Colors.grey.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Obx(
-                    () => TextField(
-                      controller: volumeController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      enabled: false,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Enter volume',
-                        hintStyle: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: isDark
-                              ? Colors.grey.shade600
-                              : Colors.grey.shade400,
-                        ),
-                        errorText:
-                            volumeError.value.isEmpty ? null : volumeError.value,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? Colors.grey.shade700
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: CustomColor.secondaryColor,
-                            width: 2,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? Colors.grey.shade700
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-                        disabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? Colors.grey.shade800
-                                : Colors.grey.shade200,
-                          ),
-                        ),
-                        filled: true,
-                        fillColor: isDark
-                            ? Colors.grey.shade800.withOpacity(0.3)
-                            : Colors.grey.shade50,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // // TP Field
-              // Column(
-              //   crossAxisAlignment: CrossAxisAlignment.start,
-              //   children: [
-              //     Row(
-              //       children: [
-              //         Text(
-              //           'Take Profit (TP) - Points',
-              //           style: GoogleFonts.inter(
-              //             fontSize: 12,
-              //             fontWeight: FontWeight.w600,
-              //             color: isDark
-              //                 ? Colors.grey.shade400
-              //                 : Colors.grey.shade700,
-              //           ),
-              //         ),
-              //         const Spacer(),
-              //         Text(
-              //           order.takeProfit > 0
-              //               ? 'Current: ${order.takeProfit.toStringAsFixed(0)} pts'
-              //               : 'Current: Not set',
-              //           style: GoogleFonts.inter(
-              //             fontSize: 10,
-              //             color: order.takeProfit > 0
-              //                 ? Colors.green
-              //                 : isDark
-              //                     ? Colors.grey.shade600
-              //                     : Colors.grey.shade500,
-              //           ),
-              //         ),
-              //       ],
-              //     ),
-              //     const SizedBox(height: 6),
-              //     Obx(
-              //       () => TextField(
-              //         controller: tpController,
-              //         keyboardType:
-              //             const TextInputType.numberWithOptions(decimal: false),
-              //         enabled: !isSaving.value,
-              //         style: GoogleFonts.inter(
-              //           fontSize: 14,
-              //           fontWeight: FontWeight.w600,
-              //           color: isDark ? Colors.white : Colors.black87,
-              //         ),
-              //         decoration: InputDecoration(
-              //           hintText: 'e.g., 6000 (integer points)',
-              //           helperText: 'Leave empty to remove TP',
-              //           counterText: '',
-              //           helperStyle: GoogleFonts.inter(
-              //             fontSize: 10,
-              //             color: isDark
-              //                 ? Colors.grey.shade600
-              //                 : Colors.grey.shade500,
-              //           ),
-              //           hintStyle: GoogleFonts.inter(
-              //             fontSize: 14,
-              //             color: isDark
-              //                 ? Colors.grey.shade600
-              //                 : Colors.grey.shade400,
-              //           ),
-              //           errorText: tpError.value.isEmpty ? null : tpError.value,
-              //           prefixIcon: Padding(
-              //             padding: const EdgeInsets.only(left: 12, right: 8),
-              //             child: Icon(
-              //               Iconsax.arrow_up_bold,
-              //               size: 18,
-              //               color: Colors.green,
-              //             ),
-              //           ),
-              //           contentPadding: const EdgeInsets.symmetric(
-              //             horizontal: 14,
-              //             vertical: 12,
-              //           ),
-              //           border: OutlineInputBorder(
-              //             borderRadius: BorderRadius.circular(10),
-              //             borderSide: BorderSide(
-              //               color: isDark
-              //                   ? Colors.grey.shade700
-              //                   : Colors.grey.shade300,
-              //             ),
-              //           ),
-              //           focusedBorder: OutlineInputBorder(
-              //             borderRadius: BorderRadius.circular(10),
-              //             borderSide: BorderSide(
-              //               color: CustomColor.secondaryColor,
-              //               width: 2,
-              //             ),
-              //           ),
-              //           enabledBorder: OutlineInputBorder(
-              //             borderRadius: BorderRadius.circular(10),
-              //             borderSide: BorderSide(
-              //               color: isDark
-              //                   ? Colors.grey.shade700
-              //                   : Colors.grey.shade300,
-              //             ),
-              //           ),
-              //           disabledBorder: OutlineInputBorder(
-              //             borderRadius: BorderRadius.circular(10),
-              //             borderSide: BorderSide(
-              //               color: isDark
-              //                   ? Colors.grey.shade800
-              //                   : Colors.grey.shade200,
-              //             ),
-              //           ),
-              //           filled: true,
-              //           fillColor: isDark
-              //               ? Colors.grey.shade800.withOpacity(0.3)
-              //               : Colors.grey.shade50,
-              //         ),
-              //       ),
-              //     ),
-              //   ],
-              // ),
-
-              // const SizedBox(height: 16),
-
-              // // SL Field
-              // Column(
-              //   crossAxisAlignment: CrossAxisAlignment.start,
-              //   children: [
-              //     Row(
-              //       children: [
-              //         Text(
-              //           'Stop Loss (SL) - Points',
-              //           style: GoogleFonts.inter(
-              //             fontSize: 12,
-              //             fontWeight: FontWeight.w600,
-              //             color: isDark
-              //                 ? Colors.grey.shade400
-              //                 : Colors.grey.shade700,
-              //           ),
-              //         ),
-              //         const Spacer(),
-              //         Text(
-              //           order.stopLoss > 0
-              //               ? 'Current: ${order.stopLoss.toStringAsFixed(0)} pts'
-              //               : 'Current: Not set',
-              //           style: GoogleFonts.inter(
-              //             fontSize: 10,
-              //             color: order.stopLoss > 0
-              //                 ? Colors.red
-              //                 : isDark
-              //                     ? Colors.grey.shade600
-              //                     : Colors.grey.shade500,
-              //           ),
-              //         ),
-              //       ],
-              //     ),
-              //     const SizedBox(height: 6),
-              //     Obx(
-              //       () => TextField(
-              //         controller: slController,
-              //         keyboardType:
-              //             const TextInputType.numberWithOptions(decimal: false),
-              //         enabled: !isSaving.value,
-              //         style: GoogleFonts.inter(
-              //           fontSize: 14,
-              //           fontWeight: FontWeight.w600,
-              //           color: isDark ? Colors.white : Colors.black87,
-              //         ),
-              //         decoration: InputDecoration(
-              //           hintText: 'e.g., 100 (integer points)',
-              //           helperText: 'Leave empty to remove SL',
-              //           counterText: '',
-              //           helperStyle: GoogleFonts.inter(
-              //             fontSize: 10,
-              //             color: isDark
-              //                 ? Colors.grey.shade600
-              //                 : Colors.grey.shade500,
-              //           ),
-              //           hintStyle: GoogleFonts.inter(
-              //             fontSize: 14,
-              //             color: isDark
-              //                 ? Colors.grey.shade600
-              //                 : Colors.grey.shade400,
-              //           ),
-              //           errorText: slError.value.isEmpty ? null : slError.value,
-              //           prefixIcon: Padding(
-              //             padding: const EdgeInsets.only(left: 12, right: 8),
-              //             child: Icon(
-              //               Iconsax.arrow_down_bold,
-              //               size: 18,
-              //               color: Colors.red,
-              //             ),
-              //           ),
-              //           contentPadding: const EdgeInsets.symmetric(
-              //             horizontal: 14,
-              //             vertical: 12,
-              //           ),
-              //           border: OutlineInputBorder(
-              //             borderRadius: BorderRadius.circular(10),
-              //             borderSide: BorderSide(
-              //               color: isDark
-              //                   ? Colors.grey.shade700
-              //                   : Colors.grey.shade300,
-              //             ),
-              //           ),
-              //           focusedBorder: OutlineInputBorder(
-              //             borderRadius: BorderRadius.circular(10),
-              //             borderSide: BorderSide(
-              //               color: CustomColor.secondaryColor,
-              //               width: 2,
-              //             ),
-              //           ),
-              //           enabledBorder: OutlineInputBorder(
-              //             borderRadius: BorderRadius.circular(10),
-              //             borderSide: BorderSide(
-              //               color: isDark
-              //                   ? Colors.grey.shade700
-              //                   : Colors.grey.shade300,
-              //             ),
-              //           ),
-              //           disabledBorder: OutlineInputBorder(
-              //             borderRadius: BorderRadius.circular(10),
-              //             borderSide: BorderSide(
-              //               color: isDark
-              //                   ? Colors.grey.shade800
-              //                   : Colors.grey.shade200,
-              //             ),
-              //           ),
-              //           filled: true,
-              //           fillColor: isDark
-              //               ? Colors.grey.shade800.withOpacity(0.3)
-              //               : Colors.grey.shade50,
-              //         ),
-              //       ),
-              //     ),
-              //   ],
-              // ),
-
-              // const SizedBox(height: 12),
-
-              // // "Atau" separator
-              // Center(
-              //   child: Text(
-              //     'Atau',
-              //     style: GoogleFonts.inter(
-              //       fontSize: 13,
-              //       fontWeight: FontWeight.w600,
-              //       color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-              //     ),
-              //   ),
-              // ),
-
-              const SizedBox(height: 12),
-
-              // SL/TP Prices Row
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Stop Loss (Prices)',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: isDark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade700,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Obx(
-                          () => Container(
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? Colors.grey.shade800.withOpacity(0.3)
-                                  : Colors.grey.shade50,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: slError.value.isNotEmpty
-                                    ? Colors.red
-                                    : isDark
-                                        ? Colors.grey.shade700
-                                        : Colors.grey.shade300,
-                              ),
-                            ),
-                            child: TextField(
-                              controller: slPriceController,
-                              textAlign: TextAlign.center,
-                              keyboardType: TextInputType.number,
-                              enabled: !isSaving.value,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                _PriceShiftInputFormatter(
-                                  decimalPlaces: _getDigitsForSymbol(order.symbol),
-                                  integerDigits: order.priceCurrent > 0
-                                      ? order.priceCurrent.truncate().toString().length
-                                      : 4,
-                                ),
-                              ],
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.white : Colors.black87,
-                              ),
-                              decoration: InputDecoration(
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 10),
-                                prefixIcon: Icon(
-                                  Iconsax.shield_cross_bold,
-                                  size: 16,
-                                  color: Colors.red.shade400,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        // SL Error text
-                        Obx(
-                          () => slError.value.isNotEmpty
-                              ? Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    slError.value,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 10,
-                                      color: Colors.red,
-                                    ),
-                                  ),
-                                )
-                              : const SizedBox.shrink(),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Take Profit (Prices)',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: isDark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade700,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Obx(
-                          () => Container(
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? Colors.grey.shade800.withOpacity(0.3)
-                                  : Colors.grey.shade50,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: tpError.value.isNotEmpty
-                                    ? Colors.red
-                                    : isDark
-                                        ? Colors.grey.shade700
-                                        : Colors.grey.shade300,
-                              ),
-                            ),
-                            child: TextField(
-                              controller: tpPriceController,
-                              textAlign: TextAlign.center,
-                              keyboardType: TextInputType.number,
-                              enabled: !isSaving.value,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                _PriceShiftInputFormatter(
-                                  decimalPlaces: _getDigitsForSymbol(order.symbol),
-                                  integerDigits: order.priceCurrent > 0
-                                      ? order.priceCurrent.truncate().toString().length
-                                      : 4,
-                                ),
-                              ],
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.white : Colors.black87,
-                              ),
-                              decoration: InputDecoration(
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 10),
-                                prefixIcon: Icon(
-                                  Iconsax.medal_star_bold,
-                                  size: 16,
-                                  color: Colors.green.shade400,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        // TP Error text
-                        Obx(
-                          () => tpError.value.isNotEmpty
-                              ? Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    tpError.value,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 10,
-                                      color: Colors.red,
-                                    ),
-                                  ),
-                                )
-                              : const SizedBox.shrink(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: Obx(
-                      () => OutlinedButton(
-                        onPressed: isSaving.value
-                            ? null
-                            : () => Navigator.pop(context),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          side: BorderSide(
-                            color: isDark
-                                ? Colors.grey.shade700
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-                        child: Text(
-                          'Cancel',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: isDark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Obx(
-                      () => ElevatedButton(
-                        onPressed: isSaving.value
-                            ? null
-                            : () => _submitEditPosition(
-                                  order,
-                                  tpController,
-                                  slController,
-                                  volumeController,
-                                  isSaving,
-                                  tpError,
-                                  slError,
-                                  volumeError,
-                                  priceError,
-                                ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: CustomColor.secondaryColor,
-                          disabledBackgroundColor: CustomColor.secondaryColor
-                              .withOpacity(0.5),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: isSaving.value
-                            ? SizedBox(
-                                height: 18,
-                                width: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Text(
-                                'Update Position',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 35.0),
+              Expanded(child: _buildSimpleField("Entry Price", priceController)),
+              const SizedBox(width: 10),
+              Expanded(child: _buildSimpleField("Volume", volumeController)),
             ],
           ),
-        ),
+          const SizedBox(height: 15),
+          
+          // Input SL & TP
+          Row(
+            children: [
+              Expanded(child: _buildSimpleField("Stop Loss", slController)),
+              const SizedBox(width: 10),
+              Expanded(child: _buildSimpleField("Take Profit", tpController)),
+            ],
+          ),
+          const SizedBox(height: 25),
+          
+          // Action Button
+          Obx(() => ElevatedButton(
+            onPressed: isSaving.value ? null : _handleUpdate,
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 50),
+              backgroundColor: CustomColor.secondaryColor,
+            ),
+            child: isSaving.value 
+              ? const CircularProgressIndicator(color: Colors.white) 
+              : const Text("UPDATE POSITION", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          )),
+        ],
       ),
     );
   }
 
-  Widget _buildInfoBadge({
-    required String label,
-    required String value,
-    required bool isDark,
-  }) {
+  Widget _buildSimpleField(String label, TextEditingController controller) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 10,
-            color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: isDark ? Colors.white : Colors.black87,
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 5),
+        TextField(
+          controller: controller,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 10),
           ),
         ),
       ],
     );
   }
 
-  Future<void> _submitEditPosition(
-    PendingOrderItem order,
-    TextEditingController tpController,
-    TextEditingController slController,
-    TextEditingController volumeController,
-    RxBool isSaving,
-    RxString tpError,
-    RxString slError,
-    RxString volumeError,
-    RxString priceError,
-  ) async {
-    // Reset errors
-    tpError.value = '';
-    slError.value = '';
-    volumeError.value = '';
-    priceError.value = '';
+  Future<void> _handleUpdate() async {
+    final entry = double.tryParse(priceController.text) ?? 0;
+    final current = widget.order.priceCurrent;
+    final type = widget.order.orderType;
 
-    // Validate fields
-    final tpStr = tpController.text.trim();
-    final slStr = slController.text.trim();
-    final volumeStr = volumeController.text.trim();
-
-    bool hasError = false;
-
-    // Validate volume
-    if (volumeStr.isEmpty) {
-      volumeError.value = 'Volume is required';
-      hasError = true;
-    } else {
-      final volume = double.tryParse(volumeStr);
-      if (volume == null || volume <= 0) {
-        volumeError.value = 'Enter a valid volume';
-        hasError = true;
-      }
+    // 1. Validasi Harga vs Market (Pending Order Rules)
+    final error = _validatePendingOrder(entry, current, type);
+    if (error != null) {
+      AppSnackbar.error(error);
+      return;
     }
-
-    // Validate TP (must be integer)
-    if (tpStr.isNotEmpty) {
-      final tp = int.tryParse(tpStr);
-      if (tp == null || tp <= 0) {
-        tpError.value = 'Enter a valid integer points or leave empty';
-        hasError = true;
-      }
-    }
-
-    // Validate SL (must be integer)
-    if (slStr.isNotEmpty) {
-      final sl = int.tryParse(slStr);
-      if (sl == null || sl <= 0) {
-        slError.value = 'Enter a valid integer points or leave empty';
-        hasError = true;
-      }
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // Validate SL/TP price position based on order type
-    // ─────────────────────────────────────────────────────────
-    final slPriceStr = slPriceController.text.trim().replaceAll(',', '');
-    final tpPriceStr = tpPriceController.text.trim().replaceAll(',', '');
-    final slPrice = double.tryParse(slPriceStr) ?? 0.0;
-    final tpPrice = double.tryParse(tpPriceStr) ?? 0.0;
-    final entryPrice = order.priceOrder;
-    final isBuyType = order.orderType.toLowerCase().contains('buy');
-
-    // Validate SL position relative to entry price
-    if (slPrice > 0) {
-      if (isBuyType) {
-        // For Buy orders (Buy Limit, Buy Stop): SL must be below entry price
-        if (slPrice >= entryPrice) {
-          slError.value = 'SL must be below entry price (${_formatPrice(entryPrice, order.symbol)}) for ${order.orderType}';
-          hasError = true;
-        }
-      } else {
-        // For Sell orders (Sell Limit, Sell Stop): SL must be above entry price
-        if (slPrice <= entryPrice) {
-          slError.value = 'SL must be above entry price (${_formatPrice(entryPrice, order.symbol)}) for ${order.orderType}';
-          hasError = true;
-        }
-      }
-    }
-
-    // Validate TP position relative to entry price
-    if (tpPrice > 0) {
-      if (isBuyType) {
-        // For Buy orders: TP must be above entry price
-        if (tpPrice <= entryPrice) {
-          tpError.value = 'TP must be above entry price (${_formatPrice(entryPrice, order.symbol)}) for ${order.orderType}';
-          hasError = true;
-        }
-      } else {
-        // For Sell orders: TP must be below entry price
-        if (tpPrice >= entryPrice) {
-          tpError.value = 'TP must be below entry price (${_formatPrice(entryPrice, order.symbol)}) for ${order.orderType}';
-          hasError = true;
-        }
-      }
-    }
-
-    if (hasError) return;
 
     isSaving.value = true;
-
     try {
-      final requestBody = {
-        'login': widget.currentLogin ?? '',
-        'ticket': order.ticket.toString(),
-        'is_pending': '1',  // Convert to string
-        'tp': tpStr.isEmpty ? '0' : tpStr,
-        'sl': slStr.isEmpty ? '0' : slStr,
-        'volume': volumeStr,
-      };
+      // Memastikan jika input kosong, maka dikirim sebagai "0"
+      final String finalPrice = priceController.text.isEmpty ? "0" : priceController.text;
+      final String finalSL = slController.text.isEmpty ? "0" : slController.text;
+      final String finalTP = tpController.text.isEmpty ? "0" : tpController.text;
 
-      debugPrint('📤 Modifying position: $requestBody');
+      print("🔄 Updating pending order with Entry: $finalPrice, SL: $finalSL, TP: $finalTP");
 
-      final response = await widget.authService.post(
-        'market/execution/modify',
-        requestBody,
+      final result = await modifyPendingOrder(
+        loginID: widget.currentLogin ?? '',
+        ticketID: widget.order.ticket.toString(),
+        price: finalPrice,
+        stoploss: finalSL,
+        takeprofit: finalTP,
       );
 
-      debugPrint('📥 Modify response: $response (type: ${response.runtimeType})');
-
-      // Handle response from API
-      bool isSuccess = false;
-      String message = 'Position updated successfully';
-
-      try {
-        // Response is a Map from authService.post()
-        // Check for status field
-        if (response.containsKey('status')) {
-          isSuccess = response['status'] == true || response['status'] == 1;
-          message = response['message']?.toString() ?? 'Position updated successfully';
-          debugPrint('✅ Map response - isSuccess: $isSuccess, message: $message');
-        } else if (response.containsKey('0') && response.containsKey('1')) {
-          // Weird case where response has numeric keys like a list
-          isSuccess = response['0'] == 1 || response['0'] == true;
-          message = response['1']?.toString() ?? 'Position updated successfully';
-          debugPrint('✅ Numeric keys response - isSuccess: $isSuccess, message: $message');
-        } else {
-          debugPrint('⚠️ Unknown response format. Keys: ${response.keys}');
-          // Treat as success by default if response exists
-          isSuccess = true;
-          message = 'Position updated successfully';
-        }
-      } catch (parseErr) {
-        debugPrint('❌ Response parse error: $parseErr');
-        message = 'Error: ${parseErr.toString()}';
-        isSuccess = false;
-      }
-
-      if (isSuccess) {
-        Navigator.pop(context); // Close bottom sheet
-        // Play success sound
-        _EditPositionDialogState._playSuccessSound();
-        AppSnackbar.success(message);
+      if (result['status'] == true) {
+        Get.back(); // Tutup bottom sheet
+        AppSnackbar.success(result['message']);
       } else {
-        AppSnackbar.error(message);
+        AppSnackbar.error(result['message']);
       }
     } catch (e) {
-      debugPrint('❌ Modify position error: $e');
-      AppSnackbar.error(
-        'Failed to update position. Please try again.',
-      );
+      AppSnackbar.error(e.toString().replaceAll('Exception: ', ''));
     } finally {
       isSaving.value = false;
     }
   }
-}
 
-/// ATM-style input formatter for price fields in pending order edit dialog
-class _PriceShiftInputFormatter extends TextInputFormatter {
-  final int decimalPlaces;
-  final int integerDigits;
+  Future<Map<String, dynamic>> modifyPendingOrder({
+    required String loginID,
+    required String ticketID,
+    required String price,
+    required String stoploss,
+    required String takeprofit,
+  }) async {
+    try {
+      String? token = AccountCredentialsService.getTokenByLogin(loginID);
+      if (token == null || token.isEmpty) {
+        await AccountCredentialsService.fetchAndCache(forceRefresh: true);
+        token = AccountCredentialsService.getTokenByLogin(loginID);
+      }
 
-  _PriceShiftInputFormatter({
-    required this.decimalPlaces,
-    this.integerDigits = 4,
-  });
+      if (token == null) throw Exception('Gagal mendapatkan token MT5');
 
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    String digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-
-    if (digits.isEmpty) {
-      final zero = _formatNumber(0);
-      return TextEditingValue(
-        text: zero,
-        selection: TextSelection.collapsed(offset: zero.length),
+      // Memanggil internal helper dengan parameter lengkap
+      var result = await _callOrderModifySafe(
+        token: token,
+        ticket: ticketID,
+        price: price,
+        stoploss: stoploss,
+        takeprofit: takeprofit,
       );
+
+      // Logika Refresh Token jika INVALID_TOKEN
+      if (result['code'] == 'INVALID_TOKEN') {
+        final newToken = await AccountCredentialsService.refreshTokenForLogin(loginID);
+        result = await _callOrderModifySafe(
+          token: newToken!,
+          ticket: ticketID,
+          price: price,
+          stoploss: stoploss,
+          takeprofit: takeprofit,
+        );
+      }
+
+      if (result.containsKey('code') && result['code'] != null) {
+        throw Exception(result['message'] ?? 'Gagal mengubah order');
+      }
+
+      return {
+        'status': true,
+        'message': 'Order berhasil diperbarui',
+        'data': result,
+      };
+    } catch (e) {
+      throw Exception(e.toString());
     }
-
-    int value = int.tryParse(digits) ?? 0;
-    String formatted = _formatNumber(value);
-
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
   }
 
-  String _formatNumber(int value) {
-    double divisor = 1.0;
-    for (int i = 0; i < decimalPlaces; i++) {
-      divisor *= 10;
-    }
-    double result = value / divisor;
+  /// Internal: call OrderModifySafe API
+  Future<Map<String, dynamic>> _callOrderModifySafe({
+    required String token,
+    required String ticket,
+    String? stoploss,
+    String? takeprofit,
+    String? price,
+  }) async {
+    final uri = Uri.parse(
+      '$_mt5ApiBase/OrderModifySafe'
+      '?id=$token'
+      '&ticket=$ticket'
+      '&stoploss=$stoploss'
+      '&takeprofit=$takeprofit'
+      '&price=$price',
+    );
 
-    String formatted = result.toStringAsFixed(decimalPlaces);
-    List<String> parts = formatted.split('.');
-    String intPart = parts[0].padLeft(integerDigits, '0');
-    String decPart = parts.length > 1 ? parts[1] : ''.padRight(decimalPlaces, '0');
+    Get.log('📦 [MODIFY] Request URL: $uri');
 
-    return '$intPart.$decPart';
+    final response = await http.get(
+      uri,
+      headers: {'accept': 'text/json'},
+    ).timeout(
+      const Duration(seconds: 30),
+      onTimeout: () => throw Exception('Close order timeout, coba lagi.'),
+    );
+
+    Get.log('📥 [CLOSE] Response status: ${response.statusCode}');
+    Get.log('📥 [CLOSE] Response body: ${response.body}');
+
+    return jsonDecode(response.body) as Map<String, dynamic>;
   }
 }

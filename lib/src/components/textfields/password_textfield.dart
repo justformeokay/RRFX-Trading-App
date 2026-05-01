@@ -94,7 +94,7 @@ class _PasswordTextFieldState extends State<PasswordTextField> {
           decoration: InputDecoration(
             hintText: widget.hintText,
             hintStyle: GoogleFonts.inter(
-              color: CustomColor.textThemeDarkSoftColor.withOpacity(0.3),
+              color: CustomColor.textThemeDarkSoftColor,
               fontSize: 12,
             ),
 

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/service/account_credentials_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ChartExecutionController extends GetxController {
   String get _mt5ApiBase => GlobalVariable.tradingApiBase;
@@ -106,18 +107,19 @@ class ChartExecutionController extends GetxController {
       String token = await _getToken(login);
       final lotVolume = volume ?? lot.value;
       final apiOperation = _mapOperation(operation);
+      print("INI TOKEN YANG DIPAKAI EKSEKUSI ORDER: $token");
 
       while (retryCount <= maxRetries) {
-        print('📤 ===== EXECUTING ORDER ${retryCount > 0 ? "(Retry $retryCount)" : ""} =====');
-        print('   Operation: $apiOperation');
-        print('   Symbol: $symbol');
-        print('   Volume: $lotVolume lot');
-        print('   Price: $price');
-        print('   SL: ${sl ?? 0}');
-        print('   TP: ${tp ?? 0}');
-        print('   Token: ${token.substring(0, 8)}...');
-        print('   Comment: $comment'); // comment jika API Base nya adalah mt5-api-v3.techcrm.online = techcrm, jika mt5api.gaintactics.com = gaintactics, jika lainnya = unknown
-        print('==============================');
+        // print('📤 ===== EXECUTING ORDER ${retryCount > 0 ? "(Retry $retryCount)" : ""} =====');
+        // print('   Operation: $apiOperation');
+        // print('   Symbol: $symbol');
+        // print('   Volume: $lotVolume lot');
+        // print('   Price: $price');
+        // print('   SL: ${sl ?? 0}');
+        // print('   TP: ${tp ?? 0}');
+        // print('   Token: ${token.substring(0, 8)}...');
+        // print('   Comment: $comment'); // comment jika API Base nya adalah mt5-api-v3.techcrm.online = techcrm, jika mt5api.gaintactics.com = gaintactics, jika lainnya = unknown
+        // print('==============================');
 
         final uri = Uri.parse(
           '$_mt5ApiBase/OrderSend'
@@ -143,24 +145,24 @@ class ChartExecutionController extends GetxController {
           onTimeout: () => throw Exception('Order timeout, coba lagi.'),
         );
 
-        print('📥 Response status: ${response.statusCode}');
-        print('📥 Response body: ${response.body}');
+        // print('📥 Response status: ${response.statusCode}');
+        // print('📥 Response body: ${response.body}');
 
         final data = jsonDecode(response.body) as Map<String, dynamic>;
 
         // Check for INVALID_TOKEN — refresh token and retry once
         if (data.containsKey('code') && data['code'] == 'INVALID_TOKEN' && !tokenRefreshed) {
-          print('🔄 INVALID_TOKEN detected — refreshing token for login $login...');
+          // print('🔄 INVALID_TOKEN detected — refreshing token for login $login...');
           executionMessage.value = 'Token expired, reconnecting...';
           tokenRefreshed = true;
 
           final newToken = await AccountCredentialsService.refreshTokenForLogin(login);
           if (newToken != null && newToken.isNotEmpty) {
             token = newToken;
-            print('✅ Token refreshed successfully, retrying order...');
+            // print('✅ Token refreshed successfully, retrying order...');
             continue; // Retry with new token (don't increment retryCount)
           } else {
-            print('❌ Token refresh failed');
+            // print('❌ Token refresh failed');
             throw Exception('Koneksi MT5 gagal. Silakan login ulang.');
           }
         }
@@ -169,7 +171,7 @@ class ChartExecutionController extends GetxController {
         if (data.containsKey('code') && data['code'] != null) {
           final errorMsg = data['message'] ?? 'Order gagal dieksekusi';
           executionMessage.value = errorMsg;
-          print('❌ Order failed (error code ${data['code']}): $errorMsg');
+          // print('❌ Order failed (error code ${data['code']}): $errorMsg');
           throw Exception(errorMsg);
         }
 
@@ -179,13 +181,13 @@ class ChartExecutionController extends GetxController {
           if (ticket == null || ticket == 0) {
             final errorMsg = data['message'] ?? 'Order gagal: tidak mendapat ticket.';
             executionMessage.value = errorMsg;
-            print('❌ Order failed: ticket is $ticket');
+            // print('❌ Order failed: ticket is $ticket');
             throw Exception(errorMsg);
           }
 
           // Success — response has valid "ticket" field
           executionMessage.value = 'Order berhasil dieksekusi!';
-          print('✅ Order executed successfully! Ticket: ${data['ticket']}');
+          // print('✅ Order executed successfully! Ticket: ${data['ticket']}');
 
           return {
             'status': true,
@@ -195,36 +197,76 @@ class ChartExecutionController extends GetxController {
         } else {
           final errorMsg = data['message'] ?? 'Order gagal (HTTP ${response.statusCode})';
 
-          // Retry on "No prices" type errors
+          // Retry HANYA untuk "no prices" — kondisi transient MT5 saat quote belum tersedia.
+          // Delay 500ms (cukup untuk 3-5 quote cycles). Error lain: fail fast tanpa retry.
           if (errorMsg.toString().toLowerCase().contains('no prices') && retryCount < maxRetries) {
             retryCount++;
-            print('⏳ "No prices" error - waiting 1.5s before retry ($retryCount/$maxRetries)...');
+            // print('⏳ "No prices" - retry $retryCount/$maxRetries dalam 500ms...');
             executionMessage.value = 'Menunggu harga... (percobaan $retryCount)';
-            await Future.delayed(const Duration(milliseconds: 1500));
+            await Future.delayed(const Duration(milliseconds: 500));
             continue;
           }
 
-          if (retryCount < maxRetries) {
-            retryCount++;
-            print('⏳ HTTP ${response.statusCode} - waiting 1.5s before retry ($retryCount/$maxRetries)...');
-            await Future.delayed(const Duration(milliseconds: 1500));
-            continue;
-          }
-
+          // HTTP error lain (margin, symbol, market closed, dll) — fail fast, tidak retry.
           executionMessage.value = errorMsg;
-          print('❌ Order failed: $errorMsg');
+          // print('❌ Order failed: $errorMsg');
           throw Exception(errorMsg);
         }
       }
 
       throw Exception('Order gagal setelah $maxRetries percobaan');
     } catch (e, stackTrace) {
-      print('❌ ===== ORDER EXECUTION ERROR =====');
-      print('   Error Type: ${e.runtimeType}');
-      print('   Error Message: $e');
-      print('   Stack Trace: $stackTrace');
-      print('====================================');
+      // print('❌ ===== ORDER EXECUTION ERROR =====');
+      // print('   Error Type: ${e.runtimeType}');
+      // print('   Error Message: $e');
+      // print('   Stack Trace: $stackTrace');
+      // print('====================================');
       rethrow;
+    }
+  }
+
+  Future<String> getTokenForWSS() async {
+    print('🔐 Requesting token for WSS connection...');
+    String username = GlobalVariable.wsUsername;
+    String password = GlobalVariable.wsPassword;
+    final body = jsonEncode({
+      'username': username,
+      'password': password,
+    });
+    try{
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final uri = Uri.parse('${GlobalVariable.mainURLForWSSTokenGetAPI}${GlobalVariable.loginTokenWSSEndpoint}');
+      final response = await http.post(uri, headers: {'Content-Type': 'application/json'}, body: body).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw Exception('Token request timeout'),
+      );
+      print('📥 Token response status: ${response.statusCode}');
+      print(response.body);
+      if (response.statusCode == 200) {
+        // Pastikan response body di-parse ke Map
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        
+        // Ambil token
+        final String? token = data['token'];
+
+        if (token != null && token.isNotEmpty) {
+          // Simpan ke SharedPreferences
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('wsToken', token);
+          
+          GlobalVariable.tokenWSS = token;
+          return token;
+        } else {
+          // Jika token null, cetak isi data untuk debug
+          print("Struktur data salah: $data");
+          throw 'Field token tidak ditemukan atau kosong';
+        }
+      } else {
+        throw 'HTTP Error: ${response.statusCode}';
+      }
+    } catch(e) {
+      print('❌ Error getting token for WSS: $e');
+      throw Exception('Gagal mendapatkan token untuk koneksi WebSocket.');
     }
   }
 

@@ -155,77 +155,77 @@ class ChartControllers extends GetxController {
 
   void initConnection() {
     isLoading.value = true;
-    debugPrint('🔄 [ChartController] initConnection() dimulai');
+    // debugPrint('🔄 [ChartController] initConnection() dimulai');
     
     if (!accountController.hasAccounts) {
-      debugPrint('❌ [ChartController] Tidak ada akun tersedia');
+      // debugPrint('❌ [ChartController] Tidak ada akun tersedia');
       isLoading.value = false;
       return;
     }
     
     final selectedAcc = accountController.selectedAccount.value;
     if (selectedAcc == null) {
-      debugPrint('❌ [ChartController] selectedAccount null');
+      // debugPrint('❌ [ChartController] selectedAccount null');
       isLoading.value = false;
       return;
     }
     
-    debugPrint('🔗 [ChartController] Mencoba connectToMeta5 untuk login: ${selectedAcc.login}, type: ${selectedAcc.type}');
+    // debugPrint('🔗 [ChartController] Mencoba connectToMeta5 untuk login: ${selectedAcc.login}, type: ${selectedAcc.type}');
     
     accountController.connectToMeta5(loginNumber: selectedAcc.login).then((success) {
-      debugPrint('📡 [ChartController] connectToMeta5 callback - success: $success');
+      // debugPrint('📡 [ChartController] connectToMeta5 callback - success: $success');
       
       if (success) {
-        debugPrint('✅ [ChartController] Koneksi berhasil untuk akun ${selectedAcc.type} ${selectedAcc.login}');
+        // debugPrint('✅ [ChartController] Koneksi berhasil untuk akun ${selectedAcc.type} ${selectedAcc.login}');
         AppSnackbar.success(
           'Akun ${selectedAcc.type} ${selectedAcc.login} berhasil dihubungkan ke MetaTrader 5.',
         );
       } else {
-        debugPrint('⚠️ [ChartController] Koneksi gagal untuk akun ${selectedAcc.login}, menampilkan password popup');
+        // debugPrint('⚠️ [ChartController] Koneksi gagal untuk akun ${selectedAcc.login}, menampilkan password popup');
         final ctx = Get.context;
         if (ctx == null) {
-          debugPrint('❌ [ChartController] Get.context is null, cannot show password popup');
+          // debugPrint('❌ [ChartController] Get.context is null, cannot show password popup');
           return;
         }
         showMt5PasswordPopup(
           ctx,
           login: selectedAcc.login ?? "",
           onSubmit: (password) async {
-            debugPrint('🔑 [ChartController] Password popup submit - mencoba changePasswordMeta5 untuk login: ${selectedAcc.login}');
+            // debugPrint('🔑 [ChartController] Password popup submit - mencoba changePasswordMeta5 untuk login: ${selectedAcc.login}');
             
             final changeSuccess = await accountController.changePasswordMeta5(
               loginNumber: selectedAcc.login,
               newPassword: password,
             );
             
-            debugPrint('🔄 [ChartController] changePasswordMeta5 result: $changeSuccess');
+            // debugPrint('🔄 [ChartController] changePasswordMeta5 result: $changeSuccess');
 
             if (changeSuccess) {
-              debugPrint('✅ [ChartController] Password berhasil diubah untuk ${selectedAcc.login}');
+              // debugPrint('✅ [ChartController] Password berhasil diubah untuk ${selectedAcc.login}');
               AppSnackbar.success(
                 "Password akun ${selectedAcc.login} berhasil diubah.",
               );
 
-              debugPrint('🔗 [ChartController] Mencoba reconnect setelah password change untuk login: ${selectedAcc.login}');
+              // debugPrint('🔗 [ChartController] Mencoba reconnect setelah password change untuk login: ${selectedAcc.login}');
               final reconnect = await accountController.connectToMeta5(
                 loginNumber: selectedAcc.login,
               );
               
-              debugPrint('📡 [ChartController] Reconnect result setelah password change: $reconnect');
+              // debugPrint('📡 [ChartController] Reconnect result setelah password change: $reconnect');
 
               if (reconnect) {
-                debugPrint('✅ [ChartController] Reconnect berhasil untuk ${selectedAcc.login}');
+                // debugPrint('✅ [ChartController] Reconnect berhasil untuk ${selectedAcc.login}');
                 AppSnackbar.success(
                   "Akun ${selectedAcc.login} berhasil dihubungkan ke MetaTrader 5.",
                 );
               } else {
-                debugPrint('❌ [ChartController] Reconnect gagal setelah password change untuk ${selectedAcc.login}');
+                // debugPrint('❌ [ChartController] Reconnect gagal setelah password change untuk ${selectedAcc.login}');
                 AppSnackbar.error(
                   "Gagal menghubungkan akun ${selectedAcc.login} setelah mengubah password.",
                 );
               }
             } else {
-              debugPrint('❌ [ChartController] Password change gagal untuk ${selectedAcc.login}');
+              // debugPrint('❌ [ChartController] Password change gagal untuk ${selectedAcc.login}');
               AppSnackbar.error(
                 "Gagal mengubah password akun ${selectedAcc.login}.",
               );
@@ -234,7 +234,7 @@ class ChartControllers extends GetxController {
         );
       }
     }).catchError((error) {
-      debugPrint('❌ [ChartController] Error di connectToMeta5: $error');
+      // debugPrint('❌ [ChartController] Error di connectToMeta5: $error');
     });
     
     isLoading.value = false;

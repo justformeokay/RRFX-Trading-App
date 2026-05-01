@@ -32,7 +32,7 @@ class AccountCredentialsService {
     final user = _pendingInvalidAccount;
     if (user != null) {
       _pendingInvalidAccount = null;
-      Get.log('🔒 [AcctCreds] Pending INVALID_ACCOUNT → arahkan ke ubah password untuk $user');
+      // Get.log('🔒 [AcctCreds] Pending INVALID_ACCOUNT → arahkan ke ubah password untuk $user');
       Get.to(() => ChangeMT5PasswordPage(mt5AccountId: user));
     }
   }
@@ -51,17 +51,17 @@ class AccountCredentialsService {
         if (result['status'] == true && result['response'] != null) {
           final List<dynamic> accounts = result['response'];
           await _saveToStorage(accounts);
-          Get.log('✅ [AcctCreds] ${accounts.length} akun berhasil disimpan.');
+          // Get.log('✅ [AcctCreds] ${accounts.length} akun berhasil disimpan.');
         } else {
-          Get.log('⚠️ [AcctCreds] API response tidak sukses: ${result['message']}');
+          // Get.log('⚠️ [AcctCreds] API response tidak sukses: ${result['message']}');
           return false;
         }
       } catch (e) {
-        Get.log('❌ [AcctCreds] Error fetching credentials: $e');
+        // Get.log('❌ [AcctCreds] Error fetching credentials: $e');
         return false;
       }
     } else {
-      Get.log('✅ [AcctCreds] Data sudah ada di lokal, skip fetch.');
+      // Get.log('✅ [AcctCreds] Data sudah ada di lokal, skip fetch.');
     }
 
     // Step 2: Fetch token MT5 untuk setiap akun yang belum punya token
@@ -80,14 +80,14 @@ class AccountCredentialsService {
     for (int i = 0; i < credentials.length; i++) {
       final cred = credentials[i];
       if (cred['token'] != null && cred['token'].toString().isNotEmpty) {
-        Get.log('✅ [AcctCreds] Token sudah ada untuk login ${cred['login']}, skip.');
+        // Get.log('✅ [AcctCreds] Token sudah ada untuk login ${cred['login']}, skip.');
         continue;
       }
       final login = cred['login']?.toString() ?? '';
       final password = cred['password']?.toString() ?? '';
       final server = cred['server']?.toString() ?? '';
       if (login.isEmpty || password.isEmpty || server.isEmpty) {
-        Get.log('⚠️ [AcctCreds] Data tidak lengkap untuk index $i, skip.');
+        // Get.log('⚠️ [AcctCreds] Data tidak lengkap untuk index $i, skip.');
         continue;
       }
       pending.add(i);
@@ -95,7 +95,7 @@ class AccountCredentialsService {
 
     if (pending.isEmpty) return;
 
-    Get.log('🔗 [AcctCreds] Fetching ${pending.length} token(s) in parallel...');
+    // Get.log('🔗 [AcctCreds] Fetching ${pending.length} token(s) in parallel...');
 
     // Fetch semua token secara parallel
     final results = await Future.wait(
@@ -110,7 +110,7 @@ class AccountCredentialsService {
           );
           return MapEntry(i, token);
         } catch (e) {
-          Get.log('❌ [AcctCreds] Gagal fetch token untuk login $login: $e');
+          // Get.log('❌ [AcctCreds] Gagal fetch token untuk login $login: $e');
           return MapEntry(i, null);
         }
       }),
@@ -124,14 +124,14 @@ class AccountCredentialsService {
       if (token != null && token.isNotEmpty) {
         credentials[entry.key]['token'] = token;
         updated = true;
-        Get.log('✅ [AcctCreds] Token berhasil didapat untuk login ${credentials[entry.key]['login']}');
+        // Get.log('✅ [AcctCreds] Token berhasil didapat untuk login ${credentials[entry.key]['login']}');
       }
     }
 
     // Simpan ulang jika ada update
     if (updated) {
       await _saveToStorage(credentials);
-      Get.log('💾 [AcctCreds] Data dengan token baru berhasil disimpan.');
+      // Get.log('💾 [AcctCreds] Data dengan token baru berhasil disimpan.');
     }
   }
 
@@ -141,6 +141,7 @@ class AccountCredentialsService {
     required String password,
     required String host,
   }) async {
+    print("🔗 [AcctCreds] Connecting MT5 for user $user at host $host...");
     final uri = Uri.parse(
       '$_mt5ConnectBase/Connect'
       '?user=$user'
@@ -152,7 +153,7 @@ class AccountCredentialsService {
       '&reconnectOnSymbolUpdate=false',
     );
 
-    Get.log('🔗 [AcctCreds] Connecting MT5 for user $user...');
+    // Get.log('🔗 [AcctCreds] Connecting MT5 for user $user...');
 
     final response = await http.get(
       uri,
@@ -168,16 +169,17 @@ class AccountCredentialsService {
       if (token.isNotEmpty && !token.startsWith('{')) {
         return token;
       }
-      Get.log('⚠️ [AcctCreds] Response bukan token valid: $token');
+      // Get.log('⚠️ [AcctCreds] Response bukan token valid: $token');
       return null;
     } else {
-      Get.log('❌ [AcctCreds] MT5 Connect error ${response.statusCode}: ${response.body}');
+      // Get.log('❌ [AcctCreds] MT5 Connect error ${response.statusCode}: ${response.body}');
 
       // Parse error response untuk cek INVALID_ACCOUNT
       try {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
+        print("🔍 [AcctCreds] MT5 Connect error response: $data");
         if (data['code'] == 'INVALID_ACCOUNT') {
-          Get.log('🔒 [AcctCreds] INVALID_ACCOUNT untuk user $user → simpan flag');
+          // Get.log('🔒 [AcctCreds] INVALID_ACCOUNT untuk user $user → simpan flag');
           _pendingInvalidAccount = user;
         }
       } catch (_) {}
@@ -209,7 +211,7 @@ class AccountCredentialsService {
       _memoryCache = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
       return _memoryCache;
     } catch (e) {
-      Get.log('❌ [AcctCreds] Error reading cached credentials: $e');
+      // Get.log('❌ [AcctCreds] Error reading cached credentials: $e');
       return null;
     }
   }
@@ -235,7 +237,7 @@ class AccountCredentialsService {
 
     final index = credentials.indexWhere((c) => c['login']?.toString() == login);
     if (index == -1) {
-      Get.log('⚠️ [AcctCreds] Login $login tidak ditemukan di cache.');
+      // Get.log('⚠️ [AcctCreds] Login $login tidak ditemukan di cache.');
       return null;
     }
 
@@ -244,12 +246,12 @@ class AccountCredentialsService {
     final server = cred['server']?.toString() ?? '';
 
     if (password.isEmpty || server.isEmpty) {
-      Get.log('⚠️ [AcctCreds] Data tidak lengkap untuk login $login.');
+      // Get.log('⚠️ [AcctCreds] Data tidak lengkap untuk login $login.');
       return null;
     }
 
     try {
-      Get.log('🔄 [AcctCreds] Refreshing token untuk login $login...');
+      // Get.log('🔄 [AcctCreds] Refreshing token untuk login $login...');
       final token = await _connectMT5(
         user: login,
         password: password,
@@ -259,14 +261,14 @@ class AccountCredentialsService {
       if (token != null && token.isNotEmpty) {
         credentials[index]['token'] = token;
         await _saveToStorage(credentials);
-        Get.log('✅ [AcctCreds] Token baru berhasil disimpan untuk login $login');
+        // Get.log('✅ [AcctCreds] Token baru berhasil disimpan untuk login $login');
         return token;
       } else {
-        Get.log('⚠️ [AcctCreds] Token kosong saat refresh untuk login $login');
+        // Get.log('⚠️ [AcctCreds] Token kosong saat refresh untuk login $login');
         return null;
       }
     } catch (e) {
-      Get.log('❌ [AcctCreds] Gagal refresh token untuk login $login: $e');
+      // Get.log('❌ [AcctCreds] Gagal refresh token untuk login $login: $e');
       return null;
     }
   }
@@ -286,9 +288,9 @@ class AccountCredentialsService {
     try {
       _memoryCache = null;
       await _storage.remove(_storageKey);
-      Get.log('✅ [AcctCreds] Cache cleared.');
+      // Get.log('✅ [AcctCreds] Cache cleared.');
     } catch (e) {
-      Get.log('❌ [AcctCreds] Error clearing cache: $e');
+      // Get.log('❌ [AcctCreds] Error clearing cache: $e');
     }
   }
 }

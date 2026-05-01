@@ -12,7 +12,6 @@ import 'package:rrfx/src/controllers/authentication.dart';
 import 'package:rrfx/src/controllers/home.dart';
 import 'package:rrfx/src/helpers/formatters/masking_email.dart';
 import 'package:rrfx/src/views/authentications/success_verified_otp.dart';
-import 'package:rrfx/src/views/authentications/verification_account_page.dart';
 
 class OtpPage extends StatefulWidget {
   const OtpPage({super.key});
@@ -259,13 +258,12 @@ class _OtpPageState extends State<OtpPage> {
                           Get.log("💬 [OTP_PAGE] Response message: ${authController.responseMessage.value}");
                           
                           if (result) {
-                            Get.log("✅ [OTP_PAGE] Resend OTP SUCCESS - Starting countdown for 5 minutes");
-                            // Start countdown for 5 minutes (300 seconds)
-                            authController.startOtpCountdown(300);
+                            Get.log("✅ [OTP_PAGE] Resend OTP SUCCESS - Starting countdown from server value");
+                            // Use countdown value from server (otp_expired_in), already set in controller
                             _showModernResendSuccessDialog(
                               context,
                               otpChannel.value,
-                              300, // Pass 300 seconds (5 minutes)
+                              60,
                             );
                           } else {
                             Get.log("❌ [OTP_PAGE] Resend OTP FAILED - Showing error");

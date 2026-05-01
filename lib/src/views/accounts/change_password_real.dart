@@ -53,6 +53,7 @@ class _ChangePasswordRealState extends State<ChangePasswordReal> {
               LabelTextField.labelName(
                 label: LanguageGlobalVar.PASSWORD.tr,
                 child: PasswordTextField(
+                  labelText: LanguageGlobalVar.PASSWORD.tr,
                   fieldName: LanguageGlobalVar.PASSWORD.tr,
                   controller: passwordTextField,
                   hintText: LanguageGlobalVar.CREATE_PASSWORD.tr,
@@ -61,6 +62,7 @@ class _ChangePasswordRealState extends State<ChangePasswordReal> {
               LabelTextField.labelName(
                 label: LanguageGlobalVar.REPEAT_PASSWORD.tr,
                 child: PasswordTextField(
+                  labelText: LanguageGlobalVar.REPEAT_PASSWORD.tr,
                   fieldName: LanguageGlobalVar.REPEAT_PASSWORD.tr,
                   controller: confirmPasswordTextField,
                   hintText: LanguageGlobalVar.REPEAT_PASSWORD.tr,

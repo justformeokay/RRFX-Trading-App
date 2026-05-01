@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
 import 'package:rrfx/src/components/colors/default.dart';
+import 'package:rrfx/src/controllers/websocket_controller.dart';
 import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/controllers/trading.dart';
 import 'package:rrfx/src/service/account_credentials_service.dart';
@@ -36,6 +37,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
   final chartController = Get.put(ChartControllers());
   final accountController = Get.put(AccountController());
   final symbolsController = Get.put(SymbolsController());
+  final tickController = Get.put(TickWSSController());
   late final TradingController _tradingController;
   Worker? _chartRefreshWorker;
 
@@ -93,6 +95,10 @@ class _WebViewChartViewState extends State<WebViewChartView> {
 
     // Pre-fetch MT5 token agar sudah siap saat user klik Buy/Sell
     AccountCredentialsService.fetchAndCache();
+
+    Future.delayed(const Duration(seconds: 1), () {
+      _initConnectWSSTick();
+    });
   }
 
   Future<void> _checkConnection() async {
@@ -164,6 +170,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
     }
 
     final baseUrl = 'https://webchart-rrfx.techcrm.dev/?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
+    // final baseUrl = 'https://tv-rrfx-web.techcrm.dev/?theme=$theme&login=$login&server=${server.toLowerCase()}&symbol=$symbol';
 
     // Untuk iOS, tambahkan parameter khusus (skip untuk web)
     if (!kIsWeb && Platform.isIOS) {
@@ -201,6 +208,19 @@ class _WebViewChartViewState extends State<WebViewChartView> {
       ),
       isScrollControlled: true,
       ignoreSafeArea: false,
+    );
+  }
+
+  _initConnectWSSTick() async {
+    String? login = widget.login ?? accountController.selectedAccount.value?.login; 
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('wsToken'); // Ambil token WSS dari SharedPreferences
+    String? server = widget.serverType ?? accountController.selectedAccount.value?.type?.toLowerCase() ?? 'demo';
+    print("🔑 Connecting to Tick WSS with login: $login, server: $server, token: ${token != null ? '***' : 'null'}");
+    tickController.connectToSocket(
+      login: login ?? '',
+      token: token ?? '', 
+      server: server,
     );
   }
 
@@ -252,394 +272,387 @@ class _WebViewChartViewState extends State<WebViewChartView> {
       child: SafeArea(
         child: Scaffold(
           backgroundColor: isDark ? Colors.black : Colors.white,
-        //   appBar: AppBar(
-        //     leadingWidth: size.width * 0.25,
-        //     title: Text(
-        //       _currentSymbol ?? 'XAUUSD.db',
-        //     style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-        //   ),
-        //   leading: Center(
-        //     child: Text(
-        //       '${widget.serverType ?? accountController.selectedAccount.value?.type ?? 'Demo'} • ${widget.login ?? accountController.selectedAccount.value?.login ?? ''}',
-        //       style: GoogleFonts.inter(
-        //         fontSize: 12,
-        //         color: isDark ? Colors.grey.shade300 : Colors.grey.shade600,
-        //       ),
-        //     ),
-        //   ),
-        //   actions: [
-        //     IconButton(
-        //       icon: Icon(Iconsax.chart_square_outline),
-        //       onPressed: _showMarketSelector,
-        //       color: CustomColor.secondaryColor,
-        //       tooltip: 'Pilih Market',
-        //     ),
-        //     IconButton(
-        //       icon: Icon(Iconsax.refresh_outline),
-        //       onPressed: _reloadChart,
-        //       color: CustomColor.secondaryColor,
-        //       tooltip: 'Reload Chart',
-        //     ),
-        //     // IconButton(
-        //     //   icon: Icon(Iconsax.home_outline),
-        //     //   onPressed: () => webViewController?.loadUrl(
-        //     //     urlRequest: URLRequest(url: WebUri(_buildChartUrl())),
-        //     //   ),
-        //     //   tooltip: 'Reset to Home',
-        //     // ),
-        //   ],
-        // ),
-        body: Stack(
+        body: Column(
           children: [
-            // WebView
-            InAppWebView(
-              initialUrlRequest: URLRequest(url: WebUri(_buildChartUrl())),
-              initialSettings: InAppWebViewSettings(
-                // Pengaturan umum
-                useShouldOverrideUrlLoading: false, // Ubah ke false untuk iOS
-                mediaPlaybackRequiresUserGesture: false,
-                javaScriptEnabled: true,
-                javaScriptCanOpenWindowsAutomatically: false,
-                supportZoom: false,
-                builtInZoomControls: false,
-                displayZoomControls: false,
-                transparentBackground: false,
-                clearCache: false,
-                cacheEnabled: true,
-                minimumFontSize: 1,
-                textZoom: 100,
-        
-                // Untuk iOS, gunakan setting yang lebih simple (skip untuk web)
-                useHybridComposition:
-                    kIsWeb ? false : !Platform.isIOS, // Disable hybrid composition di iOS
-                // Pengaturan khusus iOS
-                allowsInlineMediaPlayback: true,
-                allowsPictureInPictureMediaPlayback: false, // Disable PiP
-                iframeAllow: "camera; microphone; geolocation",
-                iframeAllowFullscreen: true,
-        
-                // Pengaturan untuk kompatibilitas HTTP di iOS
-                allowUniversalAccessFromFileURLs: true,
-                allowFileAccessFromFileURLs: true,
-        
-                // Network dan security settings untuk iOS
-                mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
-                resourceCustomSchemes: [],
-              ),
-              onWebViewCreated: (controller) {
-                webViewController = controller;
-                // Untuk Web, langsung set loading false setelah delay karena onLoadStop tidak reliable
-                if (kIsWeb) {
-                  Future.delayed(const Duration(seconds: 2), () {
-                    if (mounted && isLoading) {
-                      setState(() {
-                        isLoading = false;
-                        loadingProgress = 1.0;
-                      });
-                    }
-                  });
-                }
-                
-                // JavaScript handler untuk menerima price updates dari chart (skip untuk web)
-                if (!kIsWeb) {
-                  controller.addJavaScriptHandler(
-                    handlerName: 'priceUpdate',
-                    callback: (args) {
-                      if (args.isNotEmpty && mounted) {
-                        try {
-                          final price = double.tryParse(args[0].toString());
-                          if (price != null) {
-                            currentPrice.value = price;
-                          }
-                        } catch (e) {
-                          Get.log('⚠️ Error parsing price: $e');
-                        }
-                      }
-                    },
-                  );
-                }
-        
-                // Set timeout untuk iOS (skip untuk web)
-                // Jika setelah 15s masih loading, timeout timer akan handle
-                // (dihapus auto-reload 10s karena conflict dengan timeout timer)
-              },
-              onLoadStart: (controller, url) {
-                _startTimeoutTimer();
-                if (mounted) {
-                  setState(() {
-                    isLoading = true;
-                    hasError = false;
-                    _isTimeout = false;
-                    errorMessage = null;
-                    loadingProgress = 0;
-                  });
-                }
-              },
-              onLoadStop: (controller, url) async {
-                _cancelTimeoutTimer();
-        
-                // Inject JavaScript untuk ambil price dari chart (skip untuk web)
-                if (!kIsWeb) {
-                  try {
-                    await controller.evaluateJavascript(
-                      source: """
-                    (function() {
-                      
-                      // Suppress console logs untuk "Creating stop loss line"
-                      const originalLog = console.log;
-                      console.log = function(...args) {
-                        const message = args.join(' ');
-                        if (!message.includes('Creating stop loss line')) {
-                          originalLog.apply(console, args);
-                        }
-                      };
-                      
-                      // Function untuk kirim price ke Flutter
-                      function sendPriceToFlutter(price) {
-                        try {
-                          if (window.flutter_inappwebview) {
-                            window.flutter_inappwebview.callHandler('priceUpdate', price.toString());
-                          }
-                        } catch (e) {
-                          console.error('❌ Error sending price:', e);
-                        }
-                      }
-                      
-                      // Coba ambil price dari berbagai sumber
-                      function findAndSendPrice() {
-                        // Method 1: Cari di price element yang umum
-                        const priceSelectors = [
-                          '.current-price',
-                          '.price-value',
-                          '#current-price',
-                          '[data-price]',
-                          '.last-price'
-                        ];
-                        
-                        for (let selector of priceSelectors) {
-                          const element = document.querySelector(selector);
-                          if (element) {
-                            const priceText = element.innerText || element.textContent;
-                            const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
-                            if (!isNaN(price) && price > 0) {
-                              sendPriceToFlutter(price);
-                              return true;
-                            }
-                        }
-                      }
-                      
-                      // Method 2: Cari text yang match pattern harga (e.g., 4919.17)
-                      const bodyText = document.body.innerText;
-                      const pricePattern = /\b\d{4}\.\d{2}\b/g;
-                      const matches = bodyText.match(pricePattern);
-                      if (matches && matches.length > 0) {
-                        const price = parseFloat(matches[0]);
-                        if (!isNaN(price)) {
-                          sendPriceToFlutter(price);
-                          return true;
-                        }
-                      }
-                      
-                      return false;
-                    }
-                    
-                    // Set basic viewport
-                    var viewport = document.querySelector('meta[name=viewport]');
-                    if (!viewport) {
-                      var meta = document.createElement('meta');
-                      meta.name = 'viewport';
-                      meta.content = 'width=device-width, initial-scale=1.0, user-scalable=no';
-                      document.head.appendChild(meta);
-                    }
-                    
-                    // Coba ambil price immediately
-                    setTimeout(function() {
-                      findAndSendPrice();
-                    }, 500);
-                    
-                    // Poll price setiap 2 detik
-                    setInterval(function() {
-                      findAndSendPrice();
-                    }, 2000);
-                    
-                    // Expose function globally untuk manual trigger
-                    window.sendPriceToFlutter = sendPriceToFlutter;
-                    
-                    console.log('✅ Price tracker initialized');
-                  })();
-                  """,
-                    );
-                  } catch (e) {
-                    Get.log('⚠️ JavaScript injection error: $e');
-                  }
-                }
-        
-                // Update loading state untuk semua platform (mobile dan web)
-                if (mounted) {
-                  setState(() {
-                    isLoading = false;
-                  });
-                }
-              },
-              onProgressChanged: (controller, progress) {
-                if (mounted) {
-                  setState(() {
-                    loadingProgress = progress / 100;
-                  });
-                }
-              },
-              onLoadError: (controller, url, code, message) {
-                Get.log('❌ Load error: $code - $message');
-                if (mounted) {
-                  setState(() {
-                    isLoading = false;
-                    hasError = true;
-                    errorMessage = null;
-                  });
-                }
-              },
-              onLoadHttpError: (controller, url, statusCode, description) {
-                Get.log('❌ HTTP error: $statusCode - $description');
-                if (mounted) {
-                  setState(() {
-                    isLoading = false;
-                    hasError = true;
-                    errorMessage = null;
-                  });
-                }
-              },
-              onConsoleMessage: (controller, consoleMessage) {},
-            ),
-
-            Positioned(
-              top: 10,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.grey.shade900 : Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(20.0),
-                      bottomLeft: Radius.circular(20.0),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+            // Info Bar — Market Selector + Login (tidak overlay WebView)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey.shade900 : Colors.white,
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                    width: 1,
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Market Button
-                      GestureDetector(
-                        onTap: _showMarketSelector,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: CustomColor.secondaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(30.0),
-                            border: Border.all(
-                              color: CustomColor.secondaryColor.withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  // Market Button
+                  GestureDetector(
+                    onTap: _showMarketSelector,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: CustomColor.secondaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20.0),
+                        border: Border.all(
+                          color: CustomColor.secondaryColor.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Iconsax.chart_square_outline,
+                            size: 16,
+                            color: CustomColor.secondaryColor,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _currentSymbol ?? 'XAUUSD.db',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: CustomColor.secondaryColor,
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Iconsax.chart_square_outline,
-                                size: 16,
-                                color: CustomColor.secondaryColor,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                _currentSymbol ?? 'XAUUSD.db',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: CustomColor.secondaryColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      
-                      // Divider
-                      Container(
-                        width: 1,
-                        height: 20,
-                        color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                      ),
-                      const SizedBox(width: 12),
-                      
-                      // Login Info
-                      Text(
-                        '${widget.serverType ?? (accountController.selectedAccount.value?.type?.capitalize ?? 'Demo')} • ${widget.login ?? accountController.selectedAccount.value?.login ?? ''}',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+
+                  // Divider
+                  Container(
+                    width: 1,
+                    height: 20,
+                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Login Info
+                  Expanded(
+                    child: Text(
+                      '${widget.serverType ?? (accountController.selectedAccount.value?.type?.capitalize ?? 'Demo')} • ${widget.login ?? accountController.selectedAccount.value?.login ?? ''}',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  // Obx(() {
+                  //   final tick = tickController.ticks[_currentSymbol];
+                  //   final displayColor = tickController.tickColors[_currentSymbol] ?? Colors.grey;
+                  //   if (tick == null) {
+                  //     return const SizedBox(
+                  //       height: 12,
+                  //       width: 12,
+                  //       child: CircularProgressIndicator(strokeWidth: 2),
+                  //     );
+                  //   }
+                  //   return Column(
+                  //     children: [
+                  //       Text(
+                  //         "bid ${tick.bid.toStringAsFixed(tick.digits)}",
+                  //         style: GoogleFonts.inter(
+                  //           fontSize: 12,
+                  //           fontWeight: FontWeight.w700,
+                  //           color: displayColor, // Warna berubah dinamis sesuai logika di controller
+                  //         ),
+                  //       ),
+                  //       Text(
+                  //         "ask ${tick.ask.toStringAsFixed(tick.digits)}",
+                  //         style: GoogleFonts.inter(
+                  //           fontSize: 12,
+                  //           fontWeight: FontWeight.w700,
+                  //           color: displayColor, // Warna berubah dinamis sesuai logika di controller
+                  //         ),
+                  //       ),
+                  //     ],
+                  //   );
+                  // })
+                ],
               ),
             ),
-        
-            // Loading Progress Bar
-            if (isLoading && !hasError)
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: LinearProgressIndicator(
-                  value: loadingProgress,
-                  backgroundColor: Colors.transparent,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    CustomColor.secondaryColor,
+
+            // WebView + Overlays (loading, error)
+            Expanded(
+              child: Stack(
+                children: [
+                  // WebView
+                  InAppWebView(
+                    initialUrlRequest: URLRequest(url: WebUri(_buildChartUrl())),
+                    initialSettings: InAppWebViewSettings(
+                      // Pengaturan umum
+                      useShouldOverrideUrlLoading: false, // Ubah ke false untuk iOS
+                      mediaPlaybackRequiresUserGesture: false,
+                      javaScriptEnabled: true,
+                      javaScriptCanOpenWindowsAutomatically: false,
+                      supportZoom: false,
+                      builtInZoomControls: false,
+                      displayZoomControls: false,
+                      transparentBackground: false,
+                      clearCache: false,
+                      cacheEnabled: true,
+                      minimumFontSize: 1,
+                      textZoom: 100,
+              
+                      // Untuk iOS, gunakan setting yang lebih simple (skip untuk web)
+                      useHybridComposition:
+                          kIsWeb ? false : !Platform.isIOS, // Disable hybrid composition di iOS
+                      // Pengaturan khusus iOS
+                      allowsInlineMediaPlayback: true,
+                      allowsPictureInPictureMediaPlayback: false, // Disable PiP
+                      iframeAllow: "camera; microphone; geolocation",
+                      iframeAllowFullscreen: true,
+              
+                      // Pengaturan untuk kompatibilitas HTTP di iOS
+                      allowUniversalAccessFromFileURLs: true,
+                      allowFileAccessFromFileURLs: true,
+              
+                      // Network dan security settings untuk iOS
+                      mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+                      resourceCustomSchemes: [],
+                    ),
+                    onWebViewCreated: (controller) {
+                      webViewController = controller;
+                      // Untuk Web, langsung set loading false setelah delay karena onLoadStop tidak reliable
+                      if (kIsWeb) {
+                        Future.delayed(const Duration(seconds: 2), () {
+                          if (mounted && isLoading) {
+                            setState(() {
+                              isLoading = false;
+                              loadingProgress = 1.0;
+                            });
+                          }
+                        });
+                      }
+                      
+                      // JavaScript handler untuk menerima price updates dari chart (skip untuk web)
+                      if (!kIsWeb) {
+                        controller.addJavaScriptHandler(
+                          handlerName: 'priceUpdate',
+                          callback: (args) {
+                            if (args.isNotEmpty && mounted) {
+                              try {
+                                final price = double.tryParse(args[0].toString());
+                                if (price != null) {
+                                  currentPrice.value = price;
+                                }
+                              } catch (e) {
+                                Get.log('⚠️ Error parsing price: $e');
+                              }
+                            }
+                          },
+                        );
+                      }
+              
+                      // Set timeout untuk iOS (skip untuk web)
+                      // Jika setelah 15s masih loading, timeout timer akan handle
+                      // (dihapus auto-reload 10s karena conflict dengan timeout timer)
+                    },
+                    onLoadStart: (controller, url) {
+                      _startTimeoutTimer();
+                      if (mounted) {
+                        setState(() {
+                          isLoading = true;
+                          hasError = false;
+                          _isTimeout = false;
+                          errorMessage = null;
+                          loadingProgress = 0;
+                        });
+                      }
+                    },
+                    onLoadStop: (controller, url) async {
+                      _cancelTimeoutTimer();
+              
+                      // Inject JavaScript untuk ambil price dari chart (skip untuk web)
+                      if (!kIsWeb) {
+                        try {
+                          await controller.evaluateJavascript(
+                            source: """
+                          (function() {
+                            
+                            // Suppress console logs untuk "Creating stop loss line"
+                            const originalLog = console.log;
+                            console.log = function(...args) {
+                              const message = args.join(' ');
+                              if (!message.includes('Creating stop loss line')) {
+                                originalLog.apply(console, args);
+                              }
+                            };
+                            
+                            // Function untuk kirim price ke Flutter
+                            function sendPriceToFlutter(price) {
+                              try {
+                                if (window.flutter_inappwebview) {
+                                  window.flutter_inappwebview.callHandler('priceUpdate', price.toString());
+                                }
+                              } catch (e) {
+                                console.error('❌ Error sending price:', e);
+                              }
+                            }
+                            
+                            // Coba ambil price dari berbagai sumber
+                            function findAndSendPrice() {
+                              // Method 1: Cari di price element yang umum
+                              const priceSelectors = [
+                                '.current-price',
+                                '.price-value',
+                                '#current-price',
+                                '[data-price]',
+                                '.last-price'
+                              ];
+                              
+                              for (let selector of priceSelectors) {
+                                const element = document.querySelector(selector);
+                                if (element) {
+                                  const priceText = element.innerText || element.textContent;
+                                  const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
+                                  if (!isNaN(price) && price > 0) {
+                                    sendPriceToFlutter(price);
+                                    return true;
+                                  }
+                              }
+                            }
+                            
+                            // Method 2: Cari text yang match pattern harga (e.g., 4919.17)
+                            const bodyText = document.body.innerText;
+                            const pricePattern = /\b\d{4}\.\d{2}\b/g;
+                            const matches = bodyText.match(pricePattern);
+                            if (matches && matches.length > 0) {
+                              const price = parseFloat(matches[0]);
+                              if (!isNaN(price)) {
+                                sendPriceToFlutter(price);
+                                return true;
+                              }
+                            }
+                            
+                            return false;
+                          }
+                          
+                          // Set basic viewport
+                          var viewport = document.querySelector('meta[name=viewport]');
+                          if (!viewport) {
+                            var meta = document.createElement('meta');
+                            meta.name = 'viewport';
+                            meta.content = 'width=device-width, initial-scale=1.0, user-scalable=no';
+                            document.head.appendChild(meta);
+                          }
+                          
+                          // Coba ambil price immediately
+                          setTimeout(function() {
+                            findAndSendPrice();
+                          }, 500);
+                          
+                          // Poll price setiap 2 detik
+                          setInterval(function() {
+                            findAndSendPrice();
+                          }, 2000);
+                          
+                          // Expose function globally untuk manual trigger
+                          window.sendPriceToFlutter = sendPriceToFlutter;
+                          
+                          // console.log('✅ Price tracker initialized');
+                        })();
+                        """,
+                          );
+                        } catch (e) {
+                          Get.log('⚠️ JavaScript injection error: $e');
+                        }
+                      }
+              
+                      // Update loading state untuk semua platform (mobile dan web)
+                      if (mounted) {
+                        setState(() {
+                          isLoading = false;
+                        });
+                      }
+                    },
+                    onProgressChanged: (controller, progress) {
+                      if (mounted) {
+                        setState(() {
+                          loadingProgress = progress / 100;
+                        });
+                      }
+                    },
+                    onLoadError: (controller, url, code, message) {
+                      Get.log('❌ Load error: $code - $message');
+                      if (mounted) {
+                        setState(() {
+                          isLoading = false;
+                          hasError = true;
+                          errorMessage = null;
+                        });
+                      }
+                    },
+                    onLoadHttpError: (controller, url, statusCode, description) {
+                      Get.log('❌ HTTP error: $statusCode - $description');
+                      if (mounted) {
+                        setState(() {
+                          isLoading = false;
+                          hasError = true;
+                          errorMessage = null;
+                        });
+                      }
+                    },
+                    onConsoleMessage: (controller, consoleMessage) {},
                   ),
-                ),
-              ),
-        
-            // Loading Overlay (only on initial load, skip for web after brief moment)
-            if (isLoading && loadingProgress < 0.5 && !kIsWeb)
-              Container(
-                color: isDark ? Colors.black87 : Colors.white70,
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(
-                        color: CustomColor.secondaryColor,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Memuat Chart...',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: isDark ? Colors.white70 : Colors.black87,
+              
+                  // Loading Progress Bar
+                  if (isLoading && !hasError)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: LinearProgressIndicator(
+                        value: loadingProgress,
+                        backgroundColor: Colors.transparent,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          CustomColor.secondaryColor,
                         ),
                       ),
-                    ],
-                  ),
-                ),
+                    ),
+              
+                  // Loading Overlay (only on initial load, skip for web after brief moment)
+                  if (isLoading && loadingProgress < 0.5 && !kIsWeb)
+                    Container(
+                      color: isDark ? Colors.black87 : Colors.white70,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              color: CustomColor.secondaryColor,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Memuat Chart...',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: isDark ? Colors.white70 : Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+              
+                  // Error State
+                  if (hasError)
+                    Container(
+                      color: isDark ? Colors.black : Colors.white,
+                      child: Center(
+                        child: _buildErrorStateContent(theme, isDark),
+                      ),
+                    ),
+                ],
               ),
-        
-            // Error State
-            if (hasError)
-              Container(
-                color: isDark ? Colors.black : Colors.white,
-                child: Center(
-                  child: _buildErrorStateContent(theme, isDark),
-                ),
-              ),
+            ),
           ],
         ),
         
@@ -650,25 +663,33 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Trading panel
-                    ChartTradingPanel(
-                      login:
-                          widget.login ??
-                          accountController.selectedAccount.value?.login ??
-                          '',
-                      symbol:
-                          _currentSymbol ??
-                          widget.symbol ??
-                          chartController.selectedMarket.value,
-                      currentPrice: currentPrice,
-                      onOrderExecuted: (operation) {
-                        print('✅ Order executed callback: $operation');
-                        print('🔄 Symbol: ${_currentSymbol ?? widget.symbol}');
-                        print(
-                          '👤 Login: ${widget.login ?? accountController.selectedAccount.value?.login}',
+                    Obx(
+                      () {
+                        final tick = tickController.ticks[_currentSymbol];
+                        if (tick != null) {
+                          currentPrice.value = tick.bid; // Update current price dari tick
+                        }
+                        return ChartTradingPanel(
+                          bid: tick?.bid.toStringAsFixed(tick.digits) ?? '0.00',
+                          ask: tick?.ask.toStringAsFixed(tick.digits) ?? '0.00',
+                          login:
+                              widget.login ??
+                              accountController.selectedAccount.value?.login ??
+                              '',
+                          symbol:
+                              _currentSymbol ??
+                              widget.symbol ??
+                              chartController.selectedMarket.value,
+                          currentPrice: currentPrice,
+                          onOrderExecuted: (operation) {
+                            // print('✅ Order executed callback: $operation');
+                            // print('🔄 Symbol: ${_currentSymbol ?? widget.symbol}');
+                            // print('👤 Login: ${widget.login ?? accountController.selectedAccount.value?.login}');
+                            // Bisa tambahkan refresh chart atau logic lainnya jika diperlukan
+                            // _reloadChart(); // Uncomment jika ingin auto-reload chart setelah order
+                          },
                         );
-                        // Bisa tambahkan refresh chart atau logic lainnya jika diperlukan
-                        // _reloadChart(); // Uncomment jika ingin auto-reload chart setelah order
-                      },
+                      }
                     ),
                   ],
                 )

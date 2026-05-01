@@ -107,14 +107,14 @@ class AuthService extends GetxController {
       final fullUrl = "${GlobalVariable.mainURL}/$url";
       
       // DEBUG: Log request details
-      Get.log('═══════════════════════════════════════════');
-      Get.log('🚀 POST REQUEST');
-      Get.log('═══════════════════════════════════════════');
-      Get.log('URL: $fullUrl');
-      Get.log('Headers: $headers');
-      Get.log('Body: $body');
-      Get.log('Access Token (first 20 chars): ${accessToken?.substring(0, min(20, accessToken?.length ?? 0)) ?? 'NULL'}...');
-      Get.log('───────────────────────────────────────────');
+      // Get.log('═══════════════════════════════════════════');
+      // Get.log('🚀 POST REQUEST');
+      // Get.log('═══════════════════════════════════════════');
+      // Get.log('URL: $fullUrl');
+      // Get.log('Headers: $headers');
+      // Get.log('Body: $body');
+      // Get.log('Access Token (first 20 chars): ${accessToken?.substring(0, min(20, accessToken?.length ?? 0)) ?? 'NULL'}...');
+      // Get.log('───────────────────────────────────────────');
 
       // Add 20 second timeout to prevent indefinite hanging
       http.Response response;
@@ -141,18 +141,18 @@ class AuthService extends GetxController {
       }
 
       // DEBUG: Log response details
-      Get.log('📥 POST RESPONSE');
-      Get.log('Status Code: ${response.statusCode}');
-      Get.log('Response Headers: ${response.headers}');
-      Get.log('Body Preview: ${response.body.length > 200 ? response.body.substring(0, 200) + '...' : response.body}');
-      Get.log('Body Length: ${response.body.length} characters');
-      Get.log('Body is empty: ${response.body.isEmpty}');
-      Get.log('═══════════════════════════════════════════');
+      // Get.log('📥 POST RESPONSE');
+      // Get.log('Status Code: ${response.statusCode}');
+      // Get.log('Response Headers: ${response.headers}');
+      // Get.log('Body Preview: ${response.body.length > 200 ? response.body.substring(0, 200) + '...' : response.body}');
+      // Get.log('Body Length: ${response.body.length} characters');
+      // Get.log('Body is empty: ${response.body.isEmpty}');
+      // Get.log('═══════════════════════════════════════════');
 
       // Handle server errors (5xx)
       if (response.statusCode >= 500) {
-        print("❌ Server Error ${response.statusCode}");
-        print("Response preview: ${response.body.substring(0, min(500, response.body.length))}");
+        // print("❌ Server Error ${response.statusCode}");
+        // print("Response preview: ${response.body.substring(0, min(500, response.body.length))}");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -163,8 +163,8 @@ class AuthService extends GetxController {
 
       // Check if response is HTML (error page) instead of JSON
       if (response.body.trimLeft().startsWith('<') || response.body.contains('<br')) {
-        print("❌ Server returned HTML instead of JSON (possibly error page)");
-        print("Response preview: ${response.body.substring(0, min(500, response.body.length))}");
+        // print("❌ Server returned HTML instead of JSON (possibly error page)");
+        // print("Response preview: ${response.body.substring(0, min(500, response.body.length))}");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -175,7 +175,7 @@ class AuthService extends GetxController {
 
       // Handle empty response
       if (response.body.isEmpty) {
-        print("❌ Server returned empty response body");
+        // print("❌ Server returned empty response body");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -200,7 +200,7 @@ class AuthService extends GetxController {
 
         // Check if token refresh failed
         if (refreshTokenResponse['status'] != true) {
-          print("❌ Token refresh failed: ${refreshTokenResponse['message']}");
+          // print("❌ Token refresh failed: ${refreshTokenResponse['message']}");
           // Clear tokens and return error
           SharedPreferences preferences = await SharedPreferences.getInstance();
           await preferences.remove('accessToken');
@@ -218,7 +218,7 @@ class AuthService extends GetxController {
           accessToken = refreshTokenResponse['response']['access_token'];
           refreshToken = refreshTokenResponse['response']['refresh_token'];
         } catch (e) {
-          print("❌ Error extracting tokens from refresh response: $e");
+          // print("❌ Error extracting tokens from refresh response: $e");
           return {
             'status': false,
             'statusCode': 500,
@@ -240,9 +240,9 @@ class AuthService extends GetxController {
       try {
         respBody = jsonDecode(response.body);
       } catch (e) {
-        print("❌ JSON Decode Error in POST: ${e.toString()}");
-        print("Response preview: ${response.body.substring(0, min(500, response.body.length))}");
-        print("Response Status Code: ${response.statusCode}");
+        // print("❌ JSON Decode Error in POST: ${e.toString()}");
+        // print("Response preview: ${response.body.substring(0, min(500, response.body.length))}");
+        // print("Response Status Code: ${response.statusCode}");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -252,11 +252,11 @@ class AuthService extends GetxController {
       }
       
       // DEBUG: Log parsed response
-      Get.log('✅ PARSED RESPONSE DATA');
-      Get.log('Status: ${respBody['status']}');
-      Get.log('Message: ${respBody['message']}');
-      Get.log('Response Data: ${respBody['response']}');
-      Get.log('═══════════════════════════════════════════');
+      // Get.log('✅ PARSED RESPONSE DATA');
+      // Get.log('Status: ${respBody['status']}');
+      // Get.log('Message: ${respBody['message']}');
+      // Get.log('Response Data: ${respBody['response']}');
+      // Get.log('═══════════════════════════════════════════');
       
       return {
         'status': respBody['status'],
@@ -267,9 +267,9 @@ class AuthService extends GetxController {
 
     } catch (e, stackTrace) {
       final message = e.toString();
-      Get.log('❌ ERROR DI AUTHSERVICE.POST: $message');
-      Get.log('Stack trace: $stackTrace');
-      print('❌ AuthService POST Error: $message');
+      // Get.log('❌ ERROR DI AUTHSERVICE.POST: $message');
+      // Get.log('Stack trace: $stackTrace');
+      // print('❌ AuthService POST Error: $message');
       
       // Detect specific error types for better error messaging
       String errorMessage = 'Request failed: $message';
@@ -324,7 +324,7 @@ class AuthService extends GetxController {
       // 🔹 Ambil response string
       String responseString = await response.stream.bytesToString();
 
-      Get.log("Multipart Response: $responseString");
+      // Get.log("Multipart Response: $responseString");
 
       // 🔹 Safe JSON decode
       Map<String, dynamic>? respBody;
@@ -355,7 +355,7 @@ class AuthService extends GetxController {
 
         // Check if token refresh failed
         if (refreshTokenResponse['status'] != true) {
-          print("❌ Token refresh failed in multipart: ${refreshTokenResponse['message']}");
+          // print("❌ Token refresh failed in multipart: ${refreshTokenResponse['message']}");
           SharedPreferences preferences = await SharedPreferences.getInstance();
           await preferences.remove('accessToken');
           await preferences.remove('refreshToken');
@@ -372,7 +372,7 @@ class AuthService extends GetxController {
           accessToken = refreshTokenResponse['response']['access_token'];
           refreshToken = refreshTokenResponse['response']['refresh_token'];
         } catch (e) {
-          print("❌ Error extracting tokens from refresh response in multipart: $e");
+          // print("❌ Error extracting tokens from refresh response in multipart: $e");
           return {
             'status': false,
             'statusCode': 500,
@@ -400,8 +400,8 @@ class AuthService extends GetxController {
         'response': respBody != null ? respBody['response'] ?? {} : responseString,
       };
     } catch (e, stackTrace) {
-      print("❌ Multipart error: $e");
-      print("Stack trace: $stackTrace");
+      // print("❌ Multipart error: $e");
+      // print("Stack trace: $stackTrace");
       return {
         'status': false,
         'statusCode': 0,
@@ -419,15 +419,6 @@ class AuthService extends GetxController {
       headers['Authorization'] = 'Bearer $accessToken';
 
       final fullUrl = "${GlobalVariable.mainURL}/$url";
-      Get.log('═══════════════════════════════════════════');
-      Get.log('🚀 GET REQUEST');
-      Get.log('═══════════════════════════════════════════');
-      Get.log('URL: $fullUrl');
-      Get.log('Headers: $headers');
-      Get.log('Access Token (first 20 chars): ${accessToken?.substring(0, min(20, accessToken?.length ?? 0)) ?? 'NULL'}...');
-      Get.log('───────────────────────────────────────────');
-
-      // Add 20 second timeout to prevent indefinite hanging
       http.Response response;
       try {
         response = await http.get(
@@ -449,17 +440,9 @@ class AuthService extends GetxController {
         }
         rethrow;
       }
-
-      Get.log('📥 GET RESPONSE');
-      Get.log('Status Code: ${response.statusCode}');
-      Get.log('Response Headers: ${response.headers}');
-      Get.log('Body Preview: ${response.body.length > 200 ? response.body.substring(0, 200) + '...' : response.body}');
-      Get.log('═══════════════════════════════════════════');
-
-      // Handle server errors (5xx) dan Cloudflare errors
       if (response.statusCode >= 500) {
-        print("❌ Server Error ${response.statusCode}");
-        print("Response Body: ${response.body.substring(0, min(500, response.body.length))}");
+        // print("❌ Server Error ${response.statusCode}");
+        // print("Response Body: ${response.body.substring(0, min(500, response.body.length))}");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -472,7 +455,7 @@ class AuthService extends GetxController {
       if (response.statusCode == 524 || response.statusCode == 520 || 
           response.statusCode == 521 || response.statusCode == 522 || 
           response.statusCode == 523) {
-        print("❌ Cloudflare Error ${response.statusCode}");
+        // print("❌ Cloudflare Error ${response.statusCode}");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -483,8 +466,8 @@ class AuthService extends GetxController {
 
       // Cek apakah response adalah HTML (error page) bukan JSON
       if (response.body.trimLeft().startsWith('<') || response.body.contains('<br')) {
-        print("❌ Server returned HTML instead of JSON (possibly error page)");
-        print("Response Body: ${response.body.substring(0, min(500, response.body.length))}");
+        // print("❌ Server returned HTML instead of JSON (possibly error page)");
+        // print("Response Body: ${response.body.substring(0, min(500, response.body.length))}");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -495,7 +478,7 @@ class AuthService extends GetxController {
 
       // Handle empty response
       if (response.body.isEmpty) {
-        print("❌ Server returned empty response body");
+        // print("❌ Server returned empty response body");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -520,7 +503,7 @@ class AuthService extends GetxController {
 
         // Check if token refresh failed
         if (refreshTokenResponse['status'] != true) {
-          print("❌ Token refresh failed in GET: ${refreshTokenResponse['message']}");
+          // print("❌ Token refresh failed in GET: ${refreshTokenResponse['message']}");
           SharedPreferences preferences = await SharedPreferences.getInstance();
           await preferences.remove('accessToken');
           await preferences.remove('refreshToken');
@@ -537,7 +520,7 @@ class AuthService extends GetxController {
           accessToken = refreshTokenResponse['response']['access_token'];
           refreshToken = refreshTokenResponse['response']['refresh_token'];
         } catch (e) {
-          print("❌ Error extracting tokens from refresh response in GET: $e");
+          // print("❌ Error extracting tokens from refresh response in GET: $e");
           return {
             'status': false,
             'statusCode': 500,
@@ -559,9 +542,9 @@ class AuthService extends GetxController {
       try {
         respBody = jsonDecode(response.body);
       } catch (e) {
-        print("❌ JSON Decode Error: ${e.toString()}");
-        print("Response Body: ${response.body.substring(0, min(500, response.body.length))}");
-        print("Response Status Code: ${response.statusCode}");
+        // print("❌ JSON Decode Error: ${e.toString()}");
+        // print("Response Body: ${response.body.substring(0, min(500, response.body.length))}");
+        // print("Response Status Code: ${response.statusCode}");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -578,8 +561,8 @@ class AuthService extends GetxController {
       };
     } catch (e, stackTrace) {
       final message = e.toString();
-      print("❌ Exception di AuthService.get(): URL=$url, Error=$message");
-      print("Stack trace: $stackTrace");
+      // print("❌ Exception di AuthService.get(): URL=$url, Error=$message");
+      // print("Stack trace: $stackTrace");
       if (message.contains("Session Expired") || message.contains("invalid_token")) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('accessToken');
@@ -619,26 +602,26 @@ class AuthService extends GetxController {
       await init();
       headers['Authorization'] = 'Bearer $accessToken';
 
-      Get.log('═══════════════════════════════════════════');
-      Get.log('🚀 GET CUSTOM URL REQUEST');
-      Get.log('═══════════════════════════════════════════');
-      Get.log('URL: $url');
-      Get.log('Headers: $headers');
-      Get.log('───────────────────────────────────────────');
+      // Get.log('═══════════════════════════════════════════');
+      // Get.log('🚀 GET CUSTOM URL REQUEST');
+      // Get.log('═══════════════════════════════════════════');
+      // Get.log('URL: $url');
+      // Get.log('Headers: $headers');
+      // Get.log('───────────────────────────────────────────');
 
       http.Response response = await http.get(
         Uri.parse(url),
         headers: headers,
       );
 
-      Get.log('📥 GET CUSTOM URL RESPONSE');
-      Get.log('Status Code: ${response.statusCode}');
-      Get.log('Body Preview: ${response.body.length > 200 ? response.body.substring(0, 200) + '...' : response.body}');
-      Get.log('═══════════════════════════════════════════');
+      // Get.log('📥 GET CUSTOM URL RESPONSE');
+      // Get.log('Status Code: ${response.statusCode}');
+      // Get.log('Body Preview: ${response.body.length > 200 ? response.body.substring(0, 200) + '...' : response.body}');
+      // Get.log('═══════════════════════════════════════════');
 
       // Check if response is HTML (error page)
       if (response.body.trimLeft().startsWith('<') || response.body.contains('<br')) {
-        print("❌ Server returned HTML instead of JSON");
+        // print("❌ Server returned HTML instead of JSON");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -673,7 +656,7 @@ class AuthService extends GetxController {
 
         // Check if token refresh failed
         if (refreshTokenResponse['status'] != true) {
-          print("❌ Token refresh failed in getCustomURL: ${refreshTokenResponse['message']}");
+          // print("❌ Token refresh failed in getCustomURL: ${refreshTokenResponse['message']}");
           SharedPreferences preferences = await SharedPreferences.getInstance();
           await preferences.remove('accessToken');
           await preferences.remove('refreshToken');
@@ -690,7 +673,7 @@ class AuthService extends GetxController {
           accessToken = refreshTokenResponse['response']['access_token'];
           refreshToken = refreshTokenResponse['response']['refresh_token'];
         } catch (e) {
-          print("❌ Error extracting tokens from refresh response in getCustomURL: $e");
+          // print("❌ Error extracting tokens from refresh response in getCustomURL: $e");
           return {
             'status': false,
             'statusCode': 500,
@@ -712,7 +695,7 @@ class AuthService extends GetxController {
       try {
         respBody = jsonDecode(response.body);
       } catch (e) {
-        print("❌ JSON Decode Error in getCustomURL: ${e.toString()}");
+        // print("❌ JSON Decode Error in getCustomURL: ${e.toString()}");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -728,8 +711,8 @@ class AuthService extends GetxController {
         'response': respBody['response'],
       };
     } catch (e, stackTrace) {
-      print("❌ Exception di AuthService.getCustomURL(): URL=$url, Error=${e.toString()}");
-      print("Stack trace: $stackTrace");
+      // print("❌ Exception di AuthService.getCustomURL(): URL=$url, Error=${e.toString()}");
+      // print("Stack trace: $stackTrace");
       return {
         'status': false,
         'statusCode': 500,
@@ -741,12 +724,12 @@ class AuthService extends GetxController {
 
   Future<Map<String, dynamic>> refreshingToken({required Map<String, dynamic> body}) async {
     try {
-      Get.log('═══════════════════════════════════════════');
-      Get.log('🔄 REFRESHING TOKEN REQUEST');
-      Get.log('═══════════════════════════════════════════');
-      Get.log('URL: ${GlobalVariable.mainURL}/auth/refresh');
-      Get.log('Body: $body');
-      Get.log('───────────────────────────────────────────');
+      // Get.log('═══════════════════════════════════════════');
+      // Get.log('🔄 REFRESHING TOKEN REQUEST');
+      // Get.log('═══════════════════════════════════════════');
+      // Get.log('URL: ${GlobalVariable.mainURL}/auth/refresh');
+      // Get.log('Body: $body');
+      // Get.log('───────────────────────────────────────────');
 
       http.Response response = await http.post(
         Uri.parse("${GlobalVariable.mainURL}/auth/refresh"),
@@ -757,14 +740,14 @@ class AuthService extends GetxController {
         onTimeout: () => throw Exception('Token refresh timeout'),
       );
 
-      Get.log('📥 REFRESH TOKEN RESPONSE');
-      Get.log('Status Code: ${response.statusCode}');
-      Get.log('Body Preview: ${response.body.length > 200 ? response.body.substring(0, 200) + '...' : response.body}');
-      Get.log('═══════════════════════════════════════════');
+      // Get.log('📥 REFRESH TOKEN RESPONSE');
+      // Get.log('Status Code: ${response.statusCode}');
+      // Get.log('Body Preview: ${response.body.length > 200 ? response.body.substring(0, 200) + '...' : response.body}');
+      // Get.log('═══════════════════════════════════════════');
 
       // Handle server errors (5xx)
       if (response.statusCode >= 500) {
-        print("❌ Server Error ${response.statusCode} when refreshing token");
+        // print("❌ Server Error ${response.statusCode} when refreshing token");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -775,8 +758,8 @@ class AuthService extends GetxController {
 
       // Check if response is HTML (error page)
       if (response.body.trimLeft().startsWith('<') || response.body.contains('<br')) {
-        print("❌ Server returned HTML instead of JSON when refreshing token");
-        print("Response preview: ${response.body.substring(0, min(500, response.body.length))}");
+        // print("❌ Server returned HTML instead of JSON when refreshing token");
+        // print("Response preview: ${response.body.substring(0, min(500, response.body.length))}");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -787,7 +770,7 @@ class AuthService extends GetxController {
 
       // Handle empty response
       if (response.body.isEmpty) {
-        print("❌ Empty response when refreshing token");
+        // print("❌ Empty response when refreshing token");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -801,8 +784,8 @@ class AuthService extends GetxController {
       try {
         refreshTokenResponse = jsonDecode(response.body);
       } catch (e) {
-        print("❌ JSON Decode Error in refreshingToken: ${e.toString()}");
-        print("Response: ${response.body.substring(0, min(500, response.body.length))}");
+        // print("❌ JSON Decode Error in refreshingToken: ${e.toString()}");
+        // print("Response: ${response.body.substring(0, min(500, response.body.length))}");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -813,7 +796,7 @@ class AuthService extends GetxController {
 
       // Validate response structure
       if (refreshTokenResponse['status'] != true) {
-        print("❌ Token refresh failed: status is not true");
+        // print("❌ Token refresh failed: status is not true");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -823,7 +806,7 @@ class AuthService extends GetxController {
       }
 
       if (!refreshTokenResponse.containsKey("response")) {
-        print("❌ Token refresh response missing 'response' key");
+        // print("❌ Token refresh response missing 'response' key");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -834,7 +817,7 @@ class AuthService extends GetxController {
 
       if (!refreshTokenResponse['response'].containsKey("access_token") || 
           !refreshTokenResponse['response'].containsKey("refresh_token")) {
-        print("❌ Token refresh response missing access_token or refresh_token");
+        // print("❌ Token refresh response missing access_token or refresh_token");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -850,8 +833,8 @@ class AuthService extends GetxController {
       return refreshTokenResponse;
 
     } catch (e, stackTrace) {
-      print("❌ Exception in refreshingToken(): ${e.toString()}");
-      print("Stack trace: $stackTrace");
+      // print("❌ Exception in refreshingToken(): ${e.toString()}");
+      // print("Stack trace: $stackTrace");
       
       // Return graceful error response instead of throwing
       return {
@@ -873,10 +856,10 @@ class AuthService extends GetxController {
       await init();
       headers['Authorization'] = 'Bearer $accessToken';
 
-      print("=== Withdrawal Multipart Request ===");
-      print("URL: ${GlobalVariable.mainURL}/$url");
-      print("Headers: $headers");
-      print("Body: $body");
+      // print("=== Withdrawal Multipart Request ===");
+      // print("URL: ${GlobalVariable.mainURL}/$url");
+      // print("Headers: $headers");
+      // print("Body: $body");
 
       // Buat request multipart
       http.MultipartRequest request =
@@ -890,16 +873,16 @@ class AuthService extends GetxController {
       // Ambil response string
       String responseString = await response.stream.bytesToString();
 
-      print("=== Withdrawal Multipart Response ===");
-      print("Status Code: ${response.statusCode}");
-      print("Response String: $responseString");
+      // print("=== Withdrawal Multipart Response ===");
+      // print("Status Code: ${response.statusCode}");
+      // print("Response String: $responseString");
 
       // Parse JSON
       Map<String, dynamic> respBody;
       try {
         respBody = jsonDecode(responseString);
       } catch (e) {
-        print("JSON Decode Error: $e");
+        // print("JSON Decode Error: $e");
         return {
           'status': false,
           'statusCode': response.statusCode,
@@ -925,7 +908,7 @@ class AuthService extends GetxController {
 
         // Check if token refresh failed
         if (refreshTokenResponse['status'] != true) {
-          print("❌ Token refresh failed in withdrawalMultipart: ${refreshTokenResponse['message']}");
+          // print("❌ Token refresh failed in withdrawalMultipart: ${refreshTokenResponse['message']}");
           SharedPreferences preferences = await SharedPreferences.getInstance();
           await preferences.remove('accessToken');
           await preferences.remove('refreshToken');
@@ -942,7 +925,7 @@ class AuthService extends GetxController {
           accessToken = refreshTokenResponse['response']['access_token'];
           refreshToken = refreshTokenResponse['response']['refresh_token'];
         } catch (e) {
-          print("❌ Error extracting tokens from refresh response in withdrawalMultipart: $e");
+          // print("❌ Error extracting tokens from refresh response in withdrawalMultipart: $e");
           return {
             'status': false,
             'statusCode': 500,
@@ -966,8 +949,8 @@ class AuthService extends GetxController {
         'response': respBody['response'] ?? [],
       };
     } catch (e, stackTrace) {
-      print("❌ Withdrawal Multipart Exception: $e");
-      print("Stack trace: $stackTrace");
+      // print("❌ Withdrawal Multipart Exception: $e");
+      // print("Stack trace: $stackTrace");
       return {
         'status': false,
         'statusCode': 0,

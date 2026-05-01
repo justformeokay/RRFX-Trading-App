@@ -20,7 +20,10 @@ class GlobalVariable {
   // Main API URL options
   static const mainUrlProduction = 'https://api-rrfx.techcrm.net';
   static const mainUrlStaging = 'https://api-rrfx.luxurymatrix.com';
-  
+  static const mainURLForWSSTokenGetAPI = 'https://restapi-rrfx.techcrm.dev'; // URL tetap untuk request token WS, tidak terpengaruh switch mainURL
+  static const mainURLForWebSocketTick = 'wss://socket-rrfx.techcrm.dev'; // URL tetap untuk WebSocket tick, tidak terpengaruh switch mainURL
+  static String? tokenWSS;
+
   // Trading API URL options
   static const tradingUrlProduction = 'https://mt5-api-v3.techcrm.online';
   static const tradingUrlStaging = 'https://mt5api.gaintactics.com';
@@ -29,6 +32,14 @@ class GlobalVariable {
   static const _keyMainUrl = 'dev_main_url';
   static const _keyTradingUrl = 'dev_trading_url';
 
+  // End points
+  static const loginTokenWSSEndpoint = '/auth/login';
+  static const endpointWssTick = '/ws/tick';
+
+  // Username Password untuk API get token WSS
+  static const String wsUsername = 'admin';
+  static const String wsPassword = 'admin123';
+
   /// Runtime-switchable mainURL. 
   /// Default: production (api-rrfx.techcrm.net)
   static String get mainURL {
@@ -36,7 +47,8 @@ class GlobalVariable {
       return kDebugMode ? "$_devProxy/api" : "$_prodDomain/api";
     }
     final stored = GetStorage().read<String>(_keyMainUrl);
-    return stored ?? mainUrlProduction;
+    // return stored ?? mainUrlProduction;
+    return stored ?? mainUrlStaging;
   }
 
   /// Runtime-switchable Trading API URL.

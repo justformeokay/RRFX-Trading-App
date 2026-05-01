@@ -12,12 +12,12 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 
 Future<void> firebaseBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  print('📨 Background message received: ${message.notification?.title}');
+  // print('📨 Background message received: ${message.notification?.title}');
 }
 
 Future<void> initFirebaseAndNotifications() async {
   if (kIsWeb) {
-    print('⚠️ Firebase not configured for web, skipping initialization.');
+    // print('⚠️ Firebase not configured for web, skipping initialization.');
     return;
   }
 
@@ -26,7 +26,7 @@ Future<void> initFirebaseAndNotifications() async {
 
     FirebaseMessaging.onBackgroundMessage(firebaseBackgroundHandler);
   } catch (e) {
-    print('❌ Firebase initialization error: $e');
+    // print('❌ Firebase initialization error: $e');
     return;
   }
 
@@ -49,20 +49,20 @@ Future<void> initFirebaseAndNotifications() async {
   FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('deviceID', newToken);
-    print('🔄 FCM Token refreshed: $newToken');
+    // print('🔄 FCM Token refreshed: $newToken');
   });
   
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    print('💬 Foreground message received: ${message.notification?.title}');
+    // print('💬 Foreground message received: ${message.notification?.title}');
     _showNotification(message);
   });
 
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-    print('👆 User tapped notification: ${message.notification?.title}');
+    // print('👆 User tapped notification: ${message.notification?.title}');
   });
   
   // ✅ Run APNS/FCM initialization in background (non-blocking)
-  print('🔥 Starting background FCM token initialization...');
+  // print('🔥 Starting background FCM token initialization...');
   _initializeTokensInBackground();
 }
 
@@ -77,14 +77,14 @@ Future<void> _initializeTokensInBackground() async {
     // Get FCM Token and save to SharedPreferences
     await getAndSaveFCMToken();
   } catch (e) {
-    print('❌ Background token initialization error: $e');
+    // print('❌ Background token initialization error: $e');
   }
 }
 
 /// Initialize APNS for iOS (with reduced wait time for better UX)
 Future<void> _initializeAPNS() async {
   try {
-    print('🍎 Initializing APNS for iOS...');
+    // print('🍎 Initializing APNS for iOS...');
     
     // Quick check first (non-blocking)
     String? apnsToken = await FirebaseMessaging.instance.getAPNSToken();
@@ -100,20 +100,20 @@ Future<void> _initializeAPNS() async {
     
     while (retryCount < maxRetries) {
       retryCount++;
-      print('⚠️ APNS Token not available, attempt $retryCount/$maxRetries (waiting 1s)');
+      // print('⚠️ APNS Token not available, attempt $retryCount/$maxRetries (waiting 1s)');
       await Future.delayed(Duration(milliseconds: delayMs));
       
       apnsToken = await FirebaseMessaging.instance.getAPNSToken();
       if (apnsToken != null) {
-        print('✅ APNS Token obtained: ${apnsToken.substring(0, 20)}...');
+        // print('✅ APNS Token obtained: ${apnsToken.substring(0, 20)}...');
         return;
       }
     }
     
-    print('⚠️ APNS Token not available after $maxRetries attempts (likely running on simulator)');
-    print('💡 Note: APNS tokens are only available on physical iOS devices');
+    // print('⚠️ APNS Token not available after $maxRetries attempts (likely running on simulator)');
+    // print('💡 Note: APNS tokens are only available on physical iOS devices');
   } catch (e) {
-    print('❌ Error initializing APNS: $e');
+    // print('❌ Error initializing APNS: $e');
   }
 }
 
@@ -160,11 +160,11 @@ Future<String?> getAndSaveFCMToken() async {
         sound: true,
       );
       
-      print('📱 Notification permission status: ${settings.authorizationStatus}');
+      // print('📱 Notification permission status: ${settings.authorizationStatus}');
       
       // Check if permission is granted
       if (settings.authorizationStatus == AuthorizationStatus.denied) {
-        print('❌ Notification permission denied by user');
+        // print('❌ Notification permission denied by user');
         return null;
       }
       
@@ -172,17 +172,17 @@ Future<String?> getAndSaveFCMToken() async {
       if (token != null) {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('deviceID', token);
-        print('✅ FCM Token saved (attempt $attempt): ${token.substring(0, 20)}...');
+        // print('✅ FCM Token saved (attempt $attempt): ${token.substring(0, 20)}...');
         return token;
       } else {
-        print('⚠️ Failed to get FCM token (attempt $attempt/$maxAttempts)');
+        // print('⚠️ Failed to get FCM token (attempt $attempt/$maxAttempts)');
         
         if (attempt < maxAttempts) {
           await Future.delayed(Duration(seconds: 1)); // Fixed 1s delay
         }
       }
     } catch (e) {
-      print('❌ Error getting FCM token (attempt $attempt/$maxAttempts): $e');
+      // print('❌ Error getting FCM token (attempt $attempt/$maxAttempts): $e');
       
       if (attempt < maxAttempts) {
         await Future.delayed(Duration(seconds: 1)); // Fixed 1s delay
@@ -190,43 +190,43 @@ Future<String?> getAndSaveFCMToken() async {
     }
   }
   
-  print('⚠️ FCM token not available (likely iOS simulator)');
+  // print('⚠️ FCM token not available (likely iOS simulator)');
   return null;
 }
 
 /// Utility function to check current FCM token status
 Future<void> debugFCMTokenStatus() async {
   try {
-    print('🔍 Debug: Checking FCM Token Status...');
+    // print('🔍 Debug: Checking FCM Token Status...');
     
     if (Platform.isIOS) {
       String? apnsToken = await FirebaseMessaging.instance.getAPNSToken();
       if (apnsToken != null) {
-        print('✅ APNS Token: Available');
+        // print('✅ APNS Token: Available');
       } else {
-        print('❌ APNS Token: Not Available');
+        // print('❌ APNS Token: Not Available');
       }
     }
     
     String? fcmToken = await FirebaseMessaging.instance.getToken();
     if (fcmToken != null) {
-      print('✅ FCM Token: Available');
+      // print('✅ FCM Token: Available');
       
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? savedToken = prefs.getString('deviceID');
       if (savedToken == fcmToken) {
-        print('✅ Saved token matches current token');
+        // print('✅ Saved token matches current token');
       } else {
-        print('⚠️ Saved token differs from current token, updating...');
+        // print('⚠️ Saved token differs from current token, updating...');
         await prefs.setString('deviceID', fcmToken);
       }
     } else {
-      print('❌ FCM Token: Not Available');
+      // print('❌ FCM Token: Not Available');
     }
     
     NotificationSettings settings = await FirebaseMessaging.instance.getNotificationSettings();
-    print('📱 Permission Status: ${settings.authorizationStatus}');
+    // print('📱 Permission Status: ${settings.authorizationStatus}');
   } catch (e) {
-    print('❌ Error during FCM debug: $e');
+    // print('❌ Error during FCM debug: $e');
   }
 }

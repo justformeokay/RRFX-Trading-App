@@ -61,7 +61,7 @@ class AuthController extends GetxController {
     final savedUtm = box.read('utm_parameters');
     if (savedUtm != null && savedUtm is Map) {
       _utmParameters.value = Map<String, String>.from(savedUtm);
-      Get.log("📊 [AUTH] Loaded saved UTM: $_utmParameters");
+      // Get.log("📊 [AUTH] Loaded saved UTM: $_utmParameters");
     }
   }
 
@@ -69,28 +69,28 @@ class AuthController extends GetxController {
   void setUtmParameters(Map<String, String> utmParams) {
     _utmParameters.value = utmParams;
     box.write('utm_parameters', utmParams);
-    Get.log("📊 [AUTH] UTM parameters saved: $utmParams");
+    // Get.log("📊 [AUTH] UTM parameters saved: $utmParams");
   }
 
   /// Clear UTM parameters after successful registration
   void clearUtmParameters() {
     _utmParameters.value = null;
     box.remove('utm_parameters');
-    Get.log("📊 [AUTH] UTM parameters cleared");
+    // Get.log("📊 [AUTH] UTM parameters cleared");
   }
 
   /// Start OTP resend countdown timer
   void startOtpCountdown(int seconds) {
     _cancelOtpCountdown();
     otpResendCountdown.value = seconds;
-    Get.log("⏱️ [AUTH] Starting OTP countdown: $seconds seconds");
+    // Get.log("⏱️ [AUTH] Starting OTP countdown: $seconds seconds");
     
     _otpCountdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (otpResendCountdown.value > 0) {
         otpResendCountdown.value--;
       } else {
         _cancelOtpCountdown();
-        Get.log("✅ [AUTH] OTP countdown finished");
+        // Get.log("✅ [AUTH] OTP countdown finished");
       }
     });
   }
@@ -118,16 +118,16 @@ class AuthController extends GetxController {
     String? email,
     String? password,
   }) async {
-    Get.log("🔵 [AUTH] login() called for email: $email");
+    // Get.log("🔵 [AUTH] login() called for email: $email");
     SharedPreferences preferences = await SharedPreferences.getInstance();
     try {
       isLoading(true);
 
       // ✅ Get device_id (FCM Token) from SharedPreferences
       String? deviceId = preferences.getString('deviceID');
-      Get.log("📱 [AUTH] Device ID (FCM Token): $deviceId");
+      // Get.log("📱 [AUTH] Device ID (FCM Token): $deviceId");
 
-      Get.log("📡 [AUTH] Sending login request...");
+      // Get.log("📡 [AUTH] Sending login request...");
       final response = await http
           .post(
             Uri.tryParse("${GlobalVariable.mainURL}/auth/login")!,
@@ -146,7 +146,7 @@ class AuthController extends GetxController {
             const Duration(seconds: 30),
             onTimeout: () {
               isLoading(false);
-              Get.log("❌ [AUTH] Request timeout");
+              // Get.log("❌ [AUTH] Request timeout");
               ModernAlertDialog.warning(
                 title: "Koneksi Lambat",
                 message:
@@ -156,23 +156,23 @@ class AuthController extends GetxController {
               throw TimeoutException("Request timeout");
             },
           );
-      Get.log("Device Information Sent: ${jsonEncode(deviceInfo)}");
-      Get.log("Device ID Sent: ${deviceId ?? 'NULL'}");
-      Get.log("📥 [AUTH] Login response status: ${response.statusCode}");
-      Get.log("📋 [AUTH] Login response body: ${response.body}");
+      // Get.log("Device Information Sent: ${jsonEncode(deviceInfo)}");
+      // Get.log("Device ID Sent: ${deviceId ?? 'NULL'}");
+      // Get.log("📥 [AUTH] Login response status: ${response.statusCode}");
+      // Get.log("📋 [AUTH] Login response body: ${response.body}");
 
       final result = jsonDecode(response.body);
       isLoading(false);
 
       // ✅ Check API response status first (regardless of HTTP status code)
       if (result['status'] == false) {
-        Get.log("❌ [AUTH] Login failed - API status false");
+        // Get.log("❌ [AUTH] Login failed - API status false");
 
         // Check if account is locked
         final message = _extractMessage(result['message']);
         if (message.toLowerCase().contains("locked")) {
-          Get.log("🔒 [AUTH] Account is locked - Going to LockedPage");
-          Get.offAll(() => const LockedPage());
+          // Get.log("🔒 [AUTH] Account is locked - Going to LockedPage");
+          // Get.offAll(() => const LockedPage());
           return;
         }
 
@@ -197,9 +197,9 @@ class AuthController extends GetxController {
       }
 
       if (response.statusCode != 200) {
-        Get.log(
-          "❌ [AUTH] Login failed - HTTP status code not 200: ${response.statusCode}",
-        );
+        // Get.log(
+        //   "❌ [AUTH] Login failed - HTTP status code not 200: ${response.statusCode}",
+        // );
         final loginErrMsg = _extractMessage(result['message'], fallback: "Login gagal");
         responseMessage(loginErrMsg);
         ModernAlertDialog.error(
@@ -222,13 +222,13 @@ class AuthController extends GetxController {
       // Start countdown timer if OTP expiry is set
       if (countdown > 0) {
         startOtpCountdown(countdown);
-        Get.log("⏱️ [AUTH] OTP countdown started: $countdown seconds");
+        // Get.log("⏱️ [AUTH] OTP countdown started: $countdown seconds");
       }
 
-      Get.log("✅ [AUTH] Login successful");
-      Get.log("🔐 [AUTH] Account status: $status");
-      Get.log("📋 [AUTH] Has passcode on server: $hasPasscode");
-      Get.log("🎫 [AUTH] Access token: ${accessToken?.substring(0, 20)}...");
+      // Get.log("✅ [AUTH] Login successful");
+      // Get.log("🔐 [AUTH] Account status: $status");
+      // Get.log("📋 [AUTH] Has passcode on server: $hasPasscode");
+      // Get.log("🎫 [AUTH] Access token: ${accessToken?.substring(0, 20)}...");
 
       preferences.setString('refreshToken', refreshToken);
       preferences.setString('accessToken', accessToken);
@@ -237,79 +237,79 @@ class AuthController extends GetxController {
       authService.accessToken = accessToken;
       authService.refreshToken = refreshToken;
 
-      Get.log("💾 [AUTH] Tokens saved successfully");
+      // Get.log("💾 [AUTH] Tokens saved successfully");
 
       // Fetch trading API URL — harus paling awal sebelum API lain
       await fetchAndSetTradingUrl();
 
-      Get.log("🎮 [AUTH] Initializing controllers...");
+      // Get.log("🎮 [AUTH] Initializing controllers...");
       Get.put(AccountController());
       // Ensure HomeController exists and is permanent (won't be deleted on navigation)
       if (!Get.isRegistered<HomeController>()) {
-        Get.log("🎮 [AUTH] Creating HomeController as permanent...");
+        // Get.log("🎮 [AUTH] Creating HomeController as permanent...");
         Get.put(HomeController(), permanent: true);
       }
 
       Get.log("📡 [AUTH] Fetching user profile...");
       // Tunggu profile selesai di-fetch sebelum routing
-      final profileSuccess = await homeController.profile(forceRefresh: true);
-      Get.log("📥 [AUTH] Profile fetch completed. Success: $profileSuccess");
-      Get.log(
-        "👤 [AUTH] Profile data: ${homeController.profileModel.value?.toJson()}",
-      );
+      await homeController.profile(forceRefresh: true);
+      // Get.log("📥 [AUTH] Profile fetch completed. Success: $profileSuccess");
+      // Get.log(
+      //   "👤 [AUTH] Profile data: ${homeController.profileModel.value?.toJson()}",
+      // );
 
       // Fetch & cache kredensial akun trading (login, password, server)
       // Hanya fetch jika belum ada data lokal
       await AccountCredentialsService.fetchAndCache();
 
-      Get.log(
-        "🚀 [AUTH] Routing based on status: $status and passcode: $hasPasscode",
-      );
+      // Get.log(
+      //   "🚀 [AUTH] Routing based on status: $status and passcode: $hasPasscode",
+      // );
       switch (statusAccount.value) {
         case "active":
-          Get.log("✅ [AUTH] Status: active - Checking passcode...");
+          // Get.log("✅ [AUTH] Status: active - Checking passcode...");
           await preferences.setBool('loggedIn', true);
 
           // ✅ Check if passcode already exists on server
           if (hasPasscode) {
-            Get.log(
-              "✅ [AUTH] Passcode exists on server - Going to VerifyPasscodePage",
-            );
+            // Get.log(
+            //   "✅ [AUTH] Passcode exists on server - Going to VerifyPasscodePage",
+            // );
             Get.offAll(() => const VerifyPasscodePage());
             // Get.offAll(() => const VerificationAccountPage());
           } else {
-            Get.log(
-              "🔐 [AUTH] Passcode not set up on server - Going to SetupPasscodePage",
-            );
+            // Get.log(
+            //   "🔐 [AUTH] Passcode not set up on server - Going to SetupPasscodePage",
+            // );
             Get.offAll(() => const SetupPasscodePage());
           }
           break;
         case "suspend":
-          Get.log("⚠️ [AUTH] Status: suspend - Going to SuspendedAccountPage");
+          // Get.log("⚠️ [AUTH] Status: suspend - Going to SuspendedAccountPage");
           Get.offAll(() => const SuspendedAccountPage());
           break;
         case "otp":
-          Get.log(
-            "📱 [AUTH] Status: otp - Going to OtpPage (user baru, belum verifikasi OTP)",
-          );
+          // Get.log(
+          //   "📱 [AUTH] Status: otp - Going to OtpPage (user baru, belum verifikasi OTP)",
+          // );
           Get.offAll(() => const OtpPage());
           break;
         case "verification":
-          Get.log(
-            "📧 [AUTH] Status: verification - Going to VerificationAccountPage (user baru, belum verifikasi akun)",
-          );
-          Get.log(
-            "👤 [AUTH] Profile before navigation: ${homeController.profileModel.value?.email ?? 'NULL'}",
-          );
+          // Get.log(
+          //   "📧 [AUTH] Status: verification - Going to VerificationAccountPage (user baru, belum verifikasi akun)",
+          // );
+          // Get.log(
+          //   "👤 [AUTH] Profile before navigation: ${homeController.profileModel.value?.email ?? 'NULL'}",
+          // );
           Get.offAll(() => const VerificationAccountPage());
           break;
         default:
-          Get.log("❌ [AUTH] Unknown status: $status");
+          // Get.log("❌ [AUTH] Unknown status: $status");
           responseMessage("Status akun tidak dikenali, silakan hubungi admin");
       }
     } catch (e) {
       isLoading(false);
-      Get.log("❌ [AUTH] Exception in login(): $e");
+      // Get.log("❌ [AUTH] Exception in login(): $e");
 
       // Gunakan helper method untuk mendapatkan pesan error yang sesuai
       String errorMessage = _getErrorMessage(e);
@@ -338,21 +338,21 @@ class AuthController extends GetxController {
   /// Juga dipanggil dari splashscreen saat user sudah pernah login.
   Future<void> fetchAndSetTradingUrl() async {
     try {
-      Get.log("📡 [AUTH] Fetching trading endpoint URL...");
+      // Get.log("📡 [AUTH] Fetching trading endpoint URL...");
       final result = await authService.get('market/trading-endpoint');
       if (result['status'] == true || result['status'] == 200) {
         final url = result['response'];
         if (url is String && url.isNotEmpty) {
           await GlobalVariable.setTradingUrl(url);
-          Get.log("✅ [AUTH] Trading URL set: $url");
+          // Get.log("✅ [AUTH] Trading URL set: $url");
         } else {
-          Get.log("⚠️ [AUTH] Trading endpoint response tidak valid: $url");
+          // Get.log("⚠️ [AUTH] Trading endpoint response tidak valid: $url");
         }
       } else {
-        Get.log("⚠️ [AUTH] Gagal fetch trading endpoint: ${result['message']}");
+        // Get.log("⚠️ [AUTH] Gagal fetch trading endpoint: ${result['message']}");
       }
     } catch (e) {
-      Get.log("❌ [AUTH] Error fetching trading endpoint: $e");
+      // Get.log("❌ [AUTH] Error fetching trading endpoint: $e");
     }
   }
 
@@ -424,12 +424,12 @@ class AuthController extends GetxController {
     String? phoneCode,
     bool? agree,
   }) async {
-    Get.log(
-      "🟢 [AUTH] register() called for email: $email, name: $name, phone: $phone",
-    );
+    // Get.log(
+    //   "🟢 [AUTH] register() called for email: $email, name: $name, phone: $phone",
+    // );
     try {
       isLoading(true);
-      Get.log("📡 [AUTH] Sending registration request...");
+      // Get.log("📡 [AUTH] Sending registration request...");
 
       // Build request body
       final Map<String, String> requestBody = {
@@ -446,9 +446,9 @@ class AuthController extends GetxController {
       // Tambahkan UTM hanya jika ada dari deep link/iklan
       if (_utmParameters.value != null && _utmParameters.value!.isNotEmpty) {
         requestBody['utm'] = jsonEncode(_utmParameters.value);
-        Get.log("📊 [AUTH] Sending UTM to API: ${_utmParameters.value}");
+        // Get.log("📊 [AUTH] Sending UTM to API: ${_utmParameters.value}");
       } else {
-        Get.log("📊 [AUTH] No UTM parameters - user daftar langsung");
+        // Get.log("📊 [AUTH] No UTM parameters - user daftar langsung");
       }
 
       http.Response response = await http
@@ -466,19 +466,19 @@ class AuthController extends GetxController {
               isLoading(false);
               responseMessage.value =
                   "Koneksi lambat atau server tidak merespons. Silakan coba lagi.";
-              Get.log("❌ [AUTH] Request timeout");
+              // Get.log("❌ [AUTH] Request timeout");
               throw TimeoutException("Request timeout");
             },
           );
 
-      Get.log("📥 [AUTH] Register response status: ${response.statusCode}");
-      Get.log("📋 [AUTH] Register response: ${response.body}");
+      // Get.log("📥 [AUTH] Register response status: ${response.statusCode}");
+      // Get.log("📋 [AUTH] Register response: ${response.body}");
 
       dynamic result;
       try {
         result = jsonDecode(response.body);
       } catch (parseErr) {
-        Get.log("❌ [AUTH] Failed to parse response body: $parseErr");
+        // Get.log("❌ [AUTH] Failed to parse response body: $parseErr");
         isLoading(false);
         responseMessage.value = "Gagal membaca respons server. Silakan coba lagi.";
         return false;
@@ -487,11 +487,11 @@ class AuthController extends GetxController {
 
       if (response.statusCode == 200) {
         if (result['status'] != true) {
-          Get.log("❌ [AUTH] Registration failed - status false");
+          // Get.log("❌ [AUTH] Registration failed - status false");
           responseMessage.value = _extractMessage(result['message'], fallback: "Registrasi gagal");
           return false;
         }
-        Get.log("✅ [AUTH] Registration successful");
+        // Get.log("✅ [AUTH] Registration successful");
         responseMessage.value = _extractMessage(result['message'], fallback: "Registrasi berhasil");
 
         // 🔥 Log Firebase Analytics sign_up conversion with UTM attribution
@@ -501,7 +501,7 @@ class AuthController extends GetxController {
             method: 'email',
           );
         } catch (analyticsErr) {
-          Get.log("⚠️ [AUTH] Analytics log failed (non-fatal): $analyticsErr");
+          // Get.log("⚠️ [AUTH] Analytics log failed (non-fatal): $analyticsErr");
         }
 
         // Clear UTM parameters after successful registration
@@ -509,13 +509,13 @@ class AuthController extends GetxController {
 
         return true;
       }
-      Get.log("❌ [AUTH] Registration failed - status code not 200");
+      // Get.log("❌ [AUTH] Registration failed - status code not 200");
       responseMessage.value = _extractMessage(result['message'], fallback: "Terjadi kesalahan saat registrasi");
       return false;
     } catch (e, stackTrace) {
-      Get.log("❌ [AUTH] Exception in register(): $e");
-      Get.log("🔍 [AUTH] Exception type: ${e.runtimeType}");
-      Get.log("📋 [AUTH] Stack trace: $stackTrace");
+      // Get.log("❌ [AUTH] Exception in register(): $e");
+      // Get.log("🔍 [AUTH] Exception type: ${e.runtimeType}");
+      // Get.log("📋 [AUTH] Stack trace: $stackTrace");
       isLoading(false);
 
       responseMessage.value = _getErrorMessage(e);
@@ -641,7 +641,7 @@ class AuthController extends GetxController {
         onTimeout: () => '1.0',
       );
     } catch (e) {
-      Get.log('⚠️ [AUTH] getAppVersion error: $e, using fallback version');
+      // Get.log('⚠️ [AUTH] getAppVersion error: $e, using fallback version');
       appVersion = '1.0';
     }
 
@@ -729,7 +729,7 @@ class AuthController extends GetxController {
         {'otp': otp, 'device': jsonEncode(deviceInfo)},
       );
       isLoading(false);
-      Get.log("Response Confirm OTP: $result");
+      // Get.log("Response Confirm OTP: $result");
       responseMessage(_extractMessage(result['message']));
       if (result['status'] == true) {
         return true;
@@ -746,13 +746,13 @@ class AuthController extends GetxController {
   Future<bool> resendOTP({String type = 'email'}) async {
     try {
       isLoading(true);
-      Get.log("📤 [AUTH] Resending OTP via: $type");
+      // Get.log("📤 [AUTH] Resending OTP via: $type");
       
       Map<String, dynamic> result = await authService.post("auth/resend-otp", {
         'type': type,
       });
       
-      Get.log("📥 [AUTH] Resend OTP raw response: $result");
+      // Get.log("📥 [AUTH] Resend OTP raw response: $result");
       
       isLoading(false);
       
@@ -761,38 +761,38 @@ class AuthController extends GetxController {
       responseMessage.value = message;
       
       if (result['status'] == true) {
-        Get.log("✅ [AUTH] Resend OTP successful via: $type");
+        // Get.log("✅ [AUTH] Resend OTP successful via: $type");
         
         // Extract countdown from response with better error handling
         try {
           final response = result['response'];
-          Get.log("📊 [AUTH] Response data type: ${response.runtimeType}");
-          Get.log("📊 [AUTH] Response data: $response");
+          // Get.log("📊 [AUTH] Response data type: ${response.runtimeType}");
+          // Get.log("📊 [AUTH] Response data: $response");
           
           int countdown = 0;
           if (response is Map) {
             countdown = (response['otp_expired_in'] as num?)?.toInt() ?? 0;
           }
           
-          Get.log("⏲️ [AUTH] Extracted countdown: $countdown seconds");
+          // Get.log("⏲️ [AUTH] Extracted countdown: $countdown seconds");
           
           if (countdown > 0) {
             otpResendCountdown.value = countdown;
             startOtpCountdown(countdown);
           }
         } catch (e) {
-          Get.log("⚠️ [AUTH] Error extracting countdown: $e");
+          // Get.log("⚠️ [AUTH] Error extracting countdown: $e");
           // Continue without countdown - not critical
         }
         
         return true;
       }
-      Get.log("❌ [AUTH] Resend OTP failed: $message");
+      // Get.log("❌ [AUTH] Resend OTP failed: $message");
       return false;
     } catch (e, stackTrace) {
       isLoading(false);
-      Get.log("❌ [AUTH] Resend OTP error: $e");
-      Get.log("📋 [AUTH] Stack trace: $stackTrace");
+      // Get.log("❌ [AUTH] Resend OTP error: $e");
+      // Get.log("📋 [AUTH] Stack trace: $stackTrace");
       responseMessage.value = e.toString();
       return false;
     }
@@ -808,16 +808,16 @@ class AuthController extends GetxController {
       isLoading(true);
       
       // DEBUG: Print data yang akan dikirim
-      print('\n═══════════════════════════════════════════════════');
-      print('📤 [VERIFICATION] Sending data to API (verif/step-1)');
-      print('───────────────────────────────────────────────────');
-      print('Gender: $gender (Type: ${gender.runtimeType})');
-      print('Address: $address (Type: ${address.runtimeType})');
-      print('Country: $country (Type: ${country.runtimeType})');
-      print('Country (isUpperCase): ${country == country?.toUpperCase()}');
-      print('Country (length): ${country?.length}');
-      print('Device: ${jsonEncode(deviceInfo)}');
-      print('═══════════════════════════════════════════════════\n');
+      // print('\n═══════════════════════════════════════════════════');
+      // print('📤 [VERIFICATION] Sending data to API (verif/step-1)');
+      // print('───────────────────────────────────────────────────');
+      // print('Gender: $gender (Type: ${gender.runtimeType})');
+      // print('Address: $address (Type: ${address.runtimeType})');
+      // print('Country: $country (Type: ${country.runtimeType})');
+      // print('Country (isUpperCase): ${country == country?.toUpperCase()}');
+      // print('Country (length): ${country?.length}');
+      // print('Device: ${jsonEncode(deviceInfo)}');
+      // print('═══════════════════════════════════════════════════\n');
       
       Map<String, dynamic> requestBody = {
         'gender': gender,
@@ -826,34 +826,34 @@ class AuthController extends GetxController {
         'device': jsonEncode(deviceInfo),
       };
       
-      print('📋 Request Body: $requestBody');
+      // print('📋 Request Body: $requestBody');
       
       Map<String, dynamic> result = await authService.post("verif/step-1", requestBody);
       
       // DEBUG: Print API response
-      print('\n═══════════════════════════════════════════════════');
-      print('📥 [VERIFICATION] API Response:');
-      print('───────────────────────────────────────────────────');
-      print('Status: ${result['status']}');
-      print('Message: ${result['message']}');
-      print('Full Response: $result');
-      print('═══════════════════════════════════════════════════\n');
+      // print('\n═══════════════════════════════════════════════════');
+      // print('📥 [VERIFICATION] API Response:');
+      // print('───────────────────────────────────────────────────');
+      // print('Status: ${result['status']}');
+      // print('Message: ${result['message']}');
+      // print('Full Response: $result');
+      // print('═══════════════════════════════════════════════════\n');
       
       isLoading(false);
       responseMessage(_extractMessage(result['message']));
       if (result['status'] == true) {
-        print('✅ [VERIFICATION] Verification successful');
+        // print('✅ [VERIFICATION] Verification successful');
         return true;
       }
       print('❌ [VERIFICATION] Verification failed');
       return false;
     } catch (e) {
-      print('\n═══════════════════════════════════════════════════');
-      print('❌ [VERIFICATION] Exception occurred:');
-      print('───────────────────────────────────────────────────');
-      print('Error: $e');
-      print('Error Type: ${e.runtimeType}');
-      print('═══════════════════════════════════════════════════\n');
+      // print('\n═══════════════════════════════════════════════════');
+      // print('❌ [VERIFICATION] Exception occurred:');
+      // print('───────────────────────────────────────────────────');
+      // print('Error: $e');
+      // print('Error Type: ${e.runtimeType}');
+      // print('═══════════════════════════════════════════════════\n');
       isLoading(false);
       responseMessage(e.toString());
       return false;
@@ -862,7 +862,7 @@ class AuthController extends GetxController {
 
   /// Logout - Clear all stored data from login
   Future<void> logout() async {
-    Get.log("🔴 [AUTH] logout() called - Clearing all login data");
+    // Get.log("🔴 [AUTH] logout() called - Clearing all login data");
     try {
       SharedPreferences preferences = await SharedPreferences.getInstance();
 
@@ -871,44 +871,44 @@ class AuthController extends GetxController {
       await preferences.remove('refreshToken');
       await preferences.remove('loggedIn');
       await preferences.remove('deviceID');
-      Get.log("💾 [AUTH] Cleared data from SharedPreferences");
+      // Get.log("💾 [AUTH] Cleared data from SharedPreferences");
 
       // Clear tokens from GetStorage
       await box.remove('token');
       await box.remove('refreshToken');
-      Get.log("💾 [AUTH] Cleared data from GetStorage");
+      // Get.log("💾 [AUTH] Cleared data from GetStorage");
 
       // Clear tokens from AuthService
       authService.accessToken = null;
       authService.refreshToken = null;
-      Get.log("💾 [AUTH] Cleared tokens from AuthService");
+      // Get.log("💾 [AUTH] Cleared tokens from AuthService");
 
       // Clear passcode data
       await PasscodeService.deletePasscode();
-      Get.log("💾 [AUTH] Cleared passcode data");
+      // Get.log("💾 [AUTH] Cleared passcode data");
 
       // Clear cached account credentials
       await AccountCredentialsService.clearCache();
-      Get.log("💾 [AUTH] Cleared account credentials cache");
+      // Get.log("💾 [AUTH] Cleared account credentials cache");
 
       // Clear controllers
       if (Get.isRegistered<AccountController>()) {
         Get.delete<AccountController>();
-        Get.log("🎮 [AUTH] Deleted AccountController");
+        // Get.log("🎮 [AUTH] Deleted AccountController");
       }
 
       if (Get.isRegistered<HomeController>()) {
         Get.delete<HomeController>();
-        Get.log("🎮 [AUTH] Deleted HomeController");
+        // Get.log("🎮 [AUTH] Deleted HomeController");
       }
 
       // Clear other cached data
       statusAccount('');
       personalModel.value = null;
 
-      Get.log("✅ [AUTH] Logout completed successfully");
+      // Get.log("✅ [AUTH] Logout completed successfully");
     } catch (e) {
-      Get.log("❌ [AUTH] Error during logout: $e");
+      // Get.log("❌ [AUTH] Error during logout: $e");
     }
   }
 }

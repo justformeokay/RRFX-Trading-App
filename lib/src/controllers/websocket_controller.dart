@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 // import 'package:deriv_chart/deriv_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 enum WebSocketStatus { connecting, connected, failed, disconnected }
@@ -311,5 +313,96 @@ class MarketWebSocketController extends GetxController
       Get.log('⚠️ Error closing channel on dispose: $e');
     }
     super.onClose();
+  }
+}
+
+
+class TickModelWSS {
+  final double ask;
+  final double bid;
+  final String symbol;
+  final int digits;
+  final int spread;
+
+  TickModelWSS({
+    required this.ask,
+    required this.bid,
+    required this.symbol,
+    required this.digits,
+    required this.spread,
+  });
+
+  factory TickModelWSS.fromJson(Map<String, dynamic> json) {
+    return TickModelWSS(
+      ask: (json['ask'] ?? 0.0).toDouble(),
+      bid: (json['bid'] ?? 0.0).toDouble(),
+      symbol: json['symbol'] ?? "",
+      digits: json['digits'] ?? 0,
+      spread: json['spread'] ?? 0,
+    );
+  }
+}
+
+
+class TickWSSController extends GetxController {
+  WebSocketChannel? _channel;
+  
+  var ticks = <String, TickModelWSS>{}.obs;
+  // Map untuk menyimpan warna masing-masing simbol
+  var tickColors = <String, Color>{}.obs;
+  var isConnected = false.obs;
+
+  void connectToSocket({
+    required String login,
+    required String token,
+    required String server,
+  }) {
+    final url = '${GlobalVariable.mainURLForWebSocketTick}${GlobalVariable.endpointWssTick}?token=$token&server=$server&login=$login';
+
+    try {
+      _channel = WebSocketChannel.connect(Uri.parse(url));
+      isConnected.value = true;
+
+      _channel!.stream.listen(
+        (data) {
+          final decoded = jsonDecode(data);
+          final newTick = TickModelWSS.fromJson(decoded);
+          
+          final String sym = newTick.symbol;
+
+          // LOGIKA PERUBAHAN WARNA
+          if (ticks.containsKey(sym)) {
+            double oldBid = ticks[sym]!.bid;
+            double newBid = newTick.bid;
+
+            if (newBid > oldBid) {
+              tickColors[sym] = Colors.blue; // Harga Naik
+            } else if (newBid < oldBid) {
+              tickColors[sym] = Colors.red;  // Harga Turun
+            } else {
+              tickColors[sym] = Colors.grey; // Harga Sama
+            }
+          } else {
+            tickColors[sym] = Colors.grey; // Default warna pertama kali data masuk
+          }
+
+          // Simpan data terbaru
+          ticks[sym] = newTick;
+        },
+        onError: (error) {
+          isConnected.value = false;
+        },
+        onDone: () {
+          isConnected.value = false;
+        },
+      );
+    } catch (e) {
+      isConnected.value = false;
+    }
+  }
+
+  void disconnect() {
+    _channel?.sink.close();
+    isConnected.value = false;
   }
 }

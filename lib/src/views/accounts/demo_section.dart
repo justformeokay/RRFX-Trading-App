@@ -70,7 +70,7 @@ class _DemoSectionState extends State<DemoSection> {
     return GestureDetector(
       onTap: () {
         if(result != null){
-          Get.to(() => DemoAccountInformation(loginID: result.login));
+          Get.to(() => DemoAccountInformation(loginID: result.login, tradingID: result.id));
         }
       },
       child: Container(

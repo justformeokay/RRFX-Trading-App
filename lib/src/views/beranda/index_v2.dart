@@ -26,6 +26,7 @@ import 'package:rrfx/src/views/accounts/account_information.dart';
 import 'package:rrfx/src/views/accounts/demo_account_information.dart';
 import 'package:rrfx/src/views/accounts/registration_online/views/step_0_password_meta.dart';
 import 'package:rrfx/src/views/accounts/registration_online/views/step_3.dart';
+import 'package:rrfx/src/views/advance_charts/controllers/chart_execution_controller.dart';
 import 'package:rrfx/src/views/beranda/all_trading_signals.dart';
 import 'package:rrfx/src/views/beranda/rrfx-contents/market_analysis/market_analysis_detail_page.dart';
 import 'package:rrfx/src/views/beranda/rrfx-contents/market_analysis/market_analysis_page.dart';
@@ -50,6 +51,7 @@ class IndexV2 extends StatefulWidget {
 
 class _IndexV2State extends State<IndexV2> {
   UtilitiesController utilitiesController = Get.put(UtilitiesController());
+  ChartExecutionController chartExecutionController = Get.put(ChartExecutionController());  
   TradingController tradingController = Get.put(TradingController());
   RegolController regolController = Get.put(RegolController());
   HomeController homeController = Get.put(HomeController());
@@ -173,6 +175,7 @@ class _IndexV2State extends State<IndexV2> {
       startTradingSignalTimer();
       fetchPendingAccountStatus();
     });
+    chartExecutionController.getTokenForWSS();
   }
 
   Future<void> _createDemoAccount() async {
@@ -768,6 +771,10 @@ class _IndexV2State extends State<IndexV2> {
                                                       "demo") {
                                                     Get.to(
                                                       () => DemoAccountInformation(
+                                                        tradingID: controller
+                                                                .selectedAccount
+                                                                .value
+                                                                ?.id,
                                                         loginID:
                                                             controller
                                                                 .selectedAccount
@@ -1062,11 +1069,8 @@ class _IndexV2State extends State<IndexV2> {
 
                     /// === Trading Signal List ===
                     Obx(() {
-                      final signals =
-                          utilitiesController.tradingSignal.value?.message ??
-                          [];
-                      if (signals.isEmpty &&
-                          !utilitiesController.isLoading.value) {
+                      final signals = utilitiesController.tradingSignal.value?.message ?? [];
+                      if (signals.isEmpty && !utilitiesController.isLoading.value) {
                         return Center(
                           child: _buildEmptyMarketAnalysis(context),
                         );

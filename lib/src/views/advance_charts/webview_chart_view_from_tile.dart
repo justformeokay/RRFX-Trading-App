@@ -73,6 +73,7 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
 
     // final baseUrl = 'https://chart-rrfx.techcrm.dev/chart.php?symbol=$symbol&server=${server.toLowerCase()}&login=$login&theme=$theme';
     final baseUrl = 'https://webchart-rrfx.techcrm.dev/?symbol=$symbol&server=$server&login=$login&theme=$theme';
+    // final baseUrl = 'https://tv-rrfx-web.techcrm.dev/?theme=$theme&login=$login&server=${server.toLowerCase()}&symbol=$symbol';
     
     // Untuk iOS, tambahkan parameter khusus (skip untuk web)
     if (!kIsWeb && Platform.isIOS) {
@@ -181,23 +182,23 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
             ),
             onWebViewCreated: (controller) {
               webViewController = controller;
-              print('🌐 WebView created for ${widget.marketName}');
-              print('📍 Chart URL: ${_buildChartUrl()}');
-              print('🍎 Platform: ${kIsWeb ? 'Web' : (Platform.isIOS ? 'iOS' : 'Android')}');
+              // print('🌐 WebView created for ${widget.marketName}');
+              // print('📍 Chart URL: ${_buildChartUrl()}');
+              // print('🍎 Platform: ${kIsWeb ? 'Web' : (Platform.isIOS ? 'iOS' : 'Android')}');
               
               // Set timeout untuk iOS (skip untuk web)
               if (!kIsWeb && Platform.isIOS) {
                 Future.delayed(Duration(seconds: 10), () {
                   if (mounted && isLoading) {
-                    print('⏰ WebView timeout pada iOS, mencoba reload...');
+                    // print('⏰ WebView timeout pada iOS, mencoba reload...');
                     _reloadChart();
                   }
                 });
               }
             },
             onLoadStart: (controller, url) {
-              print('📥 Loading started: $url');
-              print('🍎 Platform: ${kIsWeb ? 'Web' : (Platform.isIOS ? 'iOS' : 'Android')}');
+              // print('📥 Loading started: $url');
+              // print('🍎 Platform: ${kIsWeb ? 'Web' : (Platform.isIOS ? 'iOS' : 'Android')}');
               if (mounted) {
                 setState(() {
                   isLoading = true;
@@ -207,7 +208,7 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
               }
             },
             onLoadStop: (controller, url) async {
-              print('✅ Loading finished: $url');
+               print('✅ Loading finished: $url');
               
               // Untuk iOS, inject JavaScript yang lebih simple (skip untuk web)
               if (!kIsWeb && Platform.isIOS) {
@@ -225,7 +226,7 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
                     }
                   """);
                 } catch (e) {
-                  print('⚠️ JavaScript injection error: $e');
+                  // print('⚠️ JavaScript injection error: $e');
                 }
               } else {
                 // Android - inject viewport meta tag to prevent zooming
@@ -266,9 +267,9 @@ class _WebViewChartViewFromTileState extends State<WebViewChartViewFromTile> {
               }
             },
             onLoadError: (controller, url, code, message) {
-              print('❌ Load error: $code - $message');
-              print('🌐 Failed URL: $url');
-              print('🍎 Platform: ${kIsWeb ? 'Web' : (Platform.isIOS ? 'iOS' : 'Android')}');
+              // print('❌ Load error: $code - $message');
+              // print('🌐 Failed URL: $url');
+              // print('🍎 Platform: ${kIsWeb ? 'Web' : (Platform.isIOS ? 'iOS' : 'Android')}');
               if (mounted) {
                 setState(() {
                   isLoading = false;

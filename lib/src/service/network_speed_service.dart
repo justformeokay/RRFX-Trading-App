@@ -28,7 +28,7 @@ class NetworkSpeedService {
       
       return stopwatch.elapsedMilliseconds;
     } catch (e) {
-      print('Network Speed Error: $e');
+      // print('Network Speed Error: $e');
       return null;
     }
   }
@@ -66,13 +66,13 @@ class NetworkSpeedService {
           final speedInBps = sizeInBits / timeInSeconds;
           final speedInMbps = speedInBps / (1000 * 1000);
           
-          print('Download Speed: ${speedInMbps.toStringAsFixed(2)} Mbps (${bytes.length} bytes in ${stopwatch.elapsedMilliseconds}ms)');
+          // print('Download Speed: ${speedInMbps.toStringAsFixed(2)} Mbps (${bytes.length} bytes in ${stopwatch.elapsedMilliseconds}ms)');
           return speedInMbps;
         }
       }
       return null;
     } catch (e) {
-      print('Download Speed Error: $e');
+      // print('Download Speed Error: $e');
       return null;
     }
   }
@@ -102,7 +102,7 @@ class NetworkSpeedService {
       
       return stopwatch.elapsedMilliseconds;
     } catch (e) {
-      print('Latency Measurement Error: $e');
+      // print('Latency Measurement Error: $e');
       return null;
     }
   }
@@ -128,12 +128,12 @@ class NetworkSpeedService {
         final speed = await measureLatency(url: url);
         if (speed != null) {
           results.add(speed);
-          print('Latency attempt $i: ${speed}ms');
+          // print('Latency attempt $i: ${speed}ms');
         }
         // Delay antar pengukuran untuk menghindari rate limiting
         await Future.delayed(const Duration(milliseconds: 300));
       } catch (e) {
-        print('Retry $i failed: $e');
+        // print('Retry $i failed: $e');
       }
     }
     
@@ -161,11 +161,11 @@ class NetworkSpeedService {
         final speed = await measureDownloadSpeed(url: url);
         if (speed != null && speed > 0) {
           results.add(speed);
-          print('Download speed attempt $i: ${speed.toStringAsFixed(2)} Mbps');
+          // print('Download speed attempt $i: ${speed.toStringAsFixed(2)} Mbps');
         }
         await Future.delayed(const Duration(milliseconds: 500));
       } catch (e) {
-        print('Download retry $i failed: $e');
+        // print('Download retry $i failed: $e');
       }
     }
     

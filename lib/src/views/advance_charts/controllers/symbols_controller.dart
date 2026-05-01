@@ -31,15 +31,15 @@ class SymbolsController extends GetxController {
     _loadFavorites();
 
     // Auto fetch symbols when account changes (with debounce)
-    ever(accountController.selectedAccount, (_) {
-      if (accountController.selectedAccount.value != null) {
-        final currentAccount = accountController.selectedAccount.value?.login;
-        // Only fetch if account actually changed
-        if (currentAccount != _lastFetchedAccount) {
-          fetchSymbols();
-        }
-      }
-    });
+    // ever(accountController.selectedAccount, (_) {
+    //   if (accountController.selectedAccount.value != null) {
+    //     final currentAccount = accountController.selectedAccount.value?.login;
+    //     // Only fetch if account actually changed
+    //     if (currentAccount != _lastFetchedAccount) {
+    //       fetchSymbols();
+    //     }
+    //   }
+    // });
   }
 
   /// Load favorites from GetStorage
@@ -47,14 +47,14 @@ class SymbolsController extends GetxController {
     final storedFavorites = _storage.read<List>(_favoritesKey);
     if (storedFavorites != null) {
       favoriteSymbolIds.value = List<String>.from(storedFavorites);
-      print('📌 Loaded ${favoriteSymbolIds.length} favorite symbols');
+      // print('📌 Loaded ${favoriteSymbolIds.length} favorite symbols');
     }
   }
 
   /// Save favorites to GetStorage
   void _saveFavorites() {
     _storage.write(_favoritesKey, favoriteSymbolIds);
-    print('💾 Saved ${favoriteSymbolIds.length} favorite symbols');
+    // print('💾 Saved ${favoriteSymbolIds.length} favorite symbols');
   }
 
   /// Get favorite symbols
@@ -73,10 +73,10 @@ class SymbolsController extends GetxController {
   void toggleFavorite(SymbolModel symbol) {
     if (isFavorite(symbol.symbol)) {
       favoriteSymbolIds.remove(symbol.symbol);
-      print('⭐ Removed ${symbol.symbolAlias} from favorites');
+      // print('⭐ Removed ${symbol.symbolAlias} from favorites');
     } else {
       favoriteSymbolIds.add(symbol.symbol);
-      print('⭐ Added ${symbol.symbolAlias} to favorites');
+      // print('⭐ Added ${symbol.symbolAlias} to favorites');
     }
     _saveFavorites();
   }
@@ -85,7 +85,7 @@ class SymbolsController extends GetxController {
   void clearFavorites() {
     favoriteSymbolIds.clear();
     _storage.remove(_favoritesKey);
-    print('🗑️ Cleared all favorite symbols');
+    // print('🗑️ Cleared all favorite symbols');
   }
 
   /// Get symbols by category
@@ -99,9 +99,10 @@ class SymbolsController extends GetxController {
   /// Fetch symbols from API
   Future<void> fetchSymbols() async {
     final account = accountController.selectedAccount.value?.login;
+    print('🔄 Fetching symbols for account: $account');
 
     if (account == null || account.isEmpty) {
-      print('⚠️ No account selected');
+      // print('⚠️ No account selected');
       return;
     }
 
@@ -115,11 +116,14 @@ class SymbolsController extends GetxController {
       hasError.value = false;
       errorMessage.value = '';
 
-      print('📥 Fetching symbols for account: $account');
+      // print('📥 Fetching symbols for account: $account');
 
       final response = await _symbolService.getSymbolsGroup(account);
+      print('✅ Successfully fetched symbols for account: $account');
+      print('📊 Total groups: ${response.response.length}, Total symbols: ${response.response.fold(0, (sum, group) => sum + group.symbols.length)}');
 
       symbolGroups.value = response.response;
+
 
       // Flatten all symbols
       allSymbols.clear();
@@ -136,11 +140,11 @@ class SymbolsController extends GetxController {
       }
 
       _lastFetchedAccount = account;
-      print(
-        '✅ Loaded ${allSymbols.length} symbols in ${symbolGroups.length} groups',
-      );
+      // print(
+      //   '✅ Loaded ${allSymbols.length} symbols in ${symbolGroups.length} groups',
+      // );
     } catch (e) {
-      print('❌ Error fetching symbols: $e');
+      // print('❌ Error fetching symbols: $e');
       hasError.value = true;
       errorMessage.value =
           'Terjadi kesalahan saat memuat data. Silakan coba lagi.';
@@ -148,6 +152,37 @@ class SymbolsController extends GetxController {
       isLoading.value = false;
     }
   }
+
+  // Future<String> _getToken(String login) async {
+  //   final existing = AccountCredentialsService.getTokenByLogin(login);
+  //   if (existing != null && existing.isNotEmpty) return existing;
+  //   if (!AccountCredentialsService.hasCachedData()) {
+  //     await AccountCredentialsService.fetchAndCache(forceRefresh: true);
+  //   } else {
+  //     final newToken = await AccountCredentialsService.refreshTokenForLogin(login);
+  //     if (newToken != null && newToken.isNotEmpty) return newToken;
+  //   }
+  //   final token = AccountCredentialsService.getTokenByLogin(login);
+  //   if (token != null && token.isNotEmpty) return token;
+  //   throw Exception('Gagal mendapatkan koneksi MT5 untuk login $login.');
+  // }
+
+
+  // Future fetchSymbolsNewAPI() async {
+  //   final account = accountController.selectedAccount.value?.login;
+  //   if(account == null || account.isEmpty) {
+  //     print('⚠️ No account selected, cannot fetch symbols');
+  //     return;
+  //   }
+  //   String token = await _getToken(account);
+  //   print("INI TOKEN YANG DIPAKAI EKSEKUSI ORDER: $token");
+
+  //   try {
+      
+  //   } catch (e) {
+  //     print('❌ Error fetching symbols with new API: $e');
+  //   }
+  // }
 
   /// Search symbols by query
   void searchSymbols(String query) {
@@ -169,7 +204,7 @@ class SymbolsController extends GetxController {
   /// Select a symbol
   void selectSymbol(SymbolModel symbol) {
     selectedSymbol.value = symbol;
-    print('📊 Selected symbol: ${symbol.symbolAlias} (${symbol.symbol})');
+    // print('📊 Selected symbol: ${symbol.symbolAlias} (${symbol.symbol})');
   }
 
   /// Get symbols by group name

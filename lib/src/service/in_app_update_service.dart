@@ -27,7 +27,7 @@ class InAppUpdateService {
   // Check for updates (Cross-platform)
   Future<void> checkForUpdate() async {
     if (kIsWeb) {
-      print('ℹ️  [VERSION_CHECK] Web platform - version checking not supported');
+      // print('ℹ️  [VERSION_CHECK] Web platform - version checking not supported');
       return;
     }
     
@@ -36,33 +36,33 @@ class InAppUpdateService {
     } else if (Platform.isIOS) {
       await _checkIOSUpdate();
     } else {
-      print('ℹ️  [VERSION_CHECK] Platform not supported for version checking');
+      // print('ℹ️  [VERSION_CHECK] Platform not supported for version checking');
     }
   }
 
   /// Android-specific update check using in_app_update
   Future<void> _checkAndroidUpdate() async {
     try {
-      print('🔍 [ANDROID_UPDATE] Checking for updates...');
+      // print('🔍 [ANDROID_UPDATE] Checking for updates...');
       
       final AppUpdateInfo updateInfo = await InAppUpdate.checkForUpdate();
       
-      print('📱 [ANDROID_UPDATE] Flexible update allowed: ${updateInfo.flexibleUpdateAllowed}');
-      print('📱 [ANDROID_UPDATE] Immediate update allowed: ${updateInfo.immediateUpdateAllowed}');
+      // print('📱 [ANDROID_UPDATE] Flexible update allowed: ${updateInfo.flexibleUpdateAllowed}');
+      // print('📱 [ANDROID_UPDATE] Immediate update allowed: ${updateInfo.immediateUpdateAllowed}');
 
       if (!updateInfo.flexibleUpdateAllowed && !updateInfo.immediateUpdateAllowed) {
-        print('✅ [ANDROID_UPDATE] App is already up to date');
+        // print('✅ [ANDROID_UPDATE] App is already up to date');
         return;
       }
 
       // Priority 5 = Force update (tidak bisa di-skip)
       if (updateInfo.immediateUpdateAllowed) {
-        print('🚨 [ANDROID_UPDATE] Immediate update available');
+        // print('🚨 [ANDROID_UPDATE] Immediate update available');
         await _performImmediateUpdate(updateInfo);
       }
       // Flexible update
       else if (updateInfo.flexibleUpdateAllowed) {
-        print('ℹ️  [ANDROID_UPDATE] Flexible update available');
+        // print('ℹ️  [ANDROID_UPDATE] Flexible update available');
         await _performFlexibleUpdate(updateInfo);
       }
     } on Exception catch (e) {
@@ -70,23 +70,23 @@ class InAppUpdateService {
       if (e.toString().contains('ERROR_APP_NOT_OWNED') || 
           e.toString().contains('TASK_FAILURE') ||
           e.toString().contains('not owned by any user')) {
-        print('ℹ️  [ANDROID_UPDATE] App not installed from Play Store - skipping');
+        // print('ℹ️  [ANDROID_UPDATE] App not installed from Play Store - skipping');
         return;
       }
-      print('❌ [ANDROID_UPDATE] Error checking for update: $e');
+      // print('❌ [ANDROID_UPDATE] Error checking for update: $e');
     }
   }
 
   /// iOS-specific update check using upgrader package
   Future<void> _checkIOSUpdate() async {
     try {
-      print('🔍 [IOS_UPDATE] Checking App Store for updates...');
+      // print('🔍 [IOS_UPDATE] Checking App Store for updates...');
       
       // Get current app version
       final PackageInfo packageInfo = await PackageInfo.fromPlatform();
       final String currentVersion = packageInfo.version;
       
-      print('📱 [IOS_UPDATE] Current version: $currentVersion');
+      // print('📱 [IOS_UPDATE] Current version: $currentVersion');
       
       // Initialize Upgrader
       final upgrader = Upgrader(
@@ -103,15 +103,15 @@ class InAppUpdateService {
       
       if (isUpdateAvailable) {
         final storeVersion = upgrader.currentAppStoreVersion;
-        print('🚨 [IOS_UPDATE] New version available: $storeVersion');
+        // print('🚨 [IOS_UPDATE] New version available: $storeVersion');
         
         // Show update dialog
         _showIOSUpdateDialog(currentVersion, storeVersion ?? 'Latest');
       } else {
-        print('✅ [IOS_UPDATE] App is up to date');
+        // print('✅ [IOS_UPDATE] App is up to date');
       }
     } catch (e) {
-      print('❌ [IOS_UPDATE] Error checking for update: $e');
+      // print('❌ [IOS_UPDATE] Error checking for update: $e');
     }
   }
 
@@ -153,9 +153,9 @@ class InAppUpdateService {
           appStoreUri,
           mode: LaunchMode.externalApplication,
         );
-        print('✅ [IOS_UPDATE] Opened App Store');
+        // print('✅ [IOS_UPDATE] Opened App Store');
       } else {
-        print('❌ [IOS_UPDATE] Could not launch App Store URL');
+        // print('❌ [IOS_UPDATE] Could not launch App Store URL');
         Get.snackbar(
           'Error',
           'Could not open App Store',
@@ -163,27 +163,27 @@ class InAppUpdateService {
         );
       }
     } catch (e) {
-      print('❌ [IOS_UPDATE] Error opening App Store: $e');
+      // print('❌ [IOS_UPDATE] Error opening App Store: $e');
     }
   }
 
   /// Perform immediate (forced) update (Android only)
   Future<void> _performImmediateUpdate(AppUpdateInfo updateInfo) async {
     try {
-      print('📥 [ANDROID_UPDATE] Starting immediate update...');
+      // print('📥 [ANDROID_UPDATE] Starting immediate update...');
       await InAppUpdate.performImmediateUpdate();
-      print('✅ [ANDROID_UPDATE] Immediate update completed');
+      // print('✅ [ANDROID_UPDATE] Immediate update completed');
     } on Exception catch (e) {
-      print('❌ [ANDROID_UPDATE] Immediate update error: $e');
+      // print('❌ [ANDROID_UPDATE] Immediate update error: $e');
     }
   }
 
   /// Perform flexible (optional) update with snackbar (Android only)
   Future<void> _performFlexibleUpdate(AppUpdateInfo updateInfo) async {
     try {
-      print('📥 [ANDROID_UPDATE] Starting flexible update...');
+      // print('📥 [ANDROID_UPDATE] Starting flexible update...');
       await InAppUpdate.startFlexibleUpdate().then((_) {
-        print('✅ [ANDROID_UPDATE] Flexible update started');
+        // print('✅ [ANDROID_UPDATE] Flexible update started');
         // Show message that update is downloading
         Get.snackbar(
           'Update Available',
@@ -194,21 +194,21 @@ class InAppUpdateService {
         // Complete flexible update after download
         _completeFlexibleUpdate();
       }).catchError((e) {
-        print('❌ [ANDROID_UPDATE] Flexible update error: $e');
+        // print('❌ [ANDROID_UPDATE] Flexible update error: $e');
       });
     } on Exception catch (e) {
-      print('❌ [ANDROID_UPDATE] Flexible update exception: $e');
+      // print('❌ [ANDROID_UPDATE] Flexible update exception: $e');
     }
   }
 
   /// Complete flexible update after download (Android only)
   Future<void> _completeFlexibleUpdate() async {
     try {
-      print('✅ [ANDROID_UPDATE] Completing flexible update...');
+      // print('✅ [ANDROID_UPDATE] Completing flexible update...');
       await InAppUpdate.completeFlexibleUpdate();
-      print('🔄 [ANDROID_UPDATE] App will restart to install update');
+      // print('🔄 [ANDROID_UPDATE] App will restart to install update');
     } on Exception catch (e) {
-      print('❌ [ANDROID_UPDATE] Complete flexible update error: $e');
+      // print('❌ [ANDROID_UPDATE] Complete flexible update error: $e');
     }
   }
 
@@ -220,7 +220,7 @@ class InAppUpdateService {
       final AppUpdateInfo updateInfo = await InAppUpdate.checkForUpdate();
       return updateInfo.flexibleUpdateAllowed || updateInfo.immediateUpdateAllowed;
     } catch (e) {
-      print('❌ [ANDROID_UPDATE] Error checking available update: $e');
+      // print('❌ [ANDROID_UPDATE] Error checking available update: $e');
       return false;
     }
   }

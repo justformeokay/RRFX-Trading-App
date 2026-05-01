@@ -112,7 +112,7 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
 
     if (login != null && serverType != null) {
       accountWS.subscribe(login: login, serverType: serverType);
-      print('✅ Subscribed to account WS: login=$login, server=$serverType');
+      // print('✅ Subscribed to account WS: login=$login, server=$serverType');
     }
   }
 

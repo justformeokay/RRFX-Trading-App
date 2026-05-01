@@ -16,6 +16,7 @@ import 'package:rrfx/src/views/accounts/index.dart';
 import 'package:rrfx/src/views/authentications/manage_passcode_page.dart';
 import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
 import 'package:rrfx/src/views/resources/resources_center.dart';
+import 'package:rrfx/src/views/settings/activity_log_page.dart';
 import 'package:rrfx/src/views/settings/daftar_bank_saya.dart';
 import 'package:rrfx/src/views/settings/documents/views/document_list_page.dart';
 import 'package:rrfx/src/views/settings/invite_link.dart';
@@ -310,9 +311,17 @@ class _SettingsState extends State<Settings> {
                         onTap: () => Get.to(() => const RequestIBPage()),
                       ),
                       _MenuItemData(
+                        icon: Iconsax.activity_outline,
+                        iconColor: Colors.deepOrangeAccent,
+                        title: "Log Aktivitas",
+                        subtitle: "Lihat riwayat aktivitas akun Anda",
+                        enabled: true,
+                        onTap: () => Get.to(() => const ActivityLogPage()),
+                      ),
+                      _MenuItemData(
                         icon: Iconsax.info_circle_outline,
-                        iconColor: Colors.grey,
                         title: "About",
+                        iconColor: Colors.blueGrey,
                         subtitle: "App information & version",
                         onTap: () => Get.to(() => const AboutApp()),
                       ),

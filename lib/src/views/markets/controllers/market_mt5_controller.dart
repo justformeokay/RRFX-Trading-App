@@ -84,7 +84,7 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
   void _scheduleAutoRetry() {
     // Don't retry if we've exceeded max attempts
     if (_retryAttempt >= _maxRetryAttempts) {
-      print('⚠️ Max retry attempts ($_maxRetryAttempts) reached. Stopping auto-retry.');
+      // print('⚠️ Max retry attempts ($_maxRetryAttempts) reached. Stopping auto-retry.');
       return;
     }
     
@@ -92,7 +92,7 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
     _cancelRetryTimer();
     
     final delaySeconds = _getRetryDelay();
-    print('🔄 Auto-retry scheduled in ${delaySeconds}s (attempt ${_retryAttempt + 1}/$_maxRetryAttempts)');
+    // print('🔄 Auto-retry scheduled in ${delaySeconds}s (attempt ${_retryAttempt + 1}/$_maxRetryAttempts)');
     
     _retryTimer = Timer(Duration(seconds: delaySeconds), () {
       if (!isConnected.value && !isReconnecting.value) {
@@ -114,7 +114,7 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
     
     // Ketika aplikasi kembali ke foreground (Resumed)
     if (state == AppLifecycleState.resumed) {
-      print("Aplikasi kembali aktif (RESUMED). Memeriksa koneksi...");
+      // print("Aplikasi kembali aktif (RESUMED). Memeriksa koneksi...");
       if (!isConnected.value) {
         // Hanya sambungkan ulang jika saat ini terputus
         connectWebSocket(); 
@@ -124,7 +124,7 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
     // Opsional: Putuskan koneksi saat aplikasi di-background (Paused)
     // Walaupun OS sering memutusnya, ini bisa jadi housekeeping yang baik.
     else if (state == AppLifecycleState.paused) {
-        print("Aplikasi di-background (PAUSED). Menyimpan data dan menutup koneksi...");
+        // print("Aplikasi di-background (PAUSED). Menyimpan data dan menutup koneksi...");
         _saveCacheData();
         _saveArchivedMarkets();
         _channel.sink.close();
@@ -153,7 +153,7 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
             final model = MarketMt5Model.fromJson(data);
             marketData[symbol] = model;
           } catch (e) {
-            print('Error loading cached market $symbol: $e');
+            // print('Error loading cached market $symbol: $e');
           }
         });
         
@@ -163,11 +163,11 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
         
         if (marketData.isNotEmpty) {
           isUsingCachedData.value = true;
-          print('✅ Loaded ${marketData.length} cached markets (${archivedMarkets.length} archived)');
+          // print('✅ Loaded ${marketData.length} cached markets (${archivedMarkets.length} archived)');
         }
       }
     } catch (e) {
-      print('Error loading cached data: $e');
+      // print('Error loading cached data: $e');
     }
   }
   
@@ -183,9 +183,9 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
       
       _storage.write(_cacheKey, jsonEncode(cacheMap));
       _storage.write(_cacheTimeKey, DateTime.now().toIso8601String());
-      print('💾 Saved ${marketData.length} markets to cache');
+      // print('💾 Saved ${marketData.length} markets to cache');
     } catch (e) {
-      print('Error saving cache data: $e');
+      // print('Error saving cache data: $e');
     }
   }
   
@@ -196,10 +196,10 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
       if (archivedJson != null && archivedJson.isNotEmpty) {
         final List<dynamic> archivedList = jsonDecode(archivedJson);
         archivedMarkets.addAll(archivedList.cast<String>());
-        print('✅ Loaded ${archivedMarkets.length} archived markets');
+        // print('✅ Loaded ${archivedMarkets.length} archived markets');
       }
     } catch (e) {
-      print('Error loading archived markets: $e');
+      // print('Error loading archived markets: $e');
     }
   }
   
@@ -208,7 +208,7 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
     try {
       _storage.write(_archivedKey, jsonEncode(archivedMarkets.toList()));
     } catch (e) {
-      print('Error saving archived markets: $e');
+      // print('Error saving archived markets: $e');
     }
   }
 
@@ -219,7 +219,7 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
         _channel.sink.close();
       }
     } catch (e) {
-      print('Error closing old channel: $e');
+      // print('Error closing old channel: $e');
     }
 
     try {
@@ -227,7 +227,7 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
       hasConnectionError.value = false;
       isConnected.value = false; // Reset dulu
       
-      print('Mencoba koneksi ke $_wsUrl...');
+      // print('Mencoba koneksi ke $_wsUrl...');
       _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
       
       _channel.stream.listen(
@@ -238,7 +238,7 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
             isReconnecting.value = false;
             // Reset retry counter on successful connection
             _resetRetryCounter();
-            print('✅ WebSocket TERSAMBUNG ke $_wsUrl');
+            // print('✅ WebSocket TERSAMBUNG ke $_wsUrl');
           }
           
           _handleNewData(data.toString());
@@ -249,7 +249,7 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
           }
         },
         onError: (error) {
-          print('❌ WebSocket Error: $error');
+          // print('❌ WebSocket Error: $error');
           isConnected.value = false;
           hasConnectionError.value = true;
           isReconnecting.value = false;
@@ -257,7 +257,7 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
           _scheduleAutoRetry();
         },
         onDone: () {
-          print('⚡ WebSocket TERPUTUS');
+          // print('⚡ WebSocket TERPUTUS');
           isConnected.value = false;
           isReconnecting.value = false;
           
@@ -274,19 +274,19 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
       // Set timeout untuk koneksi
       Future.delayed(const Duration(seconds: 5), () {
         if (isReconnecting.value && !isConnected.value) {
-          print('WebSocket connection timeout');
+          // print('WebSocket connection timeout');
           isReconnecting.value = false;
           hasConnectionError.value = true;
           try {
             _channel.sink.close();
           } catch (e) {
-            print('Error closing channel after timeout: $e');
+            // print('Error closing channel after timeout: $e');
           }
         }
       });
       
     } catch (e) {
-      print('Gagal menyambung ke WebSocket: $e');
+      // print('Gagal menyambung ke WebSocket: $e');
       isConnected.value = false;
       hasConnectionError.value = true;
       isReconnecting.value = false;
@@ -338,8 +338,8 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
       }
       
     } catch (e) {
-      print('Error parsing or processing JSON: $e');
-      print('Received data: $data');
+      // print('Error parsing or processing JSON: $e');
+      // print('Received data: $data');
     }
   }
 
@@ -387,7 +387,7 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
     selectedMarkets.clear();
     // Simpan ke storage
     _saveArchivedMarkets();
-    print('✅ Archived markets saved to storage');
+    // print('✅ Archived markets saved to storage');
   }
 
   /// Unarchive market
@@ -401,7 +401,7 @@ class MarketMt5Controller extends GetxController with WidgetsBindingObserver {
     archivedMarketData.remove(symbol);
     // Simpan ke storage
     _saveArchivedMarkets();
-    print('✅ Unarchived market saved to storage');
+    // print('✅ Unarchived market saved to storage');
   }
 
   /// Get visible markets (excluding archived ones)

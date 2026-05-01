@@ -16,6 +16,8 @@ class SymbolService {
         'market/symbols-group?account=$account',
       );
 
+      print("Account: $account, API Response: $response");
+
       if (response['status'] == true) {
         return SymbolsResponse.fromJson(response);
       } else {

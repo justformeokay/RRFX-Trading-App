@@ -12,5 +12,5 @@ class MyHttpOverrides extends HttpOverrides {
 
 void setupHttpOverrides() {
   HttpOverrides.global = MyHttpOverrides();
-  print('📱 [HTTP] Running on Mobile platform - HttpOverrides configured');
+  // print('📱 [HTTP] Running on Mobile platform - HttpOverrides configured');
 }

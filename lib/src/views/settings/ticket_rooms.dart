@@ -765,6 +765,7 @@ class _CreateTicketSheetState extends State<_CreateTicketSheet> {
                 duration: const Duration(milliseconds: 200),
                 width: double.infinity,
                 height: 52,
+                margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
                   gradient: _isLoading

@@ -54,7 +54,7 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
 
   Future<void> _startAppFlow() async {
     try {
-      print('🚀 [SPLASH] Starting app flow...');
+      // print('🚀 [SPLASH] Starting app flow...');
       
       // ⏳ Tunggu sebentar agar deeplink (baik getInitialLink maupun uriLinkStream)
       // sempat di-proses dan disimpan ke pendingWebViewUrl
@@ -64,10 +64,10 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
       if (_navigateToPendingWebView()) return;
 
       // ✅ Check for in-app updates from Play Store (no timeout needed)
-      print('📱 [SPLASH] Checking for app updates...');
+      // print('📱 [SPLASH] Checking for app updates...');
       await InAppUpdateService().checkForUpdate();
       
-      print('✅ [SPLASH] Update check completed, proceeding with app flow...');
+      // print('✅ [SPLASH] Update check completed, proceeding with app flow...');
       
       // 🔗 Check again setelah async operation
       if (_navigateToPendingWebView()) return;
@@ -75,12 +75,12 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
       // === DEBUG: Check all auth-related stored values ===
       final prefs = await SharedPreferences.getInstance();
       final storedLoggedIn = prefs.getBool('loggedIn');
-      final storedAccessToken = prefs.getString('accessToken');
-      final storedRefreshToken = prefs.getString('refreshToken');
-      print('🔍 [SPLASH] DEBUG SharedPreferences:');
-      print('   loggedIn = $storedLoggedIn');
-      print('   accessToken = ${storedAccessToken != null ? "${storedAccessToken.substring(0, storedAccessToken.length > 20 ? 20 : storedAccessToken.length)}..." : "NULL"}');
-      print('   refreshToken = ${storedRefreshToken != null ? "EXISTS (${storedRefreshToken.length} chars)" : "NULL"}');
+      // final storedAccessToken = prefs.getString('accessToken');
+      // final storedRefreshToken = prefs.getString('refreshToken');
+      // print('🔍 [SPLASH] DEBUG SharedPreferences:');
+      // print('   loggedIn = $storedLoggedIn');
+      // print('   accessToken = ${storedAccessToken != null ? "${storedAccessToken.substring(0, storedAccessToken.length > 20 ? 20 : storedAccessToken.length)}..." : "NULL"}');
+      // print('   refreshToken = ${storedRefreshToken != null ? "EXISTS (${storedRefreshToken.length} chars)" : "NULL"}');
       // === END DEBUG ===
 
       bool loggedIn = storedLoggedIn ?? false;
@@ -90,11 +90,11 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
 
     // ✅ If user is logged in, fetch profile and check passcode from API response
     if (loggedIn) {
-      Get.log("📡 [SPLASH] User logged in - Fetching profile from API...");
+      // Get.log("📡 [SPLASH] User logged in - Fetching profile from API...");
       
       // Ensure auth tokens are loaded before making API calls
       await authService.init();
-      print('🔑 [SPLASH] AuthService tokens after init: accessToken=${authService.accessToken != null ? "EXISTS" : "NULL"}, refreshToken=${authService.refreshToken != null ? "EXISTS" : "NULL"}');
+      // print('🔑 [SPLASH] AuthService tokens after init: accessToken=${authService.accessToken != null ? "EXISTS" : "NULL"}, refreshToken=${authService.refreshToken != null ? "EXISTS" : "NULL"}');
 
       // Fetch trading API URL — paling awal sebelum API lain
       await authController.fetchAndSetTradingUrl();
@@ -102,11 +102,11 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
       // Fetch profile dari API
       bool resultProfile = await homeController.profile();
       
-      print("Result Profile: $resultProfile");
+      // print("Result Profile: $resultProfile");
       
       // ✅ Check if account is locked
       if (homeController.responseMessage.value == "Account Locked") {
-        Get.log("🔒 [SPLASH] Account is locked");
+        // Get.log("🔒 [SPLASH] Account is locked");
         _finishTransition(() {
           Get.offAll(() => const LockedPage());
         });
@@ -114,7 +114,7 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
       }
       
       if (!resultProfile) {
-        Get.log("❌ [SPLASH] Failed to fetch profile");
+        // Get.log("❌ [SPLASH] Failed to fetch profile");
         _finishTransition(() {
           Get.offAll(() => const MainpageWithoutLogin());
         });
@@ -124,21 +124,21 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
       // ✅ Check passcode dari API response
       final profileData = homeController.profileModel.value;
       if (profileData == null) {
-        Get.log("❌ [SPLASH] Profile data is NULL");
+        // Get.log("❌ [SPLASH] Profile data is NULL");
         _finishTransition(() {
           Get.offAll(() => const MainpageWithoutLogin());
         });
         return;
       }
 
-      Get.log("✅ [SPLASH] Profile fetched successfully");
+      // Get.log("✅ [SPLASH] Profile fetched successfully");
 
       // Fetch & cache kredensial akun trading jika belum ada di lokal
       await AccountCredentialsService.fetchAndCache();
 
       // ✅ Cek apakah akun terkunci dari API response
       final isLocked = profileData.isLocked ?? false;
-      Get.log("🔒 [SPLASH] Account locked status from API: $isLocked");
+      // Get.log("🔒 [SPLASH] Account locked status from API: $isLocked");
       
       if (isLocked) {
         // 🔒 Akun terkunci, redirect ke LockedPage
@@ -152,12 +152,12 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
       // ✅ Cek passcode dari API response (bukan dari local storage)
       final hasPasscode = profileData.passcode ?? true;
       
-      print("🔐 [SPLASH] Passcode status from API: $hasPasscode");
-      print("🌐 [SPLASH] kIsWeb = $kIsWeb");
+      // print("🔐 [SPLASH] Passcode status from API: $hasPasscode");
+      // print("🌐 [SPLASH] kIsWeb = $kIsWeb");
       
       // ✅ Di web, skip passcode verification - langsung ke Mainpage
       if (kIsWeb) {
-        print("🌐 [SPLASH] Web platform - Skipping passcode, going to Mainpage");
+        // print("🌐 [SPLASH] Web platform - Skipping passcode, going to Mainpage");
         _finishTransition(() {
           Get.offAll(() => Mainpage());
         });
@@ -166,14 +166,14 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
       
       if (hasPasscode) {
         // ✅ Passcode sudah setup, HARUS verifikasi passcode
-        Get.log("✅ [SPLASH] Passcode already setup (from API) - Redirecting to VerifyPasscodePage");
+        // Get.log("✅ [SPLASH] Passcode already setup (from API) - Redirecting to VerifyPasscodePage");
         _finishTransition(() {
           Get.offAll(() => const VerifyPasscodePage());
         });
         return;
       } else {
         // ✅ Passcode belum setup, arahkan ke SetupPasscodePage
-        Get.log("🔐 [SPLASH] Passcode not setup yet (from API) - Redirecting to SetupPasscodePage");
+        // Get.log("🔐 [SPLASH] Passcode not setup yet (from API) - Redirecting to SetupPasscodePage");
         _finishTransition(() {
           Get.offAll(() => const SetupPasscodePage());
         });
@@ -181,14 +181,14 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
       }
     } else {
       // ✅ User belum login
-      Get.log("📱 [SPLASH] User not logged in - Going to MainpageWithoutLogin");
+      // Get.log("📱 [SPLASH] User not logged in - Going to MainpageWithoutLogin");
       _finishTransition(() {
         Get.offAll(() => const MainpageWithoutLogin());
       });
     }
     } catch (e, stacktrace) {
-      print('❌ [SPLASH] Error in _startAppFlow: $e');
-      print('Stack: $stacktrace');
+      // print('❌ [SPLASH] Error in _startAppFlow: $e');
+      // print('Stack: $stacktrace');
       // Default fallback ke login page
       _finishTransition(() {
         Get.offAll(() => const MainpageWithoutLogin());
@@ -205,7 +205,7 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
   /// Returns true jika ada pending dan sudah di-navigate (caller harus return)
   bool _navigateToPendingWebView() {
     if (DeepLinkService.hasPendingWebView) {
-      print('🔗 [SPLASH] Pending WebView deeplink detected, redirecting...');
+      // print('🔗 [SPLASH] Pending WebView deeplink detected, redirecting...');
       final pending = DeepLinkService.consumePendingWebView();
       if (pending != null) {
         _finishTransition(() {
@@ -218,7 +218,7 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
               ),
               transition: Transition.rightToLeft,
             );
-            print('✅ [SPLASH] Navigated to WebView from cold-start deeplink');
+            // print('✅ [SPLASH] Navigated to WebView from cold-start deeplink');
           });
         });
         return true;

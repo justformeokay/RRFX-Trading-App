@@ -49,7 +49,7 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
         
         // Only reload if account actually changed
         if (_lastLoadedLogin != newLogin) {
-          // print('🔄 [OpenTransaction] Account changed: $_lastLoadedLogin → $newLogin');
+          print('🔄 [OpenTransaction] Account changed: $_lastLoadedLogin → $newLogin');
           
           // Clear old data immediately to prevent blinking
           tradingController.openOrderModel.value = null;
@@ -87,7 +87,7 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
 
     if (login != null && serverType != null) {
       accountWS.subscribe(login: login, serverType: serverType);
-      print('✅ Subscribed to account WS: login=$login, server=$serverType');
+      // print('✅ Subscribed to account WS: login=$login, server=$serverType');
     }
   }
 
@@ -99,7 +99,7 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5> {
     }
     
     if (!controller.hasAccounts) {
-      Get.log("TIDAK MEMILIKI AKUN TRADING DEMO MAUPUN REAL");
+      // Get.log("TIDAK MEMILIKI AKUN TRADING DEMO MAUPUN REAL");
       return;
     }
     

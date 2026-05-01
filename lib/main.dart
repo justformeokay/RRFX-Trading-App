@@ -32,11 +32,11 @@ void main() async {
   
   // Firebase
   try { 
-    print('🔥 Initializing Firebase and Notifications...');
+    // print('🔥 Initializing Firebase and Notifications...');
     await initFirebaseAndNotifications(); 
-    print('✅ Firebase initialization completed');
+    // print('✅ Firebase initialization completed');
   } catch (e) { 
-    print('❌ Firebase initialization failed: $e'); 
+    // print('❌ Firebase initialization failed: $e'); 
   }
   
   final themeController = Get.put(ThemeController());
@@ -46,7 +46,7 @@ void main() async {
   try {
     await deepLinkService.init(); // Sekarang tidak akan error 'type void' lagi
   } catch (e) {
-    print('DeepLink init warning: $e');
+    // print('DeepLink init warning: $e');
   }
 
   runApp(MyApp(

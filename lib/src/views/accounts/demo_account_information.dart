@@ -7,13 +7,15 @@ import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/controllers/trading.dart';
 import 'package:rrfx/src/helpers/formatters/number_formatter.dart';
 import 'package:rrfx/src/models/trades/trading_account_models.dart';
+import 'package:rrfx/src/views/accounts/change_password_real.dart';
 import 'package:rrfx/src/views/advance_charts/webview_chart_view.dart';
 import 'package:rrfx/src/views/advance_charts/widgets/market_selector_sheet.dart';
 import 'package:rrfx/src/views/chart/controllers/chart_controller.dart';
 
 class DemoAccountInformation extends StatefulWidget {
-  const DemoAccountInformation({super.key, this.loginID});
+  const DemoAccountInformation({super.key, this.loginID, this.tradingID});
   final String? loginID;
+  final String? tradingID;
 
     @override
     State<DemoAccountInformation> createState() => _DemoAccountInformationState();
@@ -185,6 +187,11 @@ class _DemoAccountInformationState extends State<DemoAccountInformation> {
         children: [
           _menuItem(Iconsax.chart_2_outline, 'Market', onPressed: () {
             _showMarketSelector();
+          }),
+          _menuItem(Iconsax.password_check_outline, 'Ganti Password Meta 5', onPressed: () {
+            print("Login ID for password change: ${widget.loginID}");
+            print("Trading ID for password change: ${widget.tradingID}");
+            Get.to(() => ChangePasswordReal(loginID: widget.loginID, tradingID: widget.tradingID));
           }),
         ],
       ),

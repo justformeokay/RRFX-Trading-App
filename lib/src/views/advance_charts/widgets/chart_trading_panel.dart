@@ -5,11 +5,10 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:rrfx/src/components/alerts/modern_alert_dialog.dart';
-import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/helpers/variables/global_variables.dart';
+import 'package:rrfx/src/views/advance_charts/widgets/pending_order_sheets.dart';
 import '../controllers/chart_execution_controller.dart';
 
 class ChartTradingPanel extends StatefulWidget {
@@ -17,6 +16,8 @@ class ChartTradingPanel extends StatefulWidget {
   final String symbol;
   final Function(String operation)? onOrderExecuted;
   final RxnDouble? currentPrice;
+  final String? bid;
+  final String? ask;
 
   const ChartTradingPanel({
     super.key,
@@ -24,6 +25,8 @@ class ChartTradingPanel extends StatefulWidget {
     required this.symbol,
     this.onOrderExecuted,
     this.currentPrice,
+    this.bid,
+    this.ask,
   });
 
   @override
@@ -32,7 +35,7 @@ class ChartTradingPanel extends StatefulWidget {
 
 class _ChartTradingPanelState extends State<ChartTradingPanel> {
   final executionController = Get.put(ChartExecutionController());
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  // AudioPool? _audioPool;
 
   Timer? _incrementTimer;
   Timer? _decrementTimer;
@@ -40,6 +43,17 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   // Queue untuk mengelola multiple executions
   final RxList<Map<String, dynamic>> _executionQueue =
       <Map<String, dynamic>>[].obs;
+
+  // Per-item reactive status — keyed by item['id'] (int for market, String for pending).
+  // Updating a single entry here does NOT rebuild the entire queue overlay.
+  final _itemStatuses = <dynamic, RxString>{};
+
+  // Concurrency limit untuk scalping — 8 slot parallel.
+  // http.get() top-level membuat koneksi baru per call (tidak ada pool/shared client),
+  // sehingga tidak ada batas teknis di sisi client. Batas aktual ada di server MT5 API
+  // (techcrm/gaintactics) — turunkan jika muncul error 429 atau INVALID_TOKEN massal.
+  static const int _maxConcurrentOrders = 8;
+  int _activeOrders = 0;
 
   OverlayEntry? _overlayEntry;
 
@@ -73,6 +87,13 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   @override
   void initState() {
     super.initState();
+    // Init AudioPool — 4 instance concurrent, no conflict saat rapid tap
+    // AudioPool.create(
+    //   source: AssetSource('sounds/applepay.mp3'),
+    //   maxPlayers: 4,
+    // ).then((pool) {
+    //   if (mounted) _audioPool = pool;
+    // });
     // Listener: saat SL Points berubah → update SL Prices
     _slPointsController.addListener(() {
       _syncSlPriceFromPoints(_slPointsController.text);
@@ -104,7 +125,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   void dispose() {
     _incrementTimer?.cancel();
     _decrementTimer?.cancel();
-    _audioPlayer.dispose();
+    // _audioPool?.dispose();
+    // _audioPool = null;
     _entryPriceController.dispose();
     _slPointsController.dispose();
     _slPriceController.dispose();
@@ -116,7 +138,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       try {
         _overlayEntry?.remove();
       } catch (e) {
-        print('Error removing overlay on dispose: $e');
+        // print('Error removing overlay on dispose: $e');
       }
     }
     super.dispose();
@@ -150,20 +172,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     _decrementTimer = null;
   }
 
-  /// Play success sound and trigger haptic feedback
-  Future<void> _playSuccessNotification() async {
-    try {
-      // Trigger haptic feedback (vibration)
-      await HapticFeedback.mediumImpact();
-
-      // Play success sound
-      await _audioPlayer.play(AssetSource('sounds/applepay.mp3'));
-
-      print('✅ Success notification played');
-    } catch (e) {
-      print('⚠️ Error playing notification: $e');
-    }
-  }
+  /// Success notification — sound and haptic disabled.
+  void _playSuccessNotification() {}
 
   // Validasi apakah lot adalah kelipatan dari LOT_STEP
   bool _isValidLot(double lot) {
@@ -301,134 +311,141 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
   Widget _buildExecutionItem(Map<String, dynamic> item) {
     // Gunakan symbol dari item, bukan widget.symbol (fix bug: symbol berubah saat pindah market)
+    final itemId = item['id'];
     final itemSymbol = item['symbol'] as String? ?? widget.symbol;
     final symbolClean = itemSymbol.replaceAll('.db', '');
     final operation = item['operation'] as String;
     final lot = item['lot'] as double;
-    final status = item['status'] as String; // 'loading', 'success', 'error'
-    final openPrice = item['openPrice']; // Can be null
     final pendingPrice = item['price']; // For pending orders
-    final execMs = item['execMs'] as int?; // Execution time in ms
 
     // Determine color based on operation type
     final isBuyOperation = operation.toLowerCase().contains('buy');
     final operationColor = isBuyOperation ? Colors.green : Colors.red;
+    // Cache theme once — theme cannot change between frames.
+    final isDark = Get.isDarkMode;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Get.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: operationColor, width: 2),
-      ),
-      child: Row(
-        children: [
-          Flexible(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: Text(
-                    symbolClean,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Get.isDarkMode ? Colors.white : Colors.black,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  operation.toUpperCase(),
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: operationColor,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  lot.toStringAsFixed(1),
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Get.isDarkMode ? Colors.white70 : Colors.black87,
-                  ),
-                ),
-                // Show pending price for pending orders or open price for market orders
-                if (pendingPrice != null || openPrice != null) ...[
-                  const SizedBox(width: 6),
-                  Text(
-                    '@',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      color: Get.isDarkMode ? Colors.white38 : Colors.black38,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
+    // Obx watches only this item's RxString — other items won't rebuild.
+    return Obx(() {
+      final status = _itemStatuses[itemId]?.value ?? 'loading';
+      final openPrice = item['openPrice'];
+      final execMs = item['execMs'] as int?;
+
+      return Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: operationColor, width: 2),
+        ),
+        child: Row(
+          children: [
+            Flexible(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   Flexible(
                     child: Text(
-                      (openPrice ?? pendingPrice).toString(),
+                      symbolClean,
                       style: GoogleFonts.inter(
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: operationColor,
+                        color: isDark ? Colors.white : Colors.black,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  Text(
+                    operation.toUpperCase(),
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: operationColor,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    lot.toStringAsFixed(1),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
+                  // Show pending price for pending orders or open price for market orders
+                  if (pendingPrice != null || openPrice != null) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      '@',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? Colors.white38 : Colors.black38,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        (openPrice ?? pendingPrice).toString(),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: operationColor,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          if (status == 'loading')
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(operationColor),
               ),
-            )
-          else if (status == 'success') ...[
-            if (execMs != null && GlobalVariable.showExecutionSpeed) ...[
-              Text(
-                '${execMs}ms',
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  color: execMs < 3000
-                      ? Colors.green
-                      : execMs < 5000
-                          ? Colors.orange
-                          : Colors.red,
+            ),
+            const SizedBox(width: 12),
+            if (status == 'loading')
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(operationColor),
+                ),
+              )
+            else if (status == 'success') ...[
+              if (execMs != null && GlobalVariable.showExecutionSpeed) ...[
+                Text(
+                  '${execMs}ms',
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    color: execMs < 3000
+                        ? Colors.green
+                        : execMs < 5000
+                            ? Colors.orange
+                            : Colors.red,
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
+              Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: operationColor,
+                ),
+                child: const Icon(
+                  Icons.check_rounded,
+                  color: Colors.white,
+                  size: 12,
                 ),
               ),
-              const SizedBox(width: 6),
-            ],
-            Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: operationColor,
-              ),
-              child: const Icon(
-                Icons.check_rounded,
-                color: Colors.white,
-                size: 12,
-              ),
-            ),
-          ]
-          else if (status == 'error')
-            const Icon(Icons.close_rounded, color: Colors.red, size: 16),
-        ],
-      ),
-    );
+            ]
+            else if (status == 'error')
+              const Icon(Icons.close_rounded, color: Colors.red, size: 16),
+          ],
+        ),
+      );
+    });
   }
 
   void _addToQueue(String operation) {
@@ -455,9 +472,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     };
 
     _executionQueue.add(newItem);
-    print(
-      'Added to queue: $operation $lot, Total items: ${_executionQueue.length}',
-    );
+    _itemStatuses[newItem['id']] = RxString('loading');
 
     // Show overlay entry
     _showQueueOverlay();
@@ -467,21 +482,14 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   }
 
   void _showQueueOverlay() {
-    // Remove old overlay if exists and is mounted
-    if (_overlayEntry != null) {
-      try {
-        _overlayEntry?.remove();
-      } catch (e) {
-        print('Error removing overlay: $e');
-      }
-      _overlayEntry = null;
-    }
+    // Jika overlay sudah ada dan ter-mount, Obx() di dalamnya otomatis
+    // merender ulang saat _executionQueue berubah — tidak perlu recreate.
+    if (_overlayEntry != null) return;
 
     _overlayEntry = OverlayEntry(
       builder:
           (context) => Positioned(
-            bottom:
-                140, // Naikkan dari 80 ke 140 agar tidak menutupi button Buy
+            bottom: 140,
             left: 0,
             right: 0,
             child: SafeArea(
@@ -493,7 +501,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                         _overlayEntry?.remove();
                         _overlayEntry = null;
                       } catch (e) {
-                        print('Error removing overlay on empty: $e');
+                        // Overlay already removed
                       }
                     }
                   });
@@ -523,8 +531,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
     try {
       Overlay.of(context).insert(_overlayEntry!);
-    } catch (e) {
-      print('Error inserting overlay: $e');
+    } catch (_) {
+      // Overlay already removed or context unavailable
     }
   }
 
@@ -535,12 +543,24 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     final sl = item['sl'] as double?;
     final tp = item['tp'] as double?;
 
-    try {
-      print('🔄 Processing order: $operation for $itemSymbol');
-      print('📊 Login: ${widget.login}, Lot: ${item['lot']}');
-      if (sl != null) print('📊 SL: $sl');
-      if (tp != null) print('📊 TP: $tp');
+    // Jika sudah mencapai batas concurrent, tandai item sebagai error langsung.
+    if (_activeOrders >= _maxConcurrentOrders) {
+      _itemStatuses[itemId]?.value = 'error';
+      if (mounted) {
+        ModernAlertDialog.error(
+          title: 'Terlalu Banyak Order',
+          message: 'Maksimal $_maxConcurrentOrders order bersamaan. Coba lagi sesaat.',
+          onPressed: () => Get.back(),
+        );
+      }
+      await Future.delayed(const Duration(milliseconds: 1000));
+      _itemStatuses.remove(itemId);
+      _executionQueue.removeWhere((e) => e['id'] == itemId);
+      return;
+    }
 
+    _activeOrders++;
+    try {
       final stopwatch = Stopwatch()..start();
 
       Map<String, dynamic> response;
@@ -560,14 +580,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
         );
       }
 
-      print('✅ Order response received:');
-      print('   Status: ${response['status']}');
-      print('   Message: ${response['message']}');
-      print('   Response: ${response['response']}');
-
       stopwatch.stop();
       final execMs = stopwatch.elapsedMilliseconds;
-      print('⏱️ Execution time: ${execMs}ms');
 
       // Extract openPrice from response
       final openPrice = response['response']?['openPrice'];
@@ -575,32 +589,27 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       // Update status to success and add openPrice
       final index = _executionQueue.indexWhere((e) => e['id'] == itemId);
       if (index != -1) {
-        _executionQueue[index]['status'] = 'success';
         _executionQueue[index]['openPrice'] = openPrice;
         _executionQueue[index]['execMs'] = execMs;
-        _executionQueue.refresh();
+        _itemStatuses[itemId]?.value = 'success';
       }
 
-      // Play success notification (sound + haptic)
-      await _playSuccessNotification();
+      // Play success notification (sound + haptic) — fire-and-forget
+      _playSuccessNotification();
 
       // Remove after 1.5 seconds
       await Future.delayed(const Duration(milliseconds: 1500));
+      _itemStatuses.remove(itemId);
       _executionQueue.removeWhere((e) => e['id'] == itemId);
 
       if (mounted) {
         widget.onOrderExecuted?.call(operation);
       }
     } catch (e) {
-      print('❌ Order execution error:');
-      print('   Error type: ${e.runtimeType}');
-      print('   Error message: $e');
-
       // Update status to error
       final index = _executionQueue.indexWhere((e) => e['id'] == itemId);
       if (index != -1) {
-        _executionQueue[index]['status'] = 'error';
-        _executionQueue.refresh();
+        _itemStatuses[itemId]?.value = 'error';
       }
 
       // Show error popup dengan ModernAlertDialog
@@ -618,7 +627,10 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
       // Remove after 1 second
       await Future.delayed(const Duration(milliseconds: 1000));
+      _itemStatuses.remove(itemId);
       _executionQueue.removeWhere((e) => e['id'] == itemId);
+    } finally {
+      _activeOrders--;
     }
   }
 
@@ -699,13 +711,24 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                       final icon = _getExecutionTypeIcon(type);
 
                       return GestureDetector(
-                        onTap: () {
+                        onTap: () async {
+                          print("Selected execution type: $type"); // Debug log
                           _executionType.value = type;
-                          // Reset auto-show tracker saat ganti type
+                          
                           if (type == 'Execution Market') {
                             _lastAutoShownType = null;
+                            Navigator.pop(context);
+                            return;
                           }
+
+                          // Tutup menu pilihan dulu
                           Get.back();
+
+                          // Berikan sedikit jeda agar animasi penutupan selesai
+                          await Future.delayed(const Duration(milliseconds: 550));
+
+                          // Baru buka config yang baru
+                          openPendingOrderConfig(type);
                         },
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 12),
@@ -772,7 +795,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                           ),
                         ),
                       );
-                    }).toList(),
+                    }),
 
                     const SizedBox(height: 12),
                   ],
@@ -808,825 +831,36 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     }
   }
 
-  void _showFloatingPendingOrderCard(bool isDark) {
-    if (_executionType.value == 'Execution Market') return;
-    // Cegah numpuk: jangan buka dialog jika sudah ada yang terbuka
-    if (_isPendingDialogOpen) return;
+  
+  void openPendingOrderConfig(String selectedType) {
+    // 1. Ambil harga awal dari widget.bid, jika null atau 0 gunakan default 0
+    final double initialPrice = double.tryParse(widget.bid ?? '0') ?? 0;
 
-    _isPendingDialogOpen = true;
-    
-    // Selalu clear Entry Price dan isi ulang dengan current price saat dialog dibuka
-    final currentPrice = widget.currentPrice?.value;
-    _entryPriceController.clear();
-    if (currentPrice != null && currentPrice > 0) {
-      _entryPriceController.text = _formatPrice(currentPrice, widget.symbol);
-    }
-
-    // Reinisialisasi SL/TP Price ke 0000.00 (format ATM dengan leading zeros) setiap kali dialog dibuka
-    final zeroPrice = _formatPriceWithLeadingZeros(0.0, widget.symbol, referencePrice: currentPrice);
-    _slPriceController.text = zeroPrice;
-    _tpPriceController.text = zeroPrice;
-    
-    // Clear SL/TP Points controllers agar kosong seperti awal
-    _slPointsController.clear();
-    _tpPointsController.clear();
-
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black.withOpacity(0.15),
-      builder:
-          (context) => SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, -1),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: ModalRoute.of(context)!.animation!,
-                curve: Curves.easeOutCubic,
-              ),
-            ),
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 70, left: 16, right: 16),
-                child: Material(
-                  color: Colors.transparent,
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors:
-                            isDark
-                                ? [Colors.grey.shade800, Colors.grey.shade900]
-                                : [Colors.white, Colors.grey.shade50],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.25),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                      border: Border.all(
-                        color:
-                            isDark
-                                ? Colors.white.withOpacity(0.05)
-                                : Colors.black.withOpacity(0.05),
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Header dengan icon dan title
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                Iconsax.setting_2_bold,
-                                size: 16,
-                                color: Colors.blue,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _executionType.value,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color:
-                                          isDark ? Colors.white : Colors.black,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Configure order details',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 10,
-                                      color:
-                                          isDark
-                                              ? Colors.grey.shade400
-                                              : Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () => Get.back(),
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Icon(
-                                  Iconsax.close_circle_bold,
-                                  size: 18,
-                                  color: Colors.red,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Entry Price Section
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  'Entry Price',
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color:
-                                        isDark ? Colors.white : Colors.black87,
-                                  ),
-                                ),
-                                Text(
-                                  ' *',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                // Decrement Button
-                                GestureDetector(
-                                  onTap: _decrementEntryPrice,
-                                  onLongPressStart: (_) {
-                                    // Start continuous decrement
-                                    _decrementEntryPrice();
-                                  },
-                                  child: Container(
-                                    width: 36,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color:
-                                          isDark
-                                              ? Colors.grey.shade800
-                                              : Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color:
-                                            isDark
-                                                ? Colors.grey.shade700
-                                                : Colors.grey.shade300,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    child: Icon(
-                                      Icons.remove,
-                                      size: 18,
-                                      color:
-                                          isDark
-                                              ? Colors.white70
-                                              : Colors.grey.shade700,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  flex: 2,
-                                  child: Container(
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color:
-                                          isDark
-                                              ? Colors.grey.shade800
-                                                  .withOpacity(0.6)
-                                              : Colors.white.withOpacity(0.8),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color:
-                                            isDark
-                                                ? Colors.grey.shade700
-                                                : Colors.grey.shade200,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    child: TextField(
-                                      controller: _entryPriceController,
-                                      textAlign: TextAlign.center,
-                                      textAlignVertical:
-                                          TextAlignVertical.center,
-                                      keyboardType:
-                                          const TextInputType.numberWithOptions(
-                                            decimal: true,
-                                          ),
-                                      inputFormatters: [
-                                        FilteringTextInputFormatter.allow(
-                                          RegExp(r'[0-9.]'),
-                                        ),
-                                      ],
-                                      style: GoogleFonts.inter(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color:
-                                            isDark
-                                                ? Colors.white
-                                                : Colors.black87,
-                                      ),
-                                      decoration: InputDecoration(
-                                        hintText: 'e.g., 4850.50',
-                                        hintStyle: GoogleFonts.inter(
-                                          fontSize: 11,
-                                          color:
-                                              isDark
-                                                  ? Colors.grey.shade500
-                                                  : Colors.grey.shade400,
-                                        ),
-                                        border: InputBorder.none,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 8,
-                                            ),
-                                        prefixIcon: Icon(
-                                          Iconsax.tag_bold,
-                                          size: 16,
-                                          color: Colors.blue,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                // Increment Button
-                                GestureDetector(
-                                  onTap: _incrementEntryPrice,
-                                  onLongPressStart: (_) {
-                                    // Start continuous increment
-                                    _incrementEntryPrice();
-                                  },
-                                  child: Container(
-                                    width: 36,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color:
-                                          isDark
-                                              ? Colors.grey.shade800
-                                              : Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color:
-                                            isDark
-                                                ? Colors.grey.shade700
-                                                : Colors.grey.shade300,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    child: Icon(
-                                      Icons.add,
-                                      size: 18,
-                                      color:
-                                          isDark
-                                              ? Colors.white70
-                                              : Colors.grey.shade700,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-
-                                // Current Price Button
-                                if (widget.currentPrice != null)
-                                  Obx(() {
-                                    final price = widget.currentPrice?.value;
-                                    if (price == null) {
-                                      return const SizedBox.shrink();
-                                    }
-
-                                    return GestureDetector(
-                                      onTap: () {
-                                        _entryPriceController.text = _formatPrice(price, widget.symbol);
-                                        HapticFeedback.mediumImpact();
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            colors: [
-                                              Colors.blue.withOpacity(0.2),
-                                              Colors.blue.withOpacity(0.1),
-                                            ],
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                          border: Border.all(
-                                            color: Colors.blue.withOpacity(0.4),
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              'Now',
-                                              textAlign: TextAlign.center,
-                                              style: GoogleFonts.inter(
-                                                fontSize: 8,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.blue,
-                                              ),
-                                            ),
-                                            Text(
-                                              _formatPrice(price, widget.symbol),
-                                              textAlign: TextAlign.center,
-                                              style: GoogleFonts.inter(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w800,
-                                                color: Colors.blue,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  })
-                                else
-                                  const SizedBox.shrink(),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-
-                        // SL & TP Section
-                        // Row(
-                        //   children: [
-                        //     Expanded(
-                        //       child: Column(
-                        //         crossAxisAlignment: CrossAxisAlignment.start,
-                        //         children: [
-                        //           Text(
-                        //             'Stop Loss (Points)',
-                        //             textAlign: TextAlign.center,
-                        //             style: GoogleFonts.inter(
-                        //               fontSize: 11,
-                        //               fontWeight: FontWeight.w700,
-                        //               color:
-                        //                   isDark
-                        //                       ? Colors.white
-                        //                       : Colors.black87,
-                        //             ),
-                        //           ),
-                        //           const SizedBox(height: 6),
-                        //           Container(
-                        //             height: 40,
-                        //             decoration: BoxDecoration(
-                        //               color:
-                        //                   isDark
-                        //                       ? Colors.grey.shade800
-                        //                           .withOpacity(0.6)
-                        //                       : Colors.white.withOpacity(0.8),
-                        //               borderRadius: BorderRadius.circular(10),
-                        //               border: Border.all(
-                        //                 color:
-                        //                     isDark
-                        //                         ? Colors.grey.shade700
-                        //                         : Colors.grey.shade200,
-                        //                 width: 1.5,
-                        //               ),
-                        //             ),
-                        //             child: TextField(
-                        //               controller: _slPointsController,
-                        //               textAlign: TextAlign.center,
-                        //               textAlignVertical:
-                        //                   TextAlignVertical.center,
-                        //               keyboardType:
-                        //                   const TextInputType.numberWithOptions(
-                        //                     decimal: true,
-                        //                   ),
-                        //               inputFormatters: [
-                        //                 FilteringTextInputFormatter.digitsOnly,
-                        //               ],
-                        //               style: GoogleFonts.inter(
-                        //                 fontSize: 13,
-                        //                 fontWeight: FontWeight.w600,
-                        //                 color:
-                        //                     isDark
-                        //                         ? Colors.white
-                        //                         : Colors.black87,
-                        //               ),
-                        //               decoration: InputDecoration(
-                        //                 hintText: 'e.g., 50',
-                        //                 hintStyle: GoogleFonts.inter(
-                        //                   fontSize: 11,
-                        //                   color:
-                        //                       isDark
-                        //                           ? Colors.grey.shade500
-                        //                           : Colors.grey.shade400,
-                        //                 ),
-                        //                 border: InputBorder.none,
-                        //                 contentPadding:
-                        //                     const EdgeInsets.symmetric(
-                        //                       horizontal: 12,
-                        //                       vertical: 8,
-                        //                     ),
-                        //                 prefixIcon: Icon(
-                        //                   Iconsax.shield_cross_bold,
-                        //                   size: 16,
-                        //                   color: Colors.red.shade400,
-                        //                 ),
-                        //               ),
-                        //             ),
-                        //           ),
-                        //         ],
-                        //       ),
-                        //     ),
-                        //     const SizedBox(width: 10),
-
-                        //     Expanded(
-                        //       child: Column(
-                        //         crossAxisAlignment: CrossAxisAlignment.start,
-                        //         children: [
-                        //           Text(
-                        //             'Take Profit (Points)',
-                        //             textAlign: TextAlign.center,
-                        //             style: GoogleFonts.inter(
-                        //               fontSize: 11,
-                        //               fontWeight: FontWeight.w700,
-                        //               color:
-                        //                   isDark
-                        //                       ? Colors.white
-                        //                       : Colors.black87,
-                        //             ),
-                        //           ),
-                        //           const SizedBox(height: 6),
-                        //           Container(
-                        //             height: 40,
-                        //             decoration: BoxDecoration(
-                        //               color:
-                        //                   isDark
-                        //                       ? Colors.grey.shade800
-                        //                           .withOpacity(0.6)
-                        //                       : Colors.white.withOpacity(0.8),
-                        //               borderRadius: BorderRadius.circular(10),
-                        //               border: Border.all(
-                        //                 color:
-                        //                     isDark
-                        //                         ? Colors.grey.shade700
-                        //                         : Colors.grey.shade200,
-                        //                 width: 1.5,
-                        //               ),
-                        //             ),
-                        //             child: TextField(
-                        //               controller: _tpPointsController,
-                        //               textAlign: TextAlign.center,
-                        //               textAlignVertical: TextAlignVertical.center,
-                        //               keyboardType:
-                        //                   const TextInputType.numberWithOptions(
-                        //                     decimal: true,
-                        //                   ),
-                        //               inputFormatters: [
-                        //                 FilteringTextInputFormatter.digitsOnly,
-                        //               ],
-                        //               style: GoogleFonts.inter(
-                        //                 fontSize: 13,
-                        //                 fontWeight: FontWeight.w600,
-                        //                 color:
-                        //                     isDark
-                        //                         ? Colors.white
-                        //                         : Colors.black87,
-                        //               ),
-                        //               decoration: InputDecoration(
-                        //                 hintText: 'e.g., 100',
-                        //                 hintStyle: GoogleFonts.inter(
-                        //                   fontSize: 11,
-                        //                   color:
-                        //                       isDark
-                        //                           ? Colors.grey.shade500
-                        //                           : Colors.grey.shade400,
-                        //                 ),
-                        //                 border: InputBorder.none,
-                        //                 contentPadding:
-                        //                     const EdgeInsets.symmetric(
-                        //                       horizontal: 12,
-                        //                       vertical: 8,
-                        //                     ),
-                        //                 prefixIcon: Icon(
-                        //                   Iconsax.medal_star_bold,
-                        //                   size: 16,
-                        //                   color: Colors.green.shade400,
-                        //                 ),
-                        //               ),
-                        //             ),
-                        //           ),
-                        //         ],
-                        //       ),
-                        //     ),
-                        //   ],
-                        // ),
-                        // const SizedBox(height: 8),
-                        // Center(child: Text("Atau")),
-                        // const SizedBox(height: 8),
-                        // SL & TP by Prices
-                        Obx(
-                          () {
-                            final price = widget.currentPrice?.value;
-                            if (price == null) {
-                              return const SizedBox(
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation(CustomColor.secondaryColor),
-                                ),
-                              );
-                            }
-                            return Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Stop Loss (Prices)',
-                                        textAlign: TextAlign.center,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700,
-                                          color:
-                                              isDark
-                                                  ? Colors.white
-                                                  : Colors.black87,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Container(
-                                        height: 40,
-                                        decoration: BoxDecoration(
-                                          color:
-                                              isDark
-                                                  ? Colors.grey.shade800
-                                                      .withOpacity(0.6)
-                                                  : Colors.white.withOpacity(0.8),
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(
-                                            color:
-                                                isDark
-                                                    ? Colors.grey.shade700
-                                                    : Colors.grey.shade200,
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        child: TextField(
-                                          controller: _slPriceController,
-                                          textAlign: TextAlign.center,
-                                          textAlignVertical:
-                                              TextAlignVertical.center,
-                                          keyboardType: TextInputType.number,
-                                          inputFormatters: [
-                                            FilteringTextInputFormatter.digitsOnly,
-                                            PriceShiftInputFormatter(
-                                              decimalPlaces: _getDigitsForSymbol(widget.symbol),
-                                              integerDigits: price > 0 ? price.truncate().toString().length : 4,
-                                            ),
-                                          ],
-                                          style: GoogleFonts.inter(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                            color:
-                                                isDark
-                                                    ? Colors.white
-                                                    : Colors.black87,
-                                          ),
-                                          decoration: InputDecoration(
-                                            hintText: 'e.g., ${_formatPrice(price - 0.005, widget.symbol)}',
-
-                                            hintStyle: GoogleFonts.inter(
-                                              fontSize: 11,
-                                              color:
-                                                  isDark
-                                                      ? Colors.grey.shade500
-                                                      : Colors.grey.shade400,
-                                            ),
-                                            border: InputBorder.none,
-                                            contentPadding:
-                                                const EdgeInsets.symmetric(
-                                                  horizontal: 12,
-                                                  vertical: 8,
-                                                ),
-                                            prefixIcon: Icon(
-                                              Iconsax.shield_cross_bold,
-                                              size: 16,
-                                              color: Colors.red.shade400,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                            
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Take Profit (Prices)',
-                                        textAlign: TextAlign.center,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700,
-                                          color:
-                                              isDark
-                                                  ? Colors.white
-                                                  : Colors.black87,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Container(
-                                        height: 40,
-                                        decoration: BoxDecoration(
-                                          color:
-                                              isDark
-                                                  ? Colors.grey.shade800
-                                                      .withOpacity(0.6)
-                                                  : Colors.white.withOpacity(0.8),
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(
-                                            color:
-                                                isDark
-                                                    ? Colors.grey.shade700
-                                                    : Colors.grey.shade200,
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        child: TextField(
-                                          controller: _tpPriceController,
-                                          textAlign: TextAlign.center,
-                                          textAlignVertical:
-                                              TextAlignVertical.center,
-                                          keyboardType: TextInputType.number,
-                                          inputFormatters: [
-                                            FilteringTextInputFormatter.digitsOnly,
-                                            PriceShiftInputFormatter(
-                                              decimalPlaces: _getDigitsForSymbol(widget.symbol),
-                                              integerDigits: price > 0 ? price.truncate().toString().length : 4,
-                                            ),
-                                          ],
-                                          style: GoogleFonts.inter(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                            color:
-                                                isDark
-                                                    ? Colors.white
-                                                    : Colors.black87,
-                                          ),
-                                          decoration: InputDecoration(
-                                            hintText: 'e.g., ${_formatPrice(price + 0.005, widget.symbol)}',
-
-                                            hintStyle: GoogleFonts.inter(
-                                              fontSize: 11,
-                                              color:
-                                                  isDark
-                                                      ? Colors.grey.shade500
-                                                      : Colors.grey.shade400,
-                                            ),
-                                            border: InputBorder.none,
-                                            contentPadding:
-                                                const EdgeInsets.symmetric(
-                                                  horizontal: 12,
-                                                  vertical: 8,
-                                                ),
-                                            prefixIcon: Icon(
-                                              Iconsax.medal_star_bold,
-                                              size: 16,
-                                              color: Colors.green.shade400,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            );
-                          } 
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Execute Button
-                        Builder(
-                          builder: (context) {
-                            final isBuy =
-                                _executionType.value == 'Buy Limit' ||
-                                _executionType.value == 'Buy Stop';
-                            final buttonColor =
-                                isBuy
-                                    ? Colors.green.shade500
-                                    : Colors.red.shade500;
-                            final buttonLabel =
-                                _executionType.value == 'Buy Limit'
-                                    ? 'BUY LIMIT'
-                                    : _executionType.value == 'Buy Stop'
-                                    ? 'BUY STOP'
-                                    : _executionType.value == 'Sell Limit'
-                                    ? 'SELL LIMIT'
-                                    : 'SELL STOP';
-
-                            return GestureDetector(
-                              onTap: () {
-                                Get.back();
-                                Future.delayed(
-                                  const Duration(milliseconds: 150),
-                                  () => _executePendingOrder(
-                                    isBuy ? 'buy' : 'sell',
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                height: 46,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      buttonColor,
-                                      buttonColor.withOpacity(0.85),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(10),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: buttonColor.withOpacity(0.4),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Center(
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        isBuy
-                                            ? Iconsax.arrow_up_2_bold
-                                            : Iconsax.arrow_down_2_bold,
-                                        size: 16,
-                                        color: Colors.white,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        buttonLabel,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w700,
-                                          color: Colors.white,
-                                          letterSpacing: 1.2,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-    ).then((_) {
-      // Reset flag saat dialog ditutup (baik via back, tap outside, dll)
-      _isPendingDialogOpen = false;
-    });
+    Get.dialog(
+      PendingOrderDialog(
+        symbol: widget.symbol,
+        type: selectedType,
+        initialPrice: initialPrice,
+        digits: _getDigitsForSymbol(widget.symbol), // Gunakan fungsi dinamis untuk digit
+        onConfirm: (entry, sl, tp) {
+          print("SL: $sl, TP: $tp"); // Debug: pastikan SL/TP diterima dengan benar
+          // 2. Simpan hasil input dari sheet ke controller utama jika diperlukan
+          _slPointsController.text = sl != null ? _formatPrice(sl, widget.symbol) : '';
+          _tpPointsController.text = tp != null ? _formatPrice(tp, widget.symbol) : '';
+          _entryPriceController.text = _formatPrice(entry, widget.symbol);
+          print("Entry Price set to: ${_entryPriceController.text}"); // Debug: pastikan entry price juga terupdate
+          print("SL Points Controller: ${_slPointsController.text}, TP Points Controller: ${_tpPointsController.text}"); // Debug: pastikan controller SL/TP terupdate
+          
+          // 3. Eksekusi Order
+          final side = selectedType.toLowerCase().contains('buy') ? 'buy' : 'sell';
+          _executePendingOrder(side);
+          
+          // Navigator.pop tidak perlu jika sudah pakai Get.back() di dalam onConfirm 
+          // tapi jika ingin memastikan sheet tertutup:
+          if (Get.isBottomSheetOpen ?? false) Get.back();
+        },
+      ),
+    );
   }
 
   Widget _buildMarketSlTpFields(bool isDark) {
@@ -1851,87 +1085,6 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     });
   }
 
-  Widget _buildPendingOrderFields(bool isDark) {
-    if (_executionType.value != 'Execution Market') {
-      // Hanya auto-show dialog saat execution type BARU berubah,
-      // bukan setiap kali widget rebuild
-      if (_lastAutoShownType != _executionType.value) {
-        _lastAutoShownType = _executionType.value;
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (mounted) {
-            _showFloatingPendingOrderCard(isDark);
-          }
-        });
-      }
-
-      // Return a hint card to reopen settings
-      return Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color:
-              isDark
-                  ? Colors.amber.shade900.withOpacity(0.3)
-                  : Colors.amber.shade50,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color:
-                isDark
-                    ? Colors.amber.shade700.withOpacity(0.4)
-                    : Colors.amber.shade200,
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Iconsax.info_circle_bold,
-              size: 16,
-              color: Colors.amber.shade600,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Tap settings icon to modify order details',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            GestureDetector(
-              onTap: () {
-                HapticFeedback.mediumImpact();
-                _showFloatingPendingOrderCard(isDark);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color:
-                      isDark
-                          ? Colors.amber.shade700.withOpacity(0.4)
-                          : Colors.amber.shade300,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(
-                  Iconsax.setting_2_bold,
-                  size: 14,
-                  color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return const SizedBox.shrink();
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Get.isDarkMode;
@@ -2003,36 +1156,24 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
               ),
 
               // Pending Order Fields (shown for non-market execution types)
-              _buildPendingOrderFields(isDark),
+              // _buildPendingOrderFields(isDark), // saya komentari karena sekarang kita pakai dialog terpisah untuk pending order
 
               // Market order SL/TP fields
               _buildMarketSlTpFields(isDark),
-
-              // Trading Panel Row
               Row(
                 children: [
                   // SELL button
                   Expanded(
                     flex: 3,
                     child: GestureDetector(
-                      onTap:
-                          _executionType.value == 'Execution Market'
-                              ? _executeSell
-                              : () => _executePendingOrder('sell'),
+                      onTap: _executionType.value == 'Execution Market'
+                          ? _executeSell
+                          : () => openPendingOrderConfig(_executionType.value),
                       child: Container(
-                        height: 38,
+                        height: 40,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors:
-                                _executionType.value == 'Execution Market'
-                                    ? [Colors.red.shade400, Colors.red.shade500]
-                                    : (_executionType.value == 'Sell Limit' ||
-                                        _executionType.value == 'Sell Stop')
-                                    ? [Colors.red.shade400, Colors.red.shade500]
-                                    : [
-                                      Colors.grey.shade400,
-                                      Colors.grey.shade500,
-                                    ],
+                            colors: [Colors.red.shade400, Colors.red.shade500],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -2042,21 +1183,25 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                           ),
                         ),
                         child: Center(
-                          child: Text(
-                            _executionType.value == 'Sell Limit'
-                                ? 'SELL LIMIT'
-                                : _executionType.value == 'Sell Stop'
-                                ? 'SELL STOP'
-                                : 'SELL',
-                            style: GoogleFonts.inter(
-                              fontSize:
-                                  _executionType.value == 'Execution Market'
-                                      ? 14
-                                      : 11,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              letterSpacing: 1,
-                            ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                _executionType.value == 'Execution Market' 
+                                    ? 'SELL' 
+                                    : _executionType.value.toUpperCase(),
+                                style: GoogleFonts.inter(
+                                  fontSize: _executionType.value == 'Execution Market' ? 14 : 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                              Text(
+                                widget.ask ?? '0', 
+                                style: GoogleFonts.inter(fontSize: 10, color: Colors.white)
+                              )
+                            ],
                           ),
                         ),
                       ),
@@ -2067,86 +1212,46 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                   Expanded(
                     flex: 3,
                     child: Container(
-                      height: 38.5,
+                      height: 40,
                       decoration: BoxDecoration(
                         color: isDark ? Colors.grey.shade900 : Colors.white,
-                        border: Border(
-                          bottom: BorderSide(
-                            color:
-                                isDark
-                                    ? Colors.grey.shade700
-                                    : Colors.grey.shade300,
-                            width: 2,
-                          ),
-                          top: BorderSide(
-                            color:
-                                isDark
-                                    ? Colors.grey.shade700
-                                    : Colors.grey.shade300,
+                        border: Border.symmetric(
+                          horizontal: BorderSide(
+                            color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
                             width: 2,
                           ),
                         ),
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        mainAxisSize: MainAxisSize.max,
                         children: [
-                          // Decrement button
                           Expanded(
                             child: GestureDetector(
                               onTapDown: (_) => _startDecrementTimer(),
                               onTapUp: (_) => _stopDecrementTimer(),
                               onTapCancel: _stopDecrementTimer,
                               child: Center(
-                                child: Text(
-                                  '-',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w700,
-                                    color: isDark ? Colors.white : Colors.black,
-                                  ),
-                                ),
+                                child: Text('-', style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black)),
                               ),
                             ),
                           ),
-
-                          // Lot display
                           Expanded(
                             child: GestureDetector(
                               onTap: _showEditLotDialog,
-                              child: Container(
-                                color: Colors.transparent,
-                                child: Center(
-                                  child: Text(
-                                    executionController.lot.value
-                                        .toStringAsFixed(1),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color:
-                                          isDark ? Colors.white : Colors.black,
-                                    ),
-                                  ),
+                              child: Center(
+                                child: Text(
+                                  executionController.lot.value.toStringAsFixed(1),
+                                  style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black),
                                 ),
                               ),
                             ),
                           ),
-
-                          // Increment button
                           Expanded(
                             child: GestureDetector(
                               onTapDown: (_) => _startIncrementTimer(),
                               onTapUp: (_) => _stopIncrementTimer(),
                               onTapCancel: _stopIncrementTimer,
                               child: Center(
-                                child: Text(
-                                  '+',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w700,
-                                    color: isDark ? Colors.white : Colors.black,
-                                  ),
-                                ),
+                                child: Text('+', style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black)),
                               ),
                             ),
                           ),
@@ -2159,30 +1264,14 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                   Expanded(
                     flex: 3,
                     child: GestureDetector(
-                      onTap:
-                          _executionType.value == 'Execution Market'
-                              ? _executeBuy
-                              : () => _executePendingOrder('buy'),
+                      onTap: _executionType.value == 'Execution Market'
+                          ? _executeBuy
+                          : () => openPendingOrderConfig(_executionType.value),
                       child: Container(
-                        height: 38,
+                        height: 40,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors:
-                                _executionType.value == 'Execution Market'
-                                    ? [
-                                      Colors.green.shade400,
-                                      Colors.green.shade500,
-                                    ]
-                                    : (_executionType.value == 'Buy Limit' ||
-                                        _executionType.value == 'Buy Stop')
-                                    ? [
-                                      Colors.green.shade400,
-                                      Colors.green.shade500,
-                                    ]
-                                    : [
-                                      Colors.grey.shade400,
-                                      Colors.grey.shade500,
-                                    ],
+                            colors: [Colors.green.shade400, Colors.green.shade500],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -2192,28 +1281,32 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                           ),
                         ),
                         child: Center(
-                          child: Text(
-                            _executionType.value == 'Buy Limit'
-                                ? 'BUY LIMIT'
-                                : _executionType.value == 'Buy Stop'
-                                ? 'BUY STOP'
-                                : 'BUY',
-                            style: GoogleFonts.inter(
-                              fontSize:
-                                  _executionType.value == 'Execution Market'
-                                      ? 14
-                                      : 11,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              letterSpacing: 1,
-                            ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                _executionType.value == 'Execution Market' 
+                                    ? 'BUY' 
+                                    : _executionType.value.toUpperCase(),
+                                style: GoogleFonts.inter(
+                                  fontSize: _executionType.value == 'Execution Market' ? 14 : 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                              Text(
+                                widget.bid ?? '0', 
+                                style: GoogleFonts.inter(fontSize: 10, color: Colors.white)
+                              )
+                            ],
                           ),
                         ),
                       ),
                     ),
                   ),
                 ],
-              ),
+              )
             ],
           ),
         ),
@@ -2344,6 +1437,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     // Create unique ID for this execution
     final id = DateTime.now().millisecondsSinceEpoch.toString();
     final lot = executionController.lot.value;
+    double? stopLoss = double.tryParse(_slPointsController.text.replaceAll(',', ''));
+    double? takeProfit = double.tryParse(_tpPointsController.text.replaceAll(',', ''));
 
     // Add to queue with loading status
     _executionQueue.add({
@@ -2352,20 +1447,17 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       'lot': lot,
       'symbol': capturedSymbol,  // Gunakan captured symbol
       'price': entryPrice,
-      'sl': slPrice,
-      'tp': tpPrice,
+      'sl': stopLoss,
+      'tp': takeProfit,
       'status': 'loading',
       'openPrice': null,
     });
 
+    _itemStatuses[id] = RxString('loading');
     // Show overlay if not already showing
     _showQueueOverlay();
 
-    // print('🔄 Processing pending order: $operation');
-    // print('📊 Entry Price: $entryPrice');
-    // print('📊 SL Points: ${slPoints ?? "Not set"}');
-    // print('📊 TP Points: ${tpPoints ?? "Not set"}');
-    // Get.snackbar("Data", "Entry Price: $entryPrice, SL: ${slPoints ?? "Not set"}, TP: ${tpPoints ?? "Not set"}", backgroundColor: Colors.white);
+
     try {
       final stopwatch = Stopwatch()..start();
 
@@ -2375,15 +1467,12 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
         operation: operation,
         price: entryPrice,
         volume: lot,
-        sl: slPrice,
-        tp: tpPrice,
+        sl: stopLoss,
+        tp: takeProfit,
       );
 
       stopwatch.stop();
       final execMs = stopwatch.elapsedMilliseconds;
-      print('⏱️ Pending order execution time: ${execMs}ms');
-
-      print('✅ Pending order response: $response');
 
       // Extract response data
       final responseData = response['response'];
@@ -2392,14 +1481,13 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       // Update status to success
       final index = _executionQueue.indexWhere((e) => e['id'] == id);
       if (index != -1) {
-        _executionQueue[index]['status'] = 'success';
         _executionQueue[index]['ticket'] = orderTicket;
         _executionQueue[index]['execMs'] = execMs;
-        _executionQueue.refresh();
+        _itemStatuses[id]?.value = 'success';
       }
 
-      // Play success notification
-      await _playSuccessNotification();
+      // Play success notification — fire-and-forget
+      _playSuccessNotification();
 
       // Clear input fields
       _entryPriceController.clear();
@@ -2413,6 +1501,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
       // Remove after delay
       await Future.delayed(const Duration(milliseconds: 1500));
+      _itemStatuses.remove(id);
       _executionQueue.removeWhere((e) => e['id'] == id);
 
       // Callback
@@ -2420,13 +1509,10 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
         widget.onOrderExecuted?.call(operation);
       }
     } catch (e) {
-      print('❌ Pending order error: $e');
-
       // Update status to error
       final index = _executionQueue.indexWhere((e) => e['id'] == id);
       if (index != -1) {
-        _executionQueue[index]['status'] = 'error';
-        _executionQueue.refresh();
+        _itemStatuses[id]?.value = 'error';
       }
 
       // Show error popup dengan ModernAlertDialog
@@ -2445,6 +1531,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
       // Remove after delay
       await Future.delayed(const Duration(milliseconds: 1000));
+      _itemStatuses.remove(id);
       _executionQueue.removeWhere((e) => e['id'] == id);
     }
   }
@@ -2672,28 +1759,6 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       case 5:
       default:
         return 0.00001; // Forex pairs
-    }
-  }
-
-  /// Increment entry price
-  void _incrementEntryPrice() {
-    final currentText = _entryPriceController.text;
-    final currentValue = double.tryParse(currentText) ?? 0.0;
-    final increment = _getIncrementForSymbol(widget.symbol);
-    final newValue = currentValue + increment;
-    _entryPriceController.text = _formatPrice(newValue, widget.symbol);
-    HapticFeedback.lightImpact();
-  }
-
-  /// Decrement entry price
-  void _decrementEntryPrice() {
-    final currentText = _entryPriceController.text;
-    final currentValue = double.tryParse(currentText) ?? 0.0;
-    final increment = _getIncrementForSymbol(widget.symbol);
-    final newValue = currentValue - increment;
-    if (newValue >= 0) {
-      _entryPriceController.text = _formatPrice(newValue, widget.symbol);
-      HapticFeedback.lightImpact();
     }
   }
 

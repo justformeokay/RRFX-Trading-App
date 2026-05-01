@@ -99,14 +99,14 @@ class AccountController extends GetxController {
         _allAccounts.isNotEmpty &&
         _lastFetchedAt != null &&
         DateTime.now().difference(_lastFetchedAt!) < _cacheTTL) {
-      Get.log("✅ [AccountController] Using cached accounts (age: ${DateTime.now().difference(_lastFetchedAt!).inSeconds}s)");
+      // Get.log("✅ [AccountController] Using cached accounts (age: ${DateTime.now().difference(_lastFetchedAt!).inSeconds}s)");
       isLoading.value = false;
       return;
     }
 
     // Deduplicate: jika fetch sedang berjalan, tunggu yang sudah ada
     if (_fetchInProgress != null) {
-      Get.log("⏳ [AccountController] Fetch already in progress, waiting...");
+      // Get.log("⏳ [AccountController] Fetch already in progress, waiting...");
       await _fetchInProgress;
       return;
     }
@@ -145,7 +145,7 @@ class AccountController extends GetxController {
   /// Invalidate cache (panggil setelah add/delete account, atau logout).
   void invalidateCache() {
     _lastFetchedAt = null;
-    Get.log("🗑️ [AccountController] Cache invalidated");
+    // Get.log("🗑️ [AccountController] Cache invalidated");
   }
 
   void resetAccountsState() {

@@ -471,13 +471,13 @@ class TradingController extends GetxController {
         tradingAccountModels.value != null &&
         _accountInfoFetchedAt != null &&
         DateTime.now().difference(_accountInfoFetchedAt!) < _accountInfoCacheTTL) {
-      Get.log("✅ [TRADING] getTradingAccount() using cache (age: ${DateTime.now().difference(_accountInfoFetchedAt!).inSeconds}s)");
+      // Get.log("✅ [TRADING] getTradingAccount() using cache (age: ${DateTime.now().difference(_accountInfoFetchedAt!).inSeconds}s)");
       return true;
     }
 
     // Deduplicate: jika fetch sedang berjalan, tunggu yang sudah ada
     if (_accountInfoFetchInProgress != null) {
-      Get.log("⏳ [TRADING] getTradingAccount() already in progress, waiting...");
+      // Get.log("⏳ [TRADING] getTradingAccount() already in progress, waiting...");
       return _accountInfoFetchInProgress!;
     }
 
@@ -523,13 +523,13 @@ class TradingController extends GetxController {
         _cachedAccountList != null &&
         _accountListFetchedAt != null &&
         DateTime.now().difference(_accountListFetchedAt!) < _accountListCacheTTL) {
-      Get.log("✅ [TRADING] getTradingAccountV2() using cache (age: ${DateTime.now().difference(_accountListFetchedAt!).inSeconds}s)");
+      // Get.log("✅ [TRADING] getTradingAccountV2() using cache (age: ${DateTime.now().difference(_accountListFetchedAt!).inSeconds}s)");
       return _cachedAccountList!;
     }
 
     // Deduplicate: jika fetch sedang berjalan, tunggu yang sudah ada
     if (_accountListFetchInProgress != null) {
-      Get.log("⏳ [TRADING] getTradingAccountV2() already in progress, waiting...");
+      // Get.log("⏳ [TRADING] getTradingAccountV2() already in progress, waiting...");
       return _accountListFetchInProgress!;
     }
 
@@ -567,7 +567,7 @@ class TradingController extends GetxController {
     _accountInfoFetchedAt = null;
     _accountListFetchedAt = null;
     _cachedAccountList = null;
-    Get.log("🗑️ [TRADING] Trading account cache invalidated");
+    // Get.log("🗑️ [TRADING] Trading account cache invalidated");
   }
 
   // Create Demo Trading API
@@ -630,12 +630,21 @@ class TradingController extends GetxController {
     required String password,
   }) async {
     try {
+      isLoading.value = true;
       Map<String, dynamic> result = await authService.post(
         "market/account/update",
         {'account_id': accountId, 'password': password},
       );
+      if(result['status'] == true){
+        responseMessage("Berhasil update password.");
+      } else {
+        responseMessage(result['message'] ?? "Gagal update password.");
+      }
+      print(result);
+      isLoading.value = false;
       return result;
     } catch (e) {
+      isLoading.value = false;
       throw Exception("addTradingAccount error: $e");
     }
   }
@@ -661,10 +670,10 @@ class TradingController extends GetxController {
     required String login,
     required String lot,
   }) async {
-    print(login);
-    print(symbol);
-    print(type);
-    print(lot);
+    // print(login);
+    // print(symbol);
+    // print(type);
+    // print(lot);
     try {
       Map<String, dynamic> result = await authService.post(
         'market/execution/open',
@@ -676,7 +685,7 @@ class TradingController extends GetxController {
           // 'price': price
         },
       );
-      print(result);
+      // print(result);
       return result;
     } catch (e) {
       throw Exception("executionOrder error: $e");
@@ -703,7 +712,7 @@ class TradingController extends GetxController {
         'market/opened-order?login=$login',
       );
       openOrderModel(OpenOrderModel.fromJson(result));
-      print("INI RESULT OPEN ORDER => $result");
+      // print("INI RESULT OPEN ORDER => $result");
       return result;
     } catch (e) {
       throw Exception("executionOrder error: $e");
@@ -734,7 +743,7 @@ class TradingController extends GetxController {
 
       // Handle INVALID_TOKEN → refresh token and retry once
       if (result.containsKey('code') && result['code'] == 'INVALID_TOKEN') {
-        Get.log('🔄 [CLOSE] INVALID_TOKEN → refreshing token for login $loginID...');
+        // Get.log('🔄 [CLOSE] INVALID_TOKEN → refreshing token for login $loginID...');
         final newToken = await AccountCredentialsService.refreshTokenForLogin(loginID);
         if (newToken == null || newToken.isEmpty) {
           throw Exception('Koneksi MT5 gagal. Silakan login ulang.');
@@ -755,7 +764,7 @@ class TradingController extends GetxController {
         throw Exception(errorMsg);
       }
 
-      Get.log('✅ [CLOSE] Position closed successfully! Ticket: $responseTicket');
+      // Get.log('✅ [CLOSE] Position closed successfully! Ticket: $responseTicket');
 
       // Signal the chart WebView to refresh (position was closed)
       chartRefreshTrigger.value++;

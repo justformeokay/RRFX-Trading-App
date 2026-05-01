@@ -87,6 +87,7 @@ class _TradingChartViewState extends State<TradingChartView> {
     
     // return 'https://chart-rrfx.techcrm.dev/chart.php?symbol=$symbol&server=demo&theme=$theme';
     return 'https://webchart-rrfx.techcrm.dev/?symbol=$symbol&server=demo&theme=$theme';
+    // return 'https://tv-rrfx-web.techcrm.dev/?theme=$theme&server=demo&symbol=$symbol';
   }
 
   @override

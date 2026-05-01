@@ -31,7 +31,6 @@ class _ExternalWebViewPageState extends State<ExternalWebViewPage> {
   void initState() {
     super.initState();
     _currentTitle.value = widget.title ?? 'Loading...';
-    print('🌐 [ExternalWebView] Opening URL: ${widget.url}');
   }
 
   @override
@@ -124,24 +123,20 @@ class _ExternalWebViewPageState extends State<ExternalWebViewPage> {
               // and re-triggering the deeplink handler (which causes auto-back bug)
               final url = navigationAction.request.url;
               if (url != null && url.host.contains('rrfx.co.id')) {
-                print('🔒 [ExternalWebView] Keeping navigation inside WebView: $url');
                 return NavigationActionPolicy.ALLOW;
               }
               return NavigationActionPolicy.ALLOW;
             },
             onWebViewCreated: (controller) {
               _webViewController = controller;
-              print('✅ [ExternalWebView] WebView created');
             },
             onLoadStart: (controller, url) {
-              print('🔄 [ExternalWebView] Loading: $url');
               _isLoading.value = true;
             },
             onProgressChanged: (controller, progress) {
               _progress.value = progress / 100;
             },
             onLoadStop: (controller, url) async {
-              print('✅ [ExternalWebView] Loaded: $url');
               _isLoading.value = false;
               _progress.value = 1.0;
               
@@ -152,11 +147,9 @@ class _ExternalWebViewPageState extends State<ExternalWebViewPage> {
               }
             },
             onLoadError: (controller, url, code, message) {
-              print('❌ [ExternalWebView] Error: $code - $message');
               _isLoading.value = false;
             },
             onReceivedHttpError: (controller, request, response) {
-              print('❌ [ExternalWebView] HTTP Error: ${response.statusCode}');
             },
           ),
           
