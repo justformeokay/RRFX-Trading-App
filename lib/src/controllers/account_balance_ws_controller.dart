@@ -146,7 +146,7 @@ class AccountBalanceWSController extends GetxController
 
       // Kirim subscribe message SEKALI setelah connect
       if (_currentLogin != null && _currentServerType != null) {
-        Future.delayed(const Duration(milliseconds: 500), () {
+        Future.delayed(const Duration(milliseconds: 100), () {
           _sendSubscribeMessage();
         });
       } else {

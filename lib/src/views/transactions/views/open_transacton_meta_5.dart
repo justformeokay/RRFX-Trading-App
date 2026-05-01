@@ -41,6 +41,8 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
   Worker? _accountListener;
   String? _lastLoadedLogin;
   bool _isLoadingOrders = false;
+  Timer? _wsTimeoutTimer;  // Timeout timer untuk WebSocket fallback
+  bool _wsDataReceived = false;  // Flag untuk track apakah WS sudah kirim data
 
   @override
   void initState() {
@@ -71,9 +73,11 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
           tradingController.openOrderModel.value = null;
           accountWS.profit.value = 0.0;
 
-          // Then load new data
-          _loadOrders();
+          // 🧪 TEST MODE: Parallel loading - WS + API
+          // Load data via BOTH WebSocket AND API (whichever comes first wins)
+          print('⚡ [Parallel] Account switched to $newLogin - starting parallel load');
           _subscribeToAccountWS();
+          _loadOrders();  // ← ENABLE API parallel call
 
           _lastLoadedLogin = newLogin;
         }
@@ -84,21 +88,18 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
     if (controller.selectedAccount.value != null) {
       _lastLoadedLogin = controller.selectedAccount.value!.login;
 
-      // ✅ Hanya panggil API jika data belum ada atau login berbeda
-      final cachedLogin = tradingController.openOrderModel.value?.response != null
-          ? controller.selectedAccount.value!.login
-          : null;
-      if (tradingController.openOrderModel.value == null || cachedLogin != _lastLoadedLogin) {
-        _loadOrders();
-      }
-
-      // ✅ Hanya subscribe WS jika belum connected ke akun yang sama
+      // 🧪 TEST MODE: Parallel loading
+      // Try both WebSocket AND API simultaneously
+      print('⚡ [Parallel] Starting parallel load (WS + API)');
       _subscribeToAccountWS();
+      _loadOrders();  // ← Enable API parallel call
     }
   }
 
   @override
   void dispose() {
+    // Cleanup timers
+    _wsTimeoutTimer?.cancel();
     // Dispose listener to prevent memory leaks
     _accountListener?.dispose();
     super.dispose();
@@ -111,15 +112,36 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
     final serverType = controller.selectedAccount.value?.type;
 
     if (login != null && serverType != null) {
+      print('🔌 [OpenTransaction] Subscribing to WebSocket: login=$login, server=$serverType');
       accountWS.subscribe(login: login, serverType: serverType);
-      // print('✅ Subscribed to account WS: login=$login, server=$serverType');
+      print('✅ [OpenTransaction] WebSocket subscription initiated');
+    }
+  }
+
+  /// Set 5-second timeout untuk WebSocket data
+  /// Jika WS belum send data dalam 5 detik, fallback ke API
+  void _setWebSocketTimeout() {
+    _wsTimeoutTimer?.cancel();
+    _wsTimeoutTimer = Timer(const Duration(seconds: 5), () {
+      if (!_wsDataReceived && tradingController.openOrderModel.value == null) {
+        print('⏱️ [Timeout] WS timeout (5s) - triggering fallback to API');
+        _loadOrders();
+      }
+    });
+  }
+
+  /// Mark bahwa WS sudah send data
+  void _markWebSocketDataReceived() {
+    if (!_wsDataReceived) {
+      _wsDataReceived = true;
+      _wsTimeoutTimer?.cancel();
+      print('✅ [OpenTransaction] WS data received successfully!');
     }
   }
 
   Future<void> _loadOrders() async {
-    // Prevent duplicate API calls
     if (_isLoadingOrders) {
-      // print('⏸️ [OpenTransaction] Already loading orders, skipping...');
+      print('⏸️ [OpenTransaction] Already loading orders, skipping...');
       return;
     }
 
@@ -133,7 +155,11 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
 
     try {
       _isLoadingOrders = true;
+      print('📡 [Parallel] Fetching orders via API for login: $loginID');
       await tradingController.openOrder(login: loginID);
+      print('✅ [Parallel] API orders loaded successfully');
+    } catch (e) {
+      print('❌ [Parallel] API orders failed: $e');
     } finally {
       _isLoadingOrders = false;
     }
@@ -498,6 +524,10 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
       if (!controller.hasAccounts) return noAccountDetected();
 
       var opened = tradingController.openOrderModel.value?.response;
+
+      if (opened != null && !_wsDataReceived) {
+        _markWebSocketDataReceived();
+      }
 
       return Scaffold(
         key: ValueKey(currentLogin), // Force rebuild on account change

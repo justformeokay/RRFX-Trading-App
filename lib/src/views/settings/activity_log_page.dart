@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_connect/http/src/utils/utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:intl/intl.dart';
@@ -47,19 +46,55 @@ class ActivityLogPage extends StatelessWidget {
           color: Colors.blue,
           child: NotificationListener<ScrollNotification>(
             onNotification: (ScrollNotification scrollInfo) {
-              // Trigger Load More saat user scroll mendekati bawah (sisa 200px)
-              if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200) {
+              // Trigger Load More saat user scroll mendekati bawah (sisa 500px)
+              // ← Ditingkatkan dari 200px untuk fetch lebih awal
+              if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 500) {
                 controller.loadMoreLogs();
               }
               return true;
             },
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              // Tambah 1 item untuk indikator loading di paling bawah
-              itemCount: controller.activityLogs.length + (controller.hasMoreData.value ? 1 : 0),
+              // Tambah 1 item untuk indikator loading atau error di paling bawah
+              itemCount: controller.activityLogs.length + (controller.hasMoreData.value || controller.loadMoreError.value.isNotEmpty ? 1 : 0),
               itemBuilder: (context, index) {
-                // Item Loading di bawah
+                // Item Loading/Error di bawah
                 if (index == controller.activityLogs.length) {
+                  // Show error state dengan retry button
+                  if (controller.loadMoreError.value.isNotEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Column(
+                        children: [
+                          Icon(Iconsax.warning_2_outline, size: 40, color: Colors.red.shade400),
+                          const SizedBox(height: 12),
+                          Text(
+                            controller.loadMoreError.value,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: Colors.red.shade400,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            onPressed: () => controller.retryLoadMore(),
+                            icon: const Icon(Iconsax.refresh_outline, size: 16),
+                            label: const Text("Coba Lagi"),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                              backgroundColor: Colors.blue,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  // Show loading spinner saat fetching
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 20),
                     child: Center(child: CircularProgressIndicator.adaptive(strokeWidth: 2)),

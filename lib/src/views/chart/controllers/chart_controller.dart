@@ -1,5 +1,4 @@
 import 'package:get/get.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/alerts/popup.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';

@@ -485,7 +485,7 @@ class _ProductViewState extends State<ProductView> {
                   color: CustomColor.secondaryColor, size: 50),
               const SizedBox(height: 16),
               Text(
-                "Apakah Anda perlu melakukan perubahan data sebelum melanjutkan?",
+                "Dalam proses penambahan akun trading baru, mohon konfirmasi apakah ada perubahan pada data pribadi atau profil risiko yang sebelumnya?",
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.w600,
