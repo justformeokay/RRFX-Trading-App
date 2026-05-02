@@ -47,8 +47,8 @@ class GlobalVariable {
       return kDebugMode ? "$_devProxy/api" : "$_prodDomain/api";
     }
     final stored = GetStorage().read<String>(_keyMainUrl);
-    // return stored ?? mainUrlProduction;
-    return stored ?? mainUrlStaging;
+    return stored ?? mainUrlProduction;
+    // return stored ?? mainUrlStaging;
   }
 
   /// Runtime-switchable Trading API URL.

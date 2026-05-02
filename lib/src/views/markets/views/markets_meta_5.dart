@@ -12,7 +12,8 @@ import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/views/markets/controllers/market_mt5_controller.dart'; 
 import 'package:rrfx/src/views/markets/models/market_mt5_model.dart';
 import 'package:rrfx/src/views/markets/components/empty_market_state.dart';
-import 'package:rrfx/src/views/advance_charts/webview_chart_view_from_tile.dart';
+import 'package:rrfx/src/controllers/navigation_controller.dart';
+import 'package:rrfx/src/views/chart/controllers/chart_controller.dart';
 import 'package:rrfx/src/helpers/handlers/holiday.dart';
 import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -591,11 +592,10 @@ class MarketsMeta5View extends GetView<MarketMt5Controller> {
         return;
       }
 
-      Get.to(() => WebViewChartViewFromTile(
-        login: int.tryParse(accountController.selectedAccount.value?.login ?? "0") ?? 0,
-        marketName: model.symbol,
-        balance: double.tryParse(accountController.selectedAccount.value?.balance ?? "0"),
-      ));
+      // Set market symbol ke ChartController lalu switch ke tab Trade (index 2)
+      final chartController = Get.find<ChartControllers>();
+      chartController.selectedMarket.value = model.symbol;
+      NavigationController.to.goTo(2);
     }
 
     // Highlight matching text in symbol name

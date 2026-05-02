@@ -188,11 +188,11 @@ class _DemoAccountInformationState extends State<DemoAccountInformation> {
           _menuItem(Iconsax.chart_2_outline, 'Market', onPressed: () {
             _showMarketSelector();
           }),
-          _menuItem(Iconsax.password_check_outline, 'Ganti Password Meta 5', onPressed: () {
-            print("Login ID for password change: ${widget.loginID}");
-            print("Trading ID for password change: ${widget.tradingID}");
-            Get.to(() => ChangePasswordReal(loginID: widget.loginID, tradingID: widget.tradingID));
-          }),
+          // _menuItem(Iconsax.password_check_outline, 'Ganti Password Meta 5', onPressed: () {
+          //   print("Login ID for password change: ${widget.loginID}");
+          //   print("Trading ID for password change: ${widget.tradingID}");
+          //   Get.to(() => ChangePasswordReal(loginID: widget.loginID, tradingID: widget.tradingID));
+          // }),
         ],
       ),
     );

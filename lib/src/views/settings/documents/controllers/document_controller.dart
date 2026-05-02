@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/alerts/scaffold_messanger_alert.dart';
 import 'package:rrfx/src/components/colors/default.dart';
@@ -148,49 +147,4 @@ Future<Directory?> getExternalStoragePublicDirectory(String directoryName) async
   }
   // Fallback untuk iOS/lainnya
   return await getApplicationDocumentsDirectory(); 
-}
-
-Future<bool> _showStoragePermissionDialog() async {
-  return await Get.dialog<bool>(
-    AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text(
-        "Izin Penyimpanan Diperlukan",
-        style: TextStyle(fontWeight: FontWeight.bold),
-      ),
-      content: const Text(
-        "Aplikasi membutuhkan izin penyimpanan untuk mengunduh dokumen.\n"
-        "Silakan izinkan untuk melanjutkan proses download.",
-      ),
-      actions: [
-        TextButton(
-          style: TextButton.styleFrom(
-            foregroundColor: CustomColor.secondaryColor,
-          ),
-          onPressed: () => Get.back(result: false),
-          child: const Text("Batal"),
-        ),
-        FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: CustomColor.secondaryColor,
-            elevation: 0,
-            foregroundColor: Colors.black,
-          ),
-          onPressed: () async {
-            final result = await Permission.manageExternalStorage.request();
-            if (result.isGranted) {
-                Get.back(result: true);
-            } else if (result.isPermanentlyDenied) {
-                openAppSettings();
-                Get.back(result: false);
-            } else {
-              Get.back(result: false);
-            }
-          },
-          child: const Text("Izinkan"),
-        ),
-      ],
-    ),
-    barrierDismissible: false,
-  ) ?? false;
 }

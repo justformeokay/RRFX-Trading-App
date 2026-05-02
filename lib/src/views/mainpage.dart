@@ -12,6 +12,7 @@ import 'package:rrfx/src/service/account_credentials_service.dart';
 import 'package:rrfx/src/service/auth_service.dart';
 import 'package:rrfx/src/views/advance_charts/webview_chart_view.dart';
 import 'package:rrfx/src/views/beranda/index_v2.dart';
+import 'package:rrfx/src/controllers/navigation_controller.dart';
 import 'package:rrfx/src/views/markets/views/markets_meta_5.dart';
 import 'package:rrfx/src/views/settings/index.dart';
 import 'package:rrfx/src/views/transactions/views/transaction_tab.dart';
@@ -24,7 +25,7 @@ class Mainpage extends StatefulWidget {
 }
 
 class _MainpageState extends State<Mainpage> {
-  int _selectedIndex = 0;
+  final NavigationController _navController = Get.put(NavigationController());
 
   TradingAccountController tradingAccountController = Get.put(
     TradingAccountController(),
@@ -51,9 +52,7 @@ class _MainpageState extends State<Mainpage> {
   ];
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    _navController.currentIndex.value = index;
   }
 
   @override
@@ -72,14 +71,14 @@ class _MainpageState extends State<Mainpage> {
       return GestureDetector(
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         child: Scaffold(
-          body: IndexedStack(
-            index: _selectedIndex,
+          body: Obx(() => IndexedStack(
+            index: _navController.currentIndex.value,
             children: _widgetOptions,
-          ),
+          )),
           bottomNavigationBar: Container(
             color: scaffoldBg,
-            child: BottomNavigationBar(
-              currentIndex: _selectedIndex,
+            child: Obx(() => BottomNavigationBar(
+              currentIndex: _navController.currentIndex.value,
               onTap: _onItemTapped,
               type: BottomNavigationBarType.fixed,
               elevation: 0,
@@ -128,7 +127,7 @@ class _MainpageState extends State<Mainpage> {
                   label: "Lainnya",
                 ),
               ],
-            ),
+            )),
           ),
         ),
       );

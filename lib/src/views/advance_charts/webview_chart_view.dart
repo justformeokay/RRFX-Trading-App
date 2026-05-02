@@ -53,6 +53,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
   bool _isCreatingDemoAccount = false; // Track demo account creation
   bool _waitingForAccount = false; // Guard untuk _waitForAccount
   Worker? _accountWorker;
+  Worker? _symbolWorker;
   late StreamSubscription _connectionSubscription;
   Timer? _timeoutTimer;
   Timer? _chartRefreshDebounce;
@@ -83,6 +84,16 @@ class _WebViewChartViewState extends State<WebViewChartView> {
           _reloadChart();
         }
       });
+    });
+
+    // Listen to selectedMarket changes (e.g., triggered from Market tab)
+    _symbolWorker = ever(chartController.selectedMarket, (symbol) {
+      if (symbol != _currentSymbol && mounted) {
+        setState(() {
+          _currentSymbol = symbol;
+        });
+        _reloadChart();
+      }
     });
 
     // Monitor connection
@@ -702,6 +713,7 @@ class _WebViewChartViewState extends State<WebViewChartView> {
   @override
   void dispose() {
     _chartRefreshWorker?.dispose();
+    _symbolWorker?.dispose();
     _chartRefreshDebounce?.cancel();
     _connectionSubscription.cancel();
     _cancelTimeoutTimer();

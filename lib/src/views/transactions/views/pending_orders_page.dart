@@ -1508,7 +1508,7 @@ class _EditPositionDialogState extends State<EditPositionDialog> {
             children: [
               Expanded(child: _buildSimpleField("Entry Price", priceController)),
               const SizedBox(width: 10),
-              Expanded(child: _buildSimpleField("Volume", volumeController)),
+              Expanded(child: _buildSimpleField("Volume", volumeController, disabled: true)),
             ],
           ),
           const SizedBox(height: 15),
@@ -1539,23 +1539,54 @@ class _EditPositionDialogState extends State<EditPositionDialog> {
     );
   }
 
-  Widget _buildSimpleField(String label, TextEditingController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 5),
-        TextField(
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            contentPadding: EdgeInsets.symmetric(horizontal: 10),
+  Widget _buildSimpleField(String label, TextEditingController controller, {bool? disabled}) {
+  final bool isReadOnly = disabled ?? false;
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(left: 4, bottom: 8),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[800],
           ),
         ),
-      ],
-    );
-  }
+      ),
+      TextField(
+        enabled: !isReadOnly,
+        controller: controller,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        style: const TextStyle(fontSize: 15),
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: isReadOnly ? Colors.grey[100] : Colors.blueGrey[50],
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          // Border saat kondisi normal
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey[200]!, width: 1),
+          ),
+          // Border saat diklik (Focus)
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.blue, width: 1.5),
+          ),
+          // Border saat disabled
+          disabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey[200]!, width: 1),
+          ),
+          hintText: 'Ketik di sini...',
+          hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+        ),
+      ),
+    ],
+  );
+}
 
   Future<void> _handleUpdate() async {
     final entry = double.tryParse(priceController.text) ?? 0;

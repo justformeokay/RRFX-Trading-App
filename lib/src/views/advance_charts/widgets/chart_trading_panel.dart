@@ -1197,10 +1197,11 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                   letterSpacing: 1,
                                 ),
                               ),
-                              Text(
-                                widget.ask ?? '0', 
-                                style: GoogleFonts.inter(fontSize: 10, color: Colors.white)
-                              )
+                              if (widget.ask != null && widget.ask!.isNotEmpty)
+                                Text(
+                                  widget.ask!, 
+                                  style: GoogleFonts.inter(fontSize: 10, color: Colors.white)
+                                )
                             ],
                           ),
                         ),
@@ -1295,10 +1296,11 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                   letterSpacing: 1,
                                 ),
                               ),
-                              Text(
-                                widget.bid ?? '0', 
-                                style: GoogleFonts.inter(fontSize: 10, color: Colors.white)
-                              )
+                              if (widget.bid != null && widget.bid!.isNotEmpty)
+                                Text(
+                                  widget.bid!, 
+                                  style: GoogleFonts.inter(fontSize: 10, color: Colors.white)
+                                )
                             ],
                           ),
                         ),

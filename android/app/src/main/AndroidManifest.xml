@@ -24,7 +24,7 @@
     <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
 
     <application
-        android:label="RRFX Dev+"
+        android:label="RRFX"
         android:name="${applicationName}"
         android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"
