@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:rrfx/src/helpers/variables/global_variables.dart';
@@ -39,15 +40,15 @@ class ChartExecutionController extends GetxController {
     final existing = AccountCredentialsService.getTokenByLogin(login);
     if (existing != null && existing.isNotEmpty) return existing;
 
-    print('⚠️ Token belum ada untuk login $login, auto-fetching...');
+    if (kDebugMode) print('⚠️ Token belum ada untuk login $login, auto-fetching...');
 
     // 2. Jika credentials belum ada di cache, fetch dari API dulu
     if (!AccountCredentialsService.hasCachedData()) {
-      print('📡 Credentials belum ada, fetch dari market/account/list...');
+      if (kDebugMode) print('📡 Credentials belum ada, fetch dari market/account/list...');
       await AccountCredentialsService.fetchAndCache(forceRefresh: true);
     } else {
       // 3. Credentials ada tapi token belum → langsung refresh token saja
-      print('🔗 Credentials ada, fetch token via /Connect...');
+      if (kDebugMode) print('🔗 Credentials ada, fetch token via /Connect...');
       final newToken = await AccountCredentialsService.refreshTokenForLogin(login);
       if (newToken != null && newToken.isNotEmpty) return newToken;
     }
@@ -107,7 +108,7 @@ class ChartExecutionController extends GetxController {
       String token = await _getToken(login);
       final lotVolume = volume ?? lot.value;
       final apiOperation = _mapOperation(operation);
-      print("INI TOKEN YANG DIPAKAI EKSEKUSI ORDER: $token");
+      if (kDebugMode) print("INI TOKEN YANG DIPAKAI EKSEKUSI ORDER: $token");
 
       while (retryCount <= maxRetries) {
         // print('📤 ===== EXECUTING ORDER ${retryCount > 0 ? "(Retry $retryCount)" : ""} =====');
@@ -135,7 +136,7 @@ class ChartExecutionController extends GetxController {
           '&stopLimitPrice=$stopLimitPrice',
         );
 
-        print('📦 Request URL: $uri');
+        if (kDebugMode) print('📦 Request URL: $uri');
 
         final response = await http.get(
           uri,
@@ -226,7 +227,7 @@ class ChartExecutionController extends GetxController {
   }
 
   Future<String> getTokenForWSS() async {
-    print('🔐 Requesting token for WSS connection...');
+    if (kDebugMode) print('🔐 Requesting token for WSS connection...');
     String username = GlobalVariable.wsUsername;
     String password = GlobalVariable.wsPassword;
     final body = jsonEncode({
@@ -240,8 +241,8 @@ class ChartExecutionController extends GetxController {
         const Duration(seconds: 15),
         onTimeout: () => throw Exception('Token request timeout'),
       );
-      print('📥 Token response status: ${response.statusCode}');
-      print(response.body);
+      if (kDebugMode) print('📥 Token response status: ${response.statusCode}');
+      if (kDebugMode) print(response.body);
       if (response.statusCode == 200) {
         // Pastikan response body di-parse ke Map
         final Map<String, dynamic> data = jsonDecode(response.body);
@@ -258,14 +259,14 @@ class ChartExecutionController extends GetxController {
           return token;
         } else {
           // Jika token null, cetak isi data untuk debug
-          print("Struktur data salah: $data");
+          if (kDebugMode) print("Struktur data salah: $data");
           throw 'Field token tidak ditemukan atau kosong';
         }
       } else {
         throw 'HTTP Error: ${response.statusCode}';
       }
     } catch(e) {
-      print('❌ Error getting token for WSS: $e');
+      if (kDebugMode) print('❌ Error getting token for WSS: $e');
       throw Exception('Gagal mendapatkan token untuk koneksi WebSocket.');
     }
   }

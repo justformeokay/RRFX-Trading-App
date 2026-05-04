@@ -13,34 +13,52 @@ class PromotionSection extends StatefulWidget {
   State<PromotionSection> createState() => _PromotionSectionState();
 }
 
-class _PromotionSectionState extends State<PromotionSection> {
+class _PromotionSectionState extends State<PromotionSection>
+    with WidgetsBindingObserver {
   final PromotionController controller = Get.put(PromotionController());
   final PageController pageCtrl = PageController(viewportFraction: 0.88);
 
   Timer? autoSlideTimer;
   int currentPage = 0;
 
-  @override
-  void initState() {
-    super.initState();
+  void _startTimer() {
+    autoSlideTimer?.cancel();
     autoSlideTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      if (controller.promotions.isNotEmpty) {
-        if (currentPage < controller.promotions.length - 1) {
-          currentPage++;
-        } else {
-          currentPage = 0;
-        }
-        pageCtrl.animateToPage(
-          currentPage,
-          duration: const Duration(milliseconds: 550),
-          curve: Curves.easeOut,
-        );
+      if (!mounted || controller.promotions.isEmpty) return;
+      if (currentPage < controller.promotions.length - 1) {
+        currentPage++;
+      } else {
+        currentPage = 0;
       }
+      pageCtrl.animateToPage(
+        currentPage,
+        duration: const Duration(milliseconds: 550),
+        curve: Curves.easeOut,
+      );
     });
   }
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _startTimer();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _startTimer();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.hidden) {
+      autoSlideTimer?.cancel();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     autoSlideTimer?.cancel();
     super.dispose();
   }

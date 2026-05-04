@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:rrfx/src/helpers/widgets/app_network_image.dart';
 import 'package:get/get.dart';
@@ -314,7 +314,7 @@ class _IndexV2State extends State<IndexV2> {
       final formatter = NumberFormat("#,##0.00", "id_ID");
       return formatter.format(numBalance);
     } catch (e) {
-      print("Error formatting balance: $e");
+      if (kDebugMode) print("Error formatting balance: $e");
       return "$balance";
     }
   }
@@ -1141,7 +1141,7 @@ class _IndexV2State extends State<IndexV2> {
                                 return;
                               }
                               selectedAccountType.toLowerCase();
-                              print(signal.symbol);
+                              if (kDebugMode) print(signal.symbol);
                               Get.to(
                                 () => WebViewChartViewFromTile(
                                   login: int.parse(

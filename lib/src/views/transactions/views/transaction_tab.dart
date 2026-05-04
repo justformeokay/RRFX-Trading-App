@@ -5,6 +5,7 @@ import 'package:icons_plus/icons_plus.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/components/containers/no_account.dart';
+import 'package:rrfx/src/views/transactions/transaction_tab_controller.dart';
 import 'package:rrfx/src/views/transactions/views/close_transaction_meta_5.dart';
 import 'package:rrfx/src/views/transactions/views/open_transacton_meta_5.dart';
 import 'package:rrfx/src/views/transactions/views/pending_orders_page.dart';
@@ -22,12 +23,16 @@ class _TransactionTabState extends State<TransactionTab>
   late TabController _tabController;
   int _currentIndex = 0;
 
+  // Registered here so PendingOrdersPage can find it via Get.find()
+  final _tabIndexCtrl = Get.put(TransactionTabController());
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
+        _tabIndexCtrl.currentIndex.value = _tabController.index;
         setState(() => _currentIndex = _tabController.index);
       }
     });

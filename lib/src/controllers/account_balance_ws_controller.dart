@@ -31,6 +31,15 @@ class AccountBalanceWSController extends GetxController
   final RxDouble profit = 0.0.obs;
   final RxDouble floating = 0.0.obs;
 
+  // Individual observables untuk setiap baris header — hanya field yg berubah
+  // yang memicu rebuild Obx-nya masing-masing, bukan semua sekaligus.
+  final RxString loginObs = ''.obs;
+  final RxString balanceObs = 'N/A'.obs;
+  final RxString equityObs = 'N/A'.obs;
+  final RxString marginObs = 'N/A'.obs;
+  final RxString marginFreeObs = 'N/A'.obs;
+  final RxString marginLevelObs = 'N/A'.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -92,6 +101,18 @@ class AccountBalanceWSController extends GetxController
     _currentServerType = serverType;
     _isManuallyDisconnected = false;
     _reconnectAttempts = 0;
+
+    // Sync individual observables from current account snapshot
+    // so the header shows correct values immediately on account switch
+    final acc = Get.find<AccountController>().selectedAccount.value;
+    if (acc != null) {
+      loginObs.value = acc.login ?? '';
+      balanceObs.value = acc.balance ?? 'N/A';
+      equityObs.value = acc.equity ?? 'N/A';
+      marginObs.value = acc.margin ?? 'N/A';
+      marginFreeObs.value = acc.marginFree ?? 'N/A';
+      marginLevelObs.value = acc.marginFreePercent?.toString() ?? 'N/A';
+    }
 
     // Connect to new account
     // print('🔌 [AccountWS] Subscribing to new account: $login');
@@ -206,12 +227,14 @@ class AccountBalanceWSController extends GetxController
         final newBalance = data['balance']?.toString();
         if (newBalance != null && newBalance != currentAccount.balance) {
           currentAccount.balance = newBalance;
+          balanceObs.value = newBalance;
           hasChanges = true;
         }
         
         final newEquity = data['equity']?.toString();
         if (newEquity != null && newEquity != currentAccount.equity) {
           currentAccount.equity = newEquity;
+          equityObs.value = newEquity;
           hasChanges = true;
         }
         
@@ -219,6 +242,7 @@ class AccountBalanceWSController extends GetxController
           final newMargin = data['margin'].toString();
           if (newMargin != currentAccount.margin) {
             currentAccount.margin = newMargin;
+            marginObs.value = newMargin;
             hasChanges = true;
           }
         }
@@ -226,12 +250,14 @@ class AccountBalanceWSController extends GetxController
         final newMarginFree = data['free_margin']?.toString();
         if (newMarginFree != null && newMarginFree != currentAccount.marginFree) {
           currentAccount.marginFree = newMarginFree;
+          marginFreeObs.value = newMarginFree;
           hasChanges = true;
         }
         
         final newMarginLevel = (data['margin_level'] as num?)?.toDouble();
         if (newMarginLevel != null && newMarginLevel != currentAccount.marginFreePercent) {
           currentAccount.marginFreePercent = newMarginLevel;
+          marginLevelObs.value = newMarginLevel.toString();
           hasChanges = true;
         }
 
@@ -263,38 +289,108 @@ class AccountBalanceWSController extends GetxController
         final openPositions = data['open_positions'] as List;
 
         // Skip if positions data is empty and we already have empty model
-        if (openPositions.isEmpty && 
+        if (openPositions.isEmpty &&
             (tradingController.openOrderModel.value?.response?.isEmpty ?? true)) {
           return;
         }
 
-        // Convert WebSocket format to Response objects
-        final updatedPositions =
-            openPositions.map((pos) {
-              return {
-                'ticket': pos['ticket'],
-                'symbol': pos['symbol'],
-                'orderType': pos['type'] == 0 ? 'buy' : 'sell',
-                'lot': pos['volume'],
-                'openPrice': pos['open_price'],
-                'currentPrice': pos['current_price'],
-                'stopLoss': pos['stop_loss'],
-                'takeProfit': pos['take_profit'],
-                'profit': pos['profit'],
-                'swap': pos['swap'],
-                'openTime':
-                    DateTime.fromMillisecondsSinceEpoch(
-                      (pos['open_time'] as int) * 1000,
-                    ).toString(),
-                'digits': pos['digits'] ?? 5,
-              };
-            }).toList();
+        final existingPositions = tradingController.openOrderModel.value?.response;
+        bool needsFullReplace = existingPositions == null ||
+            existingPositions.length != openPositions.length;
 
-        // Create new OpenOrderModel with updated data
-        final newModel = {'response': updatedPositions};
-        tradingController.openOrderModel.value = OpenOrderModel.fromJson(newModel);
+        if (!needsFullReplace) {
+          // Build O(1) lookup by ticket to avoid nested loops
+          final existingByTicket = {
+            for (final p in existingPositions) '${p.ticket}': p
+          };
 
-        // print('📊 [AccountWS] Updated ${openPositions.length} open positions');
+          bool positionChanged = false;
+
+          for (final pos in openPositions) {
+            final ticket = '${pos['ticket']}';
+            final existing = existingByTicket[ticket];
+            if (existing == null) {
+              // Unknown ticket — structure changed, fall through to full replace
+              needsFullReplace = true;
+              break;
+            }
+
+            // currentPrice changes on every tick — update in-place
+            final newCurrentPrice = pos['current_price'];
+            if (newCurrentPrice != null &&
+                '$newCurrentPrice' != '${existing.currentPrice}') {
+              existing.currentPrice = newCurrentPrice;
+              positionChanged = true;
+            }
+
+            // profit changes frequently
+            final newProfit = pos['profit'];
+            if (newProfit != null) {
+              final oldVal = double.tryParse('${existing.profit}') ?? 0.0;
+              final newVal = (newProfit as num).toDouble();
+              if ((newVal - oldVal).abs() > 0.00001) {
+                existing.profit = newProfit;
+                positionChanged = true;
+              }
+            }
+
+            // swap changes daily, but check anyway
+            final newSwap = pos['swap'];
+            if (newSwap != null) {
+              final oldVal = double.tryParse('${existing.swap}') ?? 0.0;
+              final newVal = (newSwap as num).toDouble();
+              if ((newVal - oldVal).abs() > 0.00001) {
+                existing.swap = newSwap;
+                positionChanged = true;
+              }
+            }
+
+            // SL/TP can change after modify order
+            final newSL = pos['stop_loss'];
+            if (newSL != null && '$newSL' != '${existing.stopLoss}') {
+              existing.stopLoss = newSL;
+              positionChanged = true;
+            }
+
+            final newTP = pos['take_profit'];
+            if (newTP != null && '$newTP' != '${existing.takeProfit}') {
+              existing.takeProfit = newTP;
+              positionChanged = true;
+            }
+          }
+
+          // In-place update: notify without creating new objects
+          if (positionChanged && !needsFullReplace) {
+            tradingController.openOrderModel.refresh();
+            return;
+          } else if (!needsFullReplace) {
+            // Nothing changed at all — skip rebuild entirely
+            return;
+          }
+        }
+
+        // Position count changed (opened/closed) — full replace required
+        final updatedPositions = openPositions.map((pos) {
+          return {
+            'ticket': pos['ticket'],
+            'symbol': pos['symbol'],
+            'orderType': pos['type'] == 0 ? 'buy' : 'sell',
+            'lot': pos['volume'],
+            'openPrice': pos['open_price'],
+            'currentPrice': pos['current_price'],
+            'stopLoss': pos['stop_loss'],
+            'takeProfit': pos['take_profit'],
+            'profit': pos['profit'],
+            'swap': pos['swap'],
+            'openTime': DateTime.fromMillisecondsSinceEpoch(
+              (pos['open_time'] as int) * 1000,
+            ).toString(),
+            'digits': pos['digits'] ?? 5,
+          };
+        }).toList();
+
+        tradingController.openOrderModel.value =
+            OpenOrderModel.fromJson({'response': updatedPositions});
       }
     } catch (e) {
       // print('❌ [AccountWS] Error handling update: $e');

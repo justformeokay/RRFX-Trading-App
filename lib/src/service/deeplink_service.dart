@@ -3,8 +3,7 @@ import 'package:app_links/app_links.dart';
 import 'package:get/get.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
 import 'package:rrfx/src/service/utm_tracking_service.dart';
-import 'package:rrfx/src/views/webview/external_webview_page.dart';
-import 'package:rrfx/src/views/authentications/signin.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DeepLinkService {
   final AppLinks _appLinks = AppLinks();
@@ -77,8 +76,8 @@ class DeepLinkService {
         // print('📌 [DeepLink] Stored pending WebView URL (initial=$isInitial, freshStart=$_isFreshStart)');
         _isProcessingLink = false;
       } else {
-        // App sudah terbuka dan bukan fresh start: navigate langsung
-        _openInWebView(uri.toString());
+        // App sudah terbuka dan bukan fresh start: buka di browser sistem
+        _openInExternalBrowser(uri.toString());
         Future.delayed(const Duration(milliseconds: 1500), () {
           _isProcessingLink = false;
         });
@@ -205,29 +204,19 @@ class DeepLinkService {
     return result;
   }
 
-  /// Buka URL di WebView page (navigasi ke Login → WebView)
-  /// Digunakan saat app sudah terbuka (bukan cold start)
-  void _openInWebView(String url) {
-    // print('🌐 [DeepLink] Opening WebView for: $url');
-    
-    final title = _getTitleForUrl(url);
-    
-    // Navigasi ke Login page dulu, lalu ke WebView
-    Future.delayed(const Duration(milliseconds: 300), () {
-      // Navigasi langsung ke WebView dengan SignIn sebagai base
-      Get.offAll(() => const SignIn());
-      
-      // Setelah login page loaded, push WebView page
-      Future.delayed(const Duration(milliseconds: 500), () {
-        Get.to(
-          () => ExternalWebViewPage(
-            url: url,
-            title: title,
-          ),
-          transition: Transition.rightToLeft,
-        );
-        // print('✅ [DeepLink] Navigated to WebView: $url');
-      });
+  /// Buka URL di browser sistem (bukan in-app WebView).
+  /// Digunakan untuk /reset, /verify, /confirm agar user bisa
+  /// berinteraksi dengan halaman web sepenuhnya di browser.
+  void _openInExternalBrowser(String url) async {
+    // print('🌐 [DeepLink] Opening in external browser: $url');
+    try {
+      final uri = Uri.parse(url);
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      // print('❌ [DeepLink] Failed to open external browser: $e');
+    }
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _isProcessingLink = false;
     });
   }
   

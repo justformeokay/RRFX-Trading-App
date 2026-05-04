@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
+
 class TicketTopicsModel {
   bool? status;
   String? message;
@@ -6,11 +8,11 @@ class TicketTopicsModel {
   TicketTopicsModel({this.status, this.message, this.data});
 
   TicketTopicsModel.fromJson(Map<String, dynamic> json) {
-    print("📌 TicketTopicsModel.fromJson called with: $json");
+    if (kDebugMode) print("📌 TicketTopicsModel.fromJson called with: $json");
     status = json['status'];
     message = json['message'];
     data = json['data'] != null ? List<String>.from(json['data']) : [];
-    print("✅ TicketTopicsModel parsed - data: $data");
+    if (kDebugMode) print("✅ TicketTopicsModel parsed - data: $data");
   }
 
   Map<String, dynamic> toJson() {

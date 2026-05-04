@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get/get.dart';
@@ -9,6 +10,9 @@ class NetworkController extends GetxController {
   var hasConnection = true.obs;
   var networkSpeed = 0.obs;
   var isCheckingSpeed = false.obs;
+
+  // Debounce timer — prevents burst checks when signal fluctuates
+  Timer? _debounceTimer;
 
   @override
   void onInit() {
@@ -22,9 +26,13 @@ class NetworkController extends GetxController {
       Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
         hasConnection.value = !results.contains(ConnectivityResult.none);
         
-        // Cek network speed ketika ada perubahan koneksi
+        // Debounce: wait 3s after last event before checking speed.
+        // Prevents burst of checks when signal fluctuates rapidly.
         if (hasConnection.value) {
-          checkNetworkSpeed();
+          _debounceTimer?.cancel();
+          _debounceTimer = Timer(const Duration(seconds: 3), () {
+            checkNetworkSpeed();
+          });
         }
       });
     } catch (e) {
@@ -56,25 +64,14 @@ class NetworkController extends GetxController {
   Future<void> checkNetworkSpeed() async {
     if (kIsWeb || isCheckingSpeed.value) return;
     
-    // isCheckingSpeed.value = true;
+    isCheckingSpeed.value = true;
     
     try {
-      // Tampilkan loading dialog
-      // NetworkSpeedDialog.showNetworkSpeedCheckingDialog();
-      
-      // Warm up - skip first request (usually slower due to DNS/connection setup)
-      try {
-        await NetworkSpeedService.measureLatency(url: 'https://www.google.com/favicon.ico');
-        await Future.delayed(const Duration(milliseconds: 200));
-      } catch (_) {}
-      
-      // Measure actual network speed dengan latency check
+      // measureNetworkSpeedWithRetry already performs its own warm-up internally,
+      // so no duplicate warm-up here.
       final speed = await NetworkSpeedService.measureNetworkSpeedWithRetry(
         retryCount: 3,
       );
-      
-      // Close loading dialog
-      Get.back();
       
       if (speed != null) {
         networkSpeed.value = speed;
@@ -86,12 +83,8 @@ class NetworkController extends GetxController {
       }
     } catch (e) {
       Get.log('Error checking network speed: $e');
-      // Close loading dialog jika ada error
-      try {
-        Get.back();
-      } catch (_) {}
     } finally {
-      // isCheckingSpeed.value = false;
+      isCheckingSpeed.value = false;
     }
   }
 
@@ -99,12 +92,6 @@ class NetworkController extends GetxController {
   Future<int?> getNetworkSpeed() async {
     if (kIsWeb) return null;
     try {
-      // Warm up
-      try {
-        await NetworkSpeedService.measureLatency(url: 'https://www.google.com/favicon.ico');
-        await Future.delayed(const Duration(milliseconds: 200));
-      } catch (_) {}
-      
       final speed = await NetworkSpeedService.measureNetworkSpeedWithRetry(
         retryCount: 3,
       );
@@ -118,6 +105,12 @@ class NetworkController extends GetxController {
       Get.log('Error getting network speed: $e');
       return null;
     }
+  }
+
+  @override
+  void onClose() {
+    _debounceTimer?.cancel();
+    super.onClose();
   }
 }
 

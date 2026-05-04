@@ -142,128 +142,6 @@ class MarketWebSocketController extends GetxController
     }
   }
 
-  // void _connectWebSocket() {
-  //   try {
-  //     status.value = WebSocketStatus.connecting;
-  //     channel = IOWebSocketChannel.connect('ws://207.148.119.106:9003');
-
-  //     channel!.stream.listen(
-  //       (message) {
-  //         try {
-  //           _reconnectAttempts = 0; // Reset counter saat berhasil terima data
-  //           // print('📥 WebSocket received message: $message');
-  //           final decoded = json.decode(message);
-  //           if (decoded is Map<String, dynamic>) {
-  //             // Check apakah response adalah single market object
-  //             if (decoded.containsKey('symbol')) {
-  //               // Single market response: { "symbol": "XAUUSD.db", "bid": 4209.27, ... }
-  //               final symbol = decoded['symbol'] as String;
-  //               final bid = decoded['bid'];
-  //               final ask = decoded['ask'];
-  //               // print(
-  //               //   '✅ Parsed single market - Symbol: $symbol, Bid: $bid, Ask: $ask',
-  //               // );
-
-  //               final data = MarketDataModel.fromJson(symbol, decoded);
-  //               marketData[symbol] = data;
-  //               // print(
-  //               //   '💾 Stored in marketData[$symbol] = Bid: ${data.bid}, Ask: ${data.ask}',
-  //               // );
-  //               status.value = WebSocketStatus.connected;
-  //             } else {
-  //               // Multiple markets response: { "XAUUSD": {...}, "EURUSD": {...} }
-  //               // print('📦 Parsing multiple markets...');
-  //               decoded.forEach((symbol, item) {
-  //                 final data = MarketDataModel.fromJson(symbol, item);
-  //                 marketData[symbol] = data;
-  //                 // print(
-  //                 // //   '💾 Stored $symbol - Bid: ${data.bid}, Ask: ${data.ask}',
-  //                 // );
-  //               });
-  //               status.value = WebSocketStatus.connected;
-  //             }
-  //           }
-  //         } catch (e) {
-  //           print('❌ WebSocket parse error: $e');
-  //         }
-  //       },
-  //       onError: (err) {
-  //         print('❌ WebSocket error: $err');
-  //         status.value = WebSocketStatus.failed;
-  //         if (!_isManuallyDisconnected) {
-  //           _scheduleReconnect();
-  //         }
-  //       },
-  //       onDone: () {
-  //         print('⚠️ WebSocket connection closed');
-  //         status.value = WebSocketStatus.disconnected;
-  //         if (!_isManuallyDisconnected) {
-  //           _scheduleReconnect();
-  //         }
-  //       },
-  //       cancelOnError: false,
-  //     );
-  //   } catch (e) {
-  //     print('WebSocket connection error: $e');
-  //     status.value = WebSocketStatus.failed;
-  //   }
-  // }
-
-  // List<Candle> generateOHLCFromTicks(String symbol, Duration interval) {
-  //   final List<TickModel>? ticks = tickData[symbol];
-  //   if (ticks == null || ticks.isEmpty) return [];
-
-  //   // final List<Candle> candles = [];
-  //   ticks.sort((a, b) => a.datetime.compareTo(b.datetime));
-
-  //   DateTime start = ticks.first.datetime;
-  //   DateTime end = start.add(interval);
-
-  //   double open = ticks.first.bid;
-  //   double high = open;
-  //   double low = open;
-  //   double close = open;
-
-  //   for (var tick in ticks) {
-  //     if (tick.datetime.isBefore(end)) {
-  //       high = tick.bid > high ? tick.bid : high;
-  //       low = tick.bid < low ? tick.bid : low;
-  //       close = tick.bid;
-  //     } else {
-  //       // candles.add(
-  //       //   Candle(
-  //       //     epoch: start.millisecondsSinceEpoch ~/ 1000,
-  //       //     open: open,
-  //       //     high: high,
-  //       //     low: low,
-  //       //     close: close,
-  //       //   ),
-  //       // );
-
-  //       // Mulai candle baru
-  //       start = end;
-  //       end = start.add(interval);
-  //       open = tick.bid;
-  //       high = tick.bid;
-  //       low = tick.bid;
-  //       close = tick.bid;
-  //     }
-  //   }
-
-  //   // Tambah candle terakhir
-  //   candles.add(
-  //     Candle(
-  //       epoch: start.millisecondsSinceEpoch ~/ 1000,
-  //       open: open,
-  //       high: high,
-  //       low: low,
-  //       close: close,
-  //     ),
-  //   );
-
-  //   return candles;
-  // }
-
   void _scheduleReconnect() {
     if (_reconnectTimer?.isActive == true) return;
     if (_reconnectAttempts >= _maxReconnectAttempts) {
@@ -346,6 +224,7 @@ class TickModelWSS {
 
 class TickWSSController extends GetxController {
   WebSocketChannel? _channel;
+  String? _connectedUrl; // URL terakhir yang berhasil connect — guard duplikat
   
   var ticks = <String, TickModelWSS>{}.obs;
   // Map untuk menyimpan warna masing-masing simbol
@@ -359,8 +238,22 @@ class TickWSSController extends GetxController {
   }) {
     final url = '${GlobalVariable.mainURLForWebSocketTick}${GlobalVariable.endpointWssTick}?token=$token&server=$server&login=$login';
 
+    // Skip jika sudah terhubung dengan URL yang sama
+    if (isConnected.value && _connectedUrl == url) return;
+
+    // Tutup channel lama sebelum membuka yang baru untuk mencegah orphan connection
+    if (_channel != null) {
+      try {
+        _channel!.sink.close();
+      } catch (_) {}
+      _channel = null;
+      isConnected.value = false;
+      _connectedUrl = null;
+    }
+
     try {
       _channel = WebSocketChannel.connect(Uri.parse(url));
+      _connectedUrl = url;
       isConnected.value = true;
 
       _channel!.stream.listen(
@@ -391,9 +284,11 @@ class TickWSSController extends GetxController {
         },
         onError: (error) {
           isConnected.value = false;
+          _connectedUrl = null;
         },
         onDone: () {
           isConnected.value = false;
+          _connectedUrl = null;
         },
       );
     } catch (e) {
@@ -403,6 +298,8 @@ class TickWSSController extends GetxController {
 
   void disconnect() {
     _channel?.sink.close();
+    _channel = null;
+    _connectedUrl = null;
     isConnected.value = false;
   }
 }

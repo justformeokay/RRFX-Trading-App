@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -17,6 +18,7 @@ import 'package:rrfx/src/components/containers/no_account.dart';
 import 'package:rrfx/src/helpers/variables/global_variables.dart';
 import 'package:rrfx/src/service/account_credentials_service.dart';
 import 'package:rrfx/src/service/auth_service.dart';
+import 'package:rrfx/src/views/transactions/transaction_tab_controller.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 // ─────────────────────────────────────────────────────────
@@ -151,6 +153,7 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
   String? _currentLogin;
   String? _currentServerType;
   Worker? _accountListener;
+  Worker? _tabVisibilityWorker;
 
   final AuthService _authService = AuthService();
   final RxBool _isCancelling = false.obs;
@@ -186,6 +189,30 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
     if (account != null && account.login != null && account.type != null) {
       _subscribe(login: account.login!, serverType: account.type!);
     }
+
+    // Pause/resume WS based on tab visibility.
+    // When user is on a different tab, disconnect to free up resources.
+    // Reconnect immediately when this tab becomes active again.
+    final tabCtrl = Get.isRegistered<TransactionTabController>()
+        ? Get.find<TransactionTabController>()
+        : null;
+    if (tabCtrl != null) {
+      _tabVisibilityWorker = ever(tabCtrl.currentIndex, (idx) {
+        if (idx == 1) {
+          // This tab is visible — reconnect if not already connected
+          if (status.value != PendingWSStatus.connected &&
+              _currentLogin != null &&
+              _currentServerType != null) {
+            _reconnectAttempts = 0;
+            _subscribe(
+                login: _currentLogin!, serverType: _currentServerType!);
+          }
+        } else {
+          // This tab is hidden — disconnect WS to save CPU/battery
+          _disconnect();
+        }
+      });
+    }
   }
 
   @override
@@ -207,6 +234,7 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _accountListener?.dispose();
+    _tabVisibilityWorker?.dispose();
     _audioPlayer.dispose();
     _disconnect();
     super.dispose();
@@ -1408,7 +1436,7 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
       '&slippage=0',
     );
 
-    Get.log('📦 [CLOSE] Request URL: $uri');
+      if (kDebugMode) Get.log('📦 [CLOSE] Request URL: $uri');
 
     final response = await http.get(
       uri,
@@ -1418,8 +1446,8 @@ class _PendingOrdersPageState extends State<PendingOrdersPage>
       onTimeout: () => throw Exception('Close order timeout, coba lagi.'),
     );
 
-    Get.log('📥 [CLOSE] Response status: ${response.statusCode}');
-    Get.log('📥 [CLOSE] Response body: ${response.body}');
+    if (kDebugMode) Get.log('📥 [CLOSE] Response status: ${response.statusCode}');
+    if (kDebugMode) Get.log('📥 [CLOSE] Response body: ${response.body}');
 
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
@@ -1607,7 +1635,7 @@ class _EditPositionDialogState extends State<EditPositionDialog> {
       final String finalSL = slController.text.isEmpty ? "0" : slController.text;
       final String finalTP = tpController.text.isEmpty ? "0" : tpController.text;
 
-      print("🔄 Updating pending order with Entry: $finalPrice, SL: $finalSL, TP: $finalTP");
+      if (kDebugMode) print("🔄 Updating pending order with Entry: $finalPrice, SL: $finalSL, TP: $finalTP");
 
       final result = await modifyPendingOrder(
         loginID: widget.currentLogin ?? '',
@@ -1698,7 +1726,7 @@ class _EditPositionDialogState extends State<EditPositionDialog> {
       '&price=$price',
     );
 
-    Get.log('📦 [MODIFY] Request URL: $uri');
+      if (kDebugMode) Get.log('📦 [MODIFY] Request URL: $uri');
 
     final response = await http.get(
       uri,
@@ -1708,8 +1736,8 @@ class _EditPositionDialogState extends State<EditPositionDialog> {
       onTimeout: () => throw Exception('Close order timeout, coba lagi.'),
     );
 
-    Get.log('📥 [CLOSE] Response status: ${response.statusCode}');
-    Get.log('📥 [CLOSE] Response body: ${response.body}');
+    if (kDebugMode) Get.log('📥 [CLOSE] Response status: ${response.statusCode}');
+    if (kDebugMode) Get.log('📥 [CLOSE] Response body: ${response.body}');
 
     return jsonDecode(response.body) as Map<String, dynamic>;
   }

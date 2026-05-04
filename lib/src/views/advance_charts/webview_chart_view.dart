@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -33,7 +33,8 @@ class WebViewChartView extends StatefulWidget {
   State<WebViewChartView> createState() => _WebViewChartViewState();
 }
 
-class _WebViewChartViewState extends State<WebViewChartView> {
+class _WebViewChartViewState extends State<WebViewChartView>
+    with WidgetsBindingObserver {
   final chartController = Get.put(ChartControllers());
   final accountController = Get.put(AccountController());
   final symbolsController = Get.put(SymbolsController());
@@ -61,9 +62,15 @@ class _WebViewChartViewState extends State<WebViewChartView> {
   // Current price from chart
   final RxnDouble currentPrice = RxnDouble(null);
 
+  // Reactive bid/ask — updated via ever() worker, not inside Obx
+  final RxString _bidObs = '0.00'.obs;
+  final RxString _askObs = '0.00'.obs;
+  Worker? _tickWorker;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _previousTheme = Get.isDarkMode;
 
     // Use symbol from widget parameter if provided, otherwise use chartController's saved value
@@ -92,7 +99,20 @@ class _WebViewChartViewState extends State<WebViewChartView> {
         setState(() {
           _currentSymbol = symbol;
         });
+        // Reset prices until first tick arrives for the new symbol
+        _bidObs.value = '0.00';
+        _askObs.value = '0.00';
         _reloadChart();
+      }
+    });
+
+    // Update bid/ask/currentPrice from tick — runs outside Obx to avoid full panel rebuild
+    _tickWorker = ever(tickController.ticks, (map) {
+      final tick = map[_currentSymbol];
+      if (tick != null) {
+        _bidObs.value = tick.bid.toStringAsFixed(tick.digits);
+        _askObs.value = tick.ask.toStringAsFixed(tick.digits);
+        currentPrice.value = tick.bid;
       }
     });
 
@@ -225,12 +245,17 @@ class _WebViewChartViewState extends State<WebViewChartView> {
   _initConnectWSSTick() async {
     String? login = widget.login ?? accountController.selectedAccount.value?.login; 
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('wsToken'); // Ambil token WSS dari SharedPreferences
+    String? token = prefs.getString('wsToken');
     String? server = widget.serverType ?? accountController.selectedAccount.value?.type?.toLowerCase() ?? 'demo';
-    print("🔑 Connecting to Tick WSS with login: $login, server: $server, token: ${token != null ? '***' : 'null'}");
+    
+    // Jangan konek jika credentials belum tersedia — mencegah flood koneksi kosong
+    if (token == null || token.isEmpty || login == null || login.isEmpty) {
+      return;
+    }
+
     tickController.connectToSocket(
-      login: login ?? '',
-      token: token ?? '', 
+      login: login,
+      token: token,
       server: server,
     );
   }
@@ -673,34 +698,22 @@ class _WebViewChartViewState extends State<WebViewChartView> {
                 ? Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Trading panel
-                    Obx(
-                      () {
-                        final tick = tickController.ticks[_currentSymbol];
-                        if (tick != null) {
-                          currentPrice.value = tick.bid; // Update current price dari tick
-                        }
-                        return ChartTradingPanel(
-                          bid: tick?.bid.toStringAsFixed(tick.digits) ?? '0.00',
-                          ask: tick?.ask.toStringAsFixed(tick.digits) ?? '0.00',
-                          login:
-                              widget.login ??
-                              accountController.selectedAccount.value?.login ??
-                              '',
-                          symbol:
-                              _currentSymbol ??
-                              widget.symbol ??
-                              chartController.selectedMarket.value,
-                          currentPrice: currentPrice,
-                          onOrderExecuted: (operation) {
-                            // print('✅ Order executed callback: $operation');
-                            // print('🔄 Symbol: ${_currentSymbol ?? widget.symbol}');
-                            // print('👤 Login: ${widget.login ?? accountController.selectedAccount.value?.login}');
-                            // Bisa tambahkan refresh chart atau logic lainnya jika diperlukan
-                            // _reloadChart(); // Uncomment jika ingin auto-reload chart setelah order
-                          },
-                        );
-                      }
+                    // Trading panel — no Obx here; bid/ask update via RxString internally
+                    ChartTradingPanel(
+                      bidObs: _bidObs,
+                      askObs: _askObs,
+                      login:
+                          widget.login ??
+                          accountController.selectedAccount.value?.login ??
+                          '',
+                      symbol:
+                          _currentSymbol ??
+                          widget.symbol ??
+                          chartController.selectedMarket.value,
+                      currentPrice: currentPrice,
+                      onOrderExecuted: (operation) {
+                        // _reloadChart(); // Uncomment jika ingin auto-reload chart setelah order
+                      },
                     ),
                   ],
                 )
@@ -711,9 +724,23 @@ class _WebViewChartViewState extends State<WebViewChartView> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      // Pause JS timers in WebView to reduce background CPU usage
+      webViewController?.pauseTimers();
+    } else if (state == AppLifecycleState.resumed) {
+      webViewController?.resumeTimers();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _chartRefreshWorker?.dispose();
     _symbolWorker?.dispose();
+    _tickWorker?.dispose();
     _chartRefreshDebounce?.cancel();
     _connectionSubscription.cancel();
     _cancelTimeoutTimer();

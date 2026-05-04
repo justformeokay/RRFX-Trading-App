@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
@@ -97,25 +98,30 @@ class AccountCredentialsService {
 
     // Get.log('🔗 [AcctCreds] Fetching ${pending.length} token(s) in parallel...');
 
-    // Fetch semua token secara parallel
-    final results = await Future.wait(
-      pending.map((i) async {
-        final cred = credentials[i];
-        final login = cred['login'].toString();
-        try {
-          final token = await _connectMT5(
-            user: login,
-            password: cred['password'].toString(),
-            host: cred['server'].toString(),
-          );
-          return MapEntry(i, token);
-        } catch (e) {
-          // Get.log('❌ [AcctCreds] Gagal fetch token untuk login $login: $e');
-          return MapEntry(i, null);
-        }
-      }),
-      eagerError: false,
-    );
+    // Fetch token dengan concurrency max 2 \u2014 prevents N parallel HTTP spikes at startup
+    final results = <MapEntry<int, String?>>[];
+    const concurrency = 2;
+    for (var start = 0; start < pending.length; start += concurrency) {
+      final batch = pending.sublist(start, (start + concurrency).clamp(0, pending.length));
+      final batchResults = await Future.wait(
+        batch.map((i) async {
+          final cred = credentials[i];
+          final login = cred['login'].toString();
+          try {
+            final token = await _connectMT5(
+              user: login,
+              password: cred['password'].toString(),
+              host: cred['server'].toString(),
+            );
+            return MapEntry(i, token);
+          } catch (e) {
+            return MapEntry(i, null);
+          }
+        }),
+        eagerError: false,
+      );
+      results.addAll(batchResults);
+    }
 
     // Update credentials dengan token yang berhasil
     bool updated = false;
@@ -141,7 +147,7 @@ class AccountCredentialsService {
     required String password,
     required String host,
   }) async {
-    print("🔗 [AcctCreds] Connecting MT5 for user $user at host $host...");
+    if (kDebugMode) print("🔗 [AcctCreds] Connecting MT5 for user $user at host $host...");
     final uri = Uri.parse(
       '$_mt5ConnectBase/Connect'
       '?user=$user'
@@ -177,7 +183,7 @@ class AccountCredentialsService {
       // Parse error response untuk cek INVALID_ACCOUNT
       try {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        print("🔍 [AcctCreds] MT5 Connect error response: $data");
+        if (kDebugMode) print("🔍 [AcctCreds] MT5 Connect error response: $data");
         if (data['code'] == 'INVALID_ACCOUNT') {
           // Get.log('🔒 [AcctCreds] INVALID_ACCOUNT untuk user $user → simpan flag');
           _pendingInvalidAccount = user;

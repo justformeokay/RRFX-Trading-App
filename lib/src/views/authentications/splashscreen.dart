@@ -9,13 +9,13 @@ import 'package:rrfx/src/views/authentications/signin.dart';
 import 'package:rrfx/src/views/authentications/verify_passcode_page.dart';
 import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
 import 'package:rrfx/src/views/mainpage.dart';
-import 'package:rrfx/src/views/webview/external_webview_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rrfx/src/controllers/two_factory_auth.dart';
 import 'package:get/get.dart';
 import 'package:rrfx/src/controllers/home.dart';
 import 'package:rrfx/src/service/auth_service.dart';
 import 'package:rrfx/src/service/account_credentials_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Splashscreen extends StatefulWidget {
   const Splashscreen({super.key});
@@ -201,29 +201,21 @@ class _SplashscreenState extends State<Splashscreen> with TickerProviderStateMix
     return preferences.getBool('loggedIn') ?? false;
   }
 
-  /// Check apakah ada pending WebView deeplink, jika ada langsung navigate
-  /// Returns true jika ada pending dan sudah di-navigate (caller harus return)
+  /// Check apakah ada pending external URL dari cold-start deeplink.
+  /// Jika ada, buka di browser sistem lalu lanjut navigasi normal (return false).
   bool _navigateToPendingWebView() {
     if (DeepLinkService.hasPendingWebView) {
-      // print('🔗 [SPLASH] Pending WebView deeplink detected, redirecting...');
+      // print('🔗 [SPLASH] Pending external URL detected, opening in browser...');
       final pending = DeepLinkService.consumePendingWebView();
       if (pending != null) {
-        _finishTransition(() {
-          Get.offAll(() => const SignIn());
-          Future.delayed(const Duration(milliseconds: 500), () {
-            Get.to(
-              () => ExternalWebViewPage(
-                url: pending['url']!,
-                title: pending['title'],
-              ),
-              transition: Transition.rightToLeft,
-            );
-            // print('✅ [SPLASH] Navigated to WebView from cold-start deeplink');
-          });
-        });
-        return true;
+        final uri = Uri.tryParse(pending['url']!);
+        if (uri != null) {
+          launchUrl(uri, mode: LaunchMode.externalApplication);
+          // print('✅ [SPLASH] Launched external browser for: ${pending['url']}');
+        }
       }
     }
+    // Selalu return false → lanjut navigasi normal app (Login / Home)
     return false;
   }
 

@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:math' show min;
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:get/get.dart';
@@ -75,7 +77,7 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
 
           // 🧪 TEST MODE: Parallel loading - WS + API
           // Load data via BOTH WebSocket AND API (whichever comes first wins)
-          print('⚡ [Parallel] Account switched to $newLogin - starting parallel load');
+          if (kDebugMode) print('⚡ [Parallel] Account switched to $newLogin - starting parallel load');
           _subscribeToAccountWS();
           _loadOrders();  // ← ENABLE API parallel call
 
@@ -90,7 +92,7 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
 
       // 🧪 TEST MODE: Parallel loading
       // Try both WebSocket AND API simultaneously
-      print('⚡ [Parallel] Starting parallel load (WS + API)');
+      if (kDebugMode) print('⚡ [Parallel] Starting parallel load (WS + API)');
       _subscribeToAccountWS();
       _loadOrders();  // ← Enable API parallel call
     }
@@ -112,9 +114,9 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
     final serverType = controller.selectedAccount.value?.type;
 
     if (login != null && serverType != null) {
-      print('🔌 [OpenTransaction] Subscribing to WebSocket: login=$login, server=$serverType');
+      if (kDebugMode) print('🔌 [OpenTransaction] Subscribing to WebSocket: login=$login, server=$serverType');
       accountWS.subscribe(login: login, serverType: serverType);
-      print('✅ [OpenTransaction] WebSocket subscription initiated');
+      if (kDebugMode) print('✅ [OpenTransaction] WebSocket subscription initiated');
     }
   }
 
@@ -124,7 +126,7 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
     _wsTimeoutTimer?.cancel();
     _wsTimeoutTimer = Timer(const Duration(seconds: 5), () {
       if (!_wsDataReceived && tradingController.openOrderModel.value == null) {
-        print('⏱️ [Timeout] WS timeout (5s) - triggering fallback to API');
+        if (kDebugMode) print('⏱️ [Timeout] WS timeout (5s) - triggering fallback to API');
         _loadOrders();
       }
     });
@@ -135,13 +137,13 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
     if (!_wsDataReceived) {
       _wsDataReceived = true;
       _wsTimeoutTimer?.cancel();
-      print('✅ [OpenTransaction] WS data received successfully!');
+      if (kDebugMode) print('✅ [OpenTransaction] WS data received successfully!');
     }
   }
 
   Future<void> _loadOrders() async {
     if (_isLoadingOrders) {
-      print('⏸️ [OpenTransaction] Already loading orders, skipping...');
+      if (kDebugMode) print('⏸️ [OpenTransaction] Already loading orders, skipping...');
       return;
     }
 
@@ -155,11 +157,11 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
 
     try {
       _isLoadingOrders = true;
-      print('📡 [Parallel] Fetching orders via API for login: $loginID');
+      if (kDebugMode) print('📡 [Parallel] Fetching orders via API for login: $loginID');
       await tradingController.openOrder(login: loginID);
-      print('✅ [Parallel] API orders loaded successfully');
+      if (kDebugMode) print('✅ [Parallel] API orders loaded successfully');
     } catch (e) {
-      print('❌ [Parallel] API orders failed: $e');
+      if (kDebugMode) print('❌ [Parallel] API orders failed: $e');
     } finally {
       _isLoadingOrders = false;
     }
@@ -226,58 +228,6 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
               '$total posisi berhasil ditutup',
               style: GoogleFonts.inter(fontSize: 12, color: onSurface.withOpacity(0.5)),
             ),
-            const SizedBox(height: 24),
-            // Container(
-            //   width: double.infinity,
-            //   padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            //   decoration: BoxDecoration(
-            //     color: accentColor.withOpacity(0.10),
-            //     borderRadius: BorderRadius.circular(16),
-            //     border: Border.all(color: accentColor.withOpacity(0.25)),
-            //   ),
-            //   child: Column(
-            //     children: [
-            //       Text(
-            //         'TOTAL ${isProfit ? 'PROFIT' : 'LOSS'}',
-            //         style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: accentColor, letterSpacing: 1.5),
-            //       ),
-            //       const SizedBox(height: 8),
-            //       Text(
-            //         '${totalPnl >= 0 ? '+' : ''}${totalPnl.toStringAsFixed(2)} USD',
-            //         style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w900, color: accentColor),
-            //       ),
-            //       if (totalSwap != 0.0) ...[
-            //         const SizedBox(height: 12),
-            //         Divider(color: accentColor.withOpacity(0.2), height: 1),
-            //         const SizedBox(height: 12),
-            //         Row(
-            //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            //           children: [
-            //             Text('Total Swap', style: GoogleFonts.inter(fontSize: 13, color: onSurface.withOpacity(0.6))),
-            //             Text(
-            //               '${totalSwap >= 0 ? '+' : ''}${totalSwap.toStringAsFixed(2)} USD',
-            //               style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: onSurface),
-            //             ),
-            //           ],
-            //         ),
-            //         const SizedBox(height: 8),
-            //         Row(
-            //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            //           children: [
-            //             Text('Net P&L', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: onSurface.withOpacity(0.7))),
-            //             Text(
-            //               '${netPnl >= 0 ? '+' : ''}${netPnl.toStringAsFixed(2)} USD',
-            //               style: GoogleFonts.inter(
-            //                 fontSize: 13, fontWeight: FontWeight.w800,
-            //                 color: netPnl >= 0 ? Colors.greenAccent.shade400 : Colors.redAccent.shade200,
-            //               ),
-            //             ),
-            //           ],
-            //         ),
-            //       ],
-            //     ],
-            //   ),
-            // ),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -448,30 +398,34 @@ class _OpenTransactonMeta5State extends State<OpenTransactonMeta5>
       )),
     );
 
-    // Fire all close requests simultaneously for maximum speed
+    // Throttled close all — max 3 concurrent requests to avoid network/CPU spike
     final tickets = positions.map((p) => '${p.ticket}').toList();
-
-    await Future.wait(tickets.map((ticket) async {
-      if (isCancelled.value) return;
-      try {
-        final result = await tradingController.closingOrder(
-          loginID: loginID,
-          ticketID: ticket,
-        ).timeout(
-          const Duration(seconds: 20),
-          onTimeout: () => throw Exception('Timeout'),
-        );
-        if (result['status'] == true) {
-          completed.value++;
-        } else {
+    const concurrency = 3;
+    for (var i = 0; i < tickets.length; i += concurrency) {
+      if (isCancelled.value) break;
+      final batch = tickets.sublist(i, min(i + concurrency, tickets.length));
+      await Future.wait(batch.map((ticket) async {
+        if (isCancelled.value) return;
+        try {
+          final result = await tradingController.closingOrder(
+            loginID: loginID,
+            ticketID: ticket,
+          ).timeout(
+            const Duration(seconds: 20),
+            onTimeout: () => throw Exception('Timeout'),
+          );
+          if (result['status'] == true) {
+            completed.value++;
+          } else {
+            failed.add(ticket);
+            completed.value++;
+          }
+        } catch (_) {
           failed.add(ticket);
           completed.value++;
         }
-      } catch (_) {
-        failed.add(ticket);
-        completed.value++;
-      }
-    }));
+      }));
+    }
 
     try {
       Navigator.of(context, rootNavigator: true).pop();
@@ -814,17 +768,18 @@ class _BalanceHeaderDelegate extends SliverPersistentHeaderDelegate {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Obx(() => _balanceRow("Account ID", accountController.selectedAccount.value?.login ?? "N/A", context)),
+            // Each row observes its own RxString — only that row rebuilds when its value changes.
+            Obx(() => _balanceRow("Account ID", accountWS.loginObs.value.isEmpty ? "N/A" : accountWS.loginObs.value, context)),
             Obx(() {
               final tradingController = Get.find<TradingController>();
               if (!(tradingController.openOrderModel.value?.response?.isNotEmpty ?? false)) return const SizedBox.shrink();
               return _balanceRow("Profit", _formatProfit(accountWS.profit.value), context, color: accountWS.profit.value >= 0 ? Colors.blue : Colors.red.shade400);
             }),
-            Obx(() => _balanceRow("Balance", _formatNumber(accountController.selectedAccount.value?.balance), context)),
-            Obx(() => _balanceRow("Equity", _formatNumber(accountController.selectedAccount.value?.equity), context)),
-            Obx(() => _balanceRow("Margin", _formatNumber(accountController.selectedAccount.value?.margin), context)),
-            Obx(() => _balanceRow("Free Margin", _formatNumber(accountController.selectedAccount.value?.marginFree), context)),
-            Obx(() => _balanceRow("Margin Level (%)", accountController.selectedAccount.value?.marginFreePercent?.toString() ?? "N/A", context)),
+            Obx(() => _balanceRow("Balance", _formatNumber(accountWS.balanceObs.value), context)),
+            Obx(() => _balanceRow("Equity", _formatNumber(accountWS.equityObs.value), context)),
+            Obx(() => _balanceRow("Margin", _formatNumber(accountWS.marginObs.value), context)),
+            Obx(() => _balanceRow("Free Margin", _formatNumber(accountWS.marginFreeObs.value), context)),
+            Obx(() => _balanceRow("Margin Level (%)", accountWS.marginLevelObs.value, context)),
           ],
         ),
       ),
@@ -1375,37 +1330,38 @@ class _PositionTile extends StatelessWidget {
     // Get digits from symbol or use provided digits
     final symbolDigits = digits ?? _getDigitsForSymbol(symbol ?? '');
 
-    // Navigate to new page
-    await Get.to(
-      () => EditPositionPage(
-        symbol: cleanSymbol,
-        positionId: positionId ?? '-',
-        direction: direction ?? 'buy',
-        openPrice: double.tryParse(openPrice ?? "0") ?? 0.0,
-        currentPrice: currentPriceObs.value,
-        stopLoss: double.tryParse(stopLoss ?? "0") ?? 0,
-        takeProfit: double.tryParse(takeProfit ?? "0") ?? 0,
-        digits: symbolDigits,
-        currentPriceObservable: currentPriceObs,
-        onModify: (sl, tp) async {
-          try {
-            // Show modern loading
-            _showModernLoadingDialog(context, "Updating Position...");
+    // Navigate to new page — worker always disposed via try-finally
+    try {
+      await Get.to(
+        () => EditPositionPage(
+          symbol: cleanSymbol,
+          positionId: positionId ?? '-',
+          direction: direction ?? 'buy',
+          openPrice: double.tryParse(openPrice ?? "0") ?? 0.0,
+          currentPrice: currentPriceObs.value,
+          stopLoss: double.tryParse(stopLoss ?? "0") ?? 0,
+          takeProfit: double.tryParse(takeProfit ?? "0") ?? 0,
+          digits: symbolDigits,
+          currentPriceObservable: currentPriceObs,
+          onModify: (sl, tp) async {
+            try {
+              // Show modern loading
+              _showModernLoadingDialog(context, "Updating Position...");
 
-            // Call modify API
-            final result = await tradingController.modifyPosition(
-              login: loginID,
-              ticket: positionId ?? '',
-              stopLoss: sl,
-              takeProfit: tp,
-              isPending: false,
-            );
+              // Call modify API
+              final result = await tradingController.modifyPosition(
+                login: loginID,
+                ticket: positionId ?? '',
+                stopLoss: sl,
+                takeProfit: tp,
+                isPending: false,
+              );
 
-            // Close loading dialog reliably
-            _dismissLoadingDialog(context);
+              // Close loading dialog reliably
+              _dismissLoadingDialog(context);
 
-            if (result['status'] == true) {
-              AppSnackbar.success(
+              if (result['status'] == true) {
+                AppSnackbar.success(
                 result['message'] ?? "Position berhasil dimodifikasi",
               );
 
@@ -1432,9 +1388,10 @@ class _PositionTile extends StatelessWidget {
         },
       ),
     );
-
-    // Dispose worker after page closes
-    worker.dispose();
+    } finally {
+      // Always dispose worker — prevents ghost listener if exception/back button
+      worker.dispose();
+    }
   }
 
   /// 🎭 Show beautiful market holiday dialog

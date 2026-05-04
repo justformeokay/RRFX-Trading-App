@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:rrfx/src/components/account_list/account_controller.dart';
@@ -99,7 +100,7 @@ class SymbolsController extends GetxController {
   /// Fetch symbols from API
   Future<void> fetchSymbols() async {
     final account = accountController.selectedAccount.value?.login;
-    print('🔄 Fetching symbols for account: $account');
+    if (kDebugMode) print('🔄 Fetching symbols for account: $account');
 
     if (account == null || account.isEmpty) {
       // print('⚠️ No account selected');
@@ -119,8 +120,8 @@ class SymbolsController extends GetxController {
       // print('📥 Fetching symbols for account: $account');
 
       final response = await _symbolService.getSymbolsGroup(account);
-      print('✅ Successfully fetched symbols for account: $account');
-      print('📊 Total groups: ${response.response.length}, Total symbols: ${response.response.fold(0, (sum, group) => sum + group.symbols.length)}');
+      if (kDebugMode) print('✅ Successfully fetched symbols for account: $account');
+      if (kDebugMode) print('📊 Total groups: ${response.response.length}, Total symbols: ${response.response.fold(0, (sum, group) => sum + group.symbols.length)}');
 
       symbolGroups.value = response.response;
 

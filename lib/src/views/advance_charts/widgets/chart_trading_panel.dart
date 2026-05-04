@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:icons_plus/icons_plus.dart';
@@ -16,8 +16,8 @@ class ChartTradingPanel extends StatefulWidget {
   final String symbol;
   final Function(String operation)? onOrderExecuted;
   final RxnDouble? currentPrice;
-  final String? bid;
-  final String? ask;
+  final RxString? bidObs;
+  final RxString? askObs;
 
   const ChartTradingPanel({
     super.key,
@@ -25,8 +25,8 @@ class ChartTradingPanel extends StatefulWidget {
     required this.symbol,
     this.onOrderExecuted,
     this.currentPrice,
-    this.bid,
-    this.ask,
+    this.bidObs,
+    this.askObs,
   });
 
   @override
@@ -52,7 +52,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   // http.get() top-level membuat koneksi baru per call (tidak ada pool/shared client),
   // sehingga tidak ada batas teknis di sisi client. Batas aktual ada di server MT5 API
   // (techcrm/gaintactics) — turunkan jika muncul error 429 atau INVALID_TOKEN massal.
-  static const int _maxConcurrentOrders = 8;
+  static const int _maxConcurrentOrders = 10;
   int _activeOrders = 0;
 
   OverlayEntry? _overlayEntry;
@@ -712,7 +712,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
 
                       return GestureDetector(
                         onTap: () async {
-                          print("Selected execution type: $type"); // Debug log
+                          if (kDebugMode) print("Selected execution type: $type");
                           _executionType.value = type;
                           
                           if (type == 'Execution Market') {
@@ -834,7 +834,7 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
   
   void openPendingOrderConfig(String selectedType) {
     // 1. Ambil harga awal dari widget.bid, jika null atau 0 gunakan default 0
-    final double initialPrice = double.tryParse(widget.bid ?? '0') ?? 0;
+    final double initialPrice = double.tryParse(widget.bidObs?.value ?? '0') ?? 0;
 
     Get.dialog(
       PendingOrderDialog(
@@ -843,13 +843,16 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
         initialPrice: initialPrice,
         digits: _getDigitsForSymbol(widget.symbol), // Gunakan fungsi dinamis untuk digit
         onConfirm: (entry, sl, tp) {
-          print("SL: $sl, TP: $tp"); // Debug: pastikan SL/TP diterima dengan benar
+          if (kDebugMode) print("SL: $sl, TP: $tp");
           // 2. Simpan hasil input dari sheet ke controller utama jika diperlukan
-          _slPointsController.text = sl != null ? _formatPrice(sl, widget.symbol) : '';
-          _tpPointsController.text = tp != null ? _formatPrice(tp, widget.symbol) : '';
+          // SL/TP dari dialog adalah PRICE — simpan ke _slPriceController/_tpPriceController
+          _slPriceController.text = sl != null ? _formatPrice(sl, widget.symbol) : '';
+          _tpPriceController.text = tp != null ? _formatPrice(tp, widget.symbol) : '';
+          _slPointsController.text = ''; // clear points fields
+          _tpPointsController.text = '';
           _entryPriceController.text = _formatPrice(entry, widget.symbol);
-          print("Entry Price set to: ${_entryPriceController.text}"); // Debug: pastikan entry price juga terupdate
-          print("SL Points Controller: ${_slPointsController.text}, TP Points Controller: ${_tpPointsController.text}"); // Debug: pastikan controller SL/TP terupdate
+          if (kDebugMode) print("Entry Price set to: ${_entryPriceController.text}");
+          if (kDebugMode) print("SL Points Controller: ${_slPointsController.text}, TP Points Controller: ${_tpPointsController.text}");
           
           // 3. Eksekusi Order
           final side = selectedType.toLowerCase().contains('buy') ? 'buy' : 'sell';
@@ -1197,11 +1200,11 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                   letterSpacing: 1,
                                 ),
                               ),
-                              if (widget.ask != null && widget.ask!.isNotEmpty)
-                                Text(
-                                  widget.ask!, 
-                                  style: GoogleFonts.inter(fontSize: 10, color: Colors.white)
-                                )
+                              if (widget.askObs != null)
+                                Obx(() => Text(
+                                  widget.askObs!.value,
+                                  style: GoogleFonts.inter(fontSize: 10, color: Colors.white),
+                                ))
                             ],
                           ),
                         ),
@@ -1296,11 +1299,11 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
                                   letterSpacing: 1,
                                 ),
                               ),
-                              if (widget.bid != null && widget.bid!.isNotEmpty)
-                                Text(
-                                  widget.bid!, 
-                                  style: GoogleFonts.inter(fontSize: 10, color: Colors.white)
-                                )
+                              if (widget.bidObs != null)
+                                Obx(() => Text(
+                                  widget.bidObs!.value,
+                                  style: GoogleFonts.inter(fontSize: 10, color: Colors.white),
+                                ))
                             ],
                           ),
                         ),
@@ -1439,8 +1442,6 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     // Create unique ID for this execution
     final id = DateTime.now().millisecondsSinceEpoch.toString();
     final lot = executionController.lot.value;
-    double? stopLoss = double.tryParse(_slPointsController.text.replaceAll(',', ''));
-    double? takeProfit = double.tryParse(_tpPointsController.text.replaceAll(',', ''));
 
     // Add to queue with loading status
     _executionQueue.add({
@@ -1449,8 +1450,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       'lot': lot,
       'symbol': capturedSymbol,  // Gunakan captured symbol
       'price': entryPrice,
-      'sl': stopLoss,
-      'tp': takeProfit,
+      'sl': slPrice,
+      'tp': tpPrice,
       'status': 'loading',
       'openPrice': null,
     });
@@ -1459,6 +1460,22 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
     // Show overlay if not already showing
     _showQueueOverlay();
 
+    // Concurrency guard — same limit as market orders
+    if (_activeOrders >= _maxConcurrentOrders) {
+      _itemStatuses[id]?.value = 'error';
+      if (mounted) {
+        ModernAlertDialog.error(
+          title: 'Terlalu Banyak Order',
+          message: 'Maksimal $_maxConcurrentOrders order bersamaan. Coba lagi sesaat.',
+          onPressed: () => Get.back(),
+        );
+      }
+      await Future.delayed(const Duration(milliseconds: 1000));
+      _itemStatuses.remove(id);
+      _executionQueue.removeWhere((e) => e['id'] == id);
+      return;
+    }
+    _activeOrders++;
 
     try {
       final stopwatch = Stopwatch()..start();
@@ -1469,8 +1486,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
         operation: operation,
         price: entryPrice,
         volume: lot,
-        sl: stopLoss,
-        tp: takeProfit,
+        sl: slPrice,
+        tp: tpPrice,
       );
 
       stopwatch.stop();
@@ -1535,6 +1552,8 @@ class _ChartTradingPanelState extends State<ChartTradingPanel> {
       await Future.delayed(const Duration(milliseconds: 1000));
       _itemStatuses.remove(id);
       _executionQueue.removeWhere((e) => e['id'] == id);
+    } finally {
+      _activeOrders--;
     }
   }
 

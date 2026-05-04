@@ -18,7 +18,9 @@ class CloseTransactionMeta5 extends StatefulWidget {
 class _CloseTransactionMeta5State extends State<CloseTransactionMeta5>
     with AutomaticKeepAliveClientMixin {
   @override
-  bool get wantKeepAlive => true;
+  // History data doesn't need to stay alive — rebuild on tab switch is fine.
+  // This frees memory and stops Obx rebuilds while viewing other tabs.
+  bool get wantKeepAlive => false;
 
   late final TradingController tradingController;
   late final AccountController controller;
