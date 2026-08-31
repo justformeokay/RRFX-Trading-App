@@ -235,7 +235,7 @@ class _CreateMT5PasswordPageState extends State<CreateMT5PasswordPage> {
               const SizedBox(height: 8),
       
               /// CONFIRM VALIDATION TEXT
-              Obx(() => (confirmTouched.value && !confirmMatch.value)
+              Obx(() => (confirmTouched.value && confirmC.text.length >= 6 && !confirmMatch.value)
                   ? Text(
                       "Password tidak cocok!",
                       style: TextStyle(

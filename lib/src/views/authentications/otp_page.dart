@@ -12,7 +12,7 @@ import 'package:rrfx/src/components/textfields/label_textfield.dart';
 import 'package:rrfx/src/components/textfields/otp_textfield.dart';
 import 'package:rrfx/src/controllers/authentication.dart';
 import 'package:rrfx/src/controllers/home.dart';
-import 'package:rrfx/src/controllers/resend_otp_controller.dart';
+
 import 'package:rrfx/src/helpers/formatters/masking_email.dart';
 import 'package:rrfx/src/views/authentications/verification_account_page.dart';
 import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
@@ -26,11 +26,10 @@ class OtpPage extends StatefulWidget {
 
 class _OtpPageState extends State<OtpPage> {
   final _formKey = GlobalKey<FormState>();
-  final OtpTimerController otpTimerController = Get.put(OtpTimerController());
   RxBool isLoading = false.obs;
   RxString phoneCode = "".obs;
   RxString number = "".obs;
-  RxString otpChannel = "email".obs; // 'email' or 'whatsapp'
+  RxString otpChannel = "whatsapp".obs; // 'email' or 'whatsapp'
   AuthController authController = Get.find();
   TextEditingController otpController = TextEditingController();
   HomeController homeController = Get.find();
@@ -48,7 +47,6 @@ class _OtpPageState extends State<OtpPage> {
 
   @override
   Widget build(BuildContext context) {
-    otpTimerController.startTimer(duration: 270);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return GestureDetector(
@@ -94,7 +92,7 @@ class _OtpPageState extends State<OtpPage> {
                     Text(
                       "Verifikasi",
                       style: GoogleFonts.inter(
-                        fontSize: 50,
+                        fontSize: 38,
                         fontWeight: FontWeight.w700,
                         color: CustomColor.secondaryColor,
                         height: 1.0,
@@ -103,7 +101,7 @@ class _OtpPageState extends State<OtpPage> {
                     Text(
                       "Akun Anda",
                       style: GoogleFonts.inter(
-                        fontSize: 50,
+                        fontSize: 38,
                         fontWeight: FontWeight.w700,
                         color: Theme.of(context).textTheme.titleLarge?.color,
                       ),
@@ -147,7 +145,6 @@ class _OtpPageState extends State<OtpPage> {
                             isSelected: otpChannel.value == "email",
                             onTap: () {
                               otpChannel.value = "email";
-                              otpTimerController.resetTimer(300);
                             },
                           ),
                         ),
@@ -162,7 +159,7 @@ class _OtpPageState extends State<OtpPage> {
                             value: "whatsapp",
                             isSelected: otpChannel.value == "whatsapp",
                             onTap: () {
-                              _showWhatsAppComingSoonDialog(context);
+                              otpChannel.value = "whatsapp";
                             },
                           ),
                         ),
@@ -234,6 +231,7 @@ class _OtpPageState extends State<OtpPage> {
                       child: OTPTextField(
                         requiredField: true,
                         labelText: "Kode OTP",
+                        maxLength: 4,
                         fieldName: "Kode OTP",
                         controller: otpController,
                         hintText: "Masukkan 6 digit",
@@ -244,24 +242,38 @@ class _OtpPageState extends State<OtpPage> {
 
                     // ===== RESEND TIMER =====
                     Obx(() => ResendOtpText(
-                      isResendAvailable: otpTimerController.isFinished,
-                      secondsRemaining: otpTimerController.seconds.value,
+                      isResendAvailable: authController.otpResendCountdown.value <= 0,
+                      secondsRemaining: authController.otpResendCountdown.value,
                       onResend: () {
-                        authController.resendOTP().then((result) {
+                        Get.log("🔄 [OTP_PAGE] User clicked Resend OTP");
+                        Get.log("📱 [OTP_PAGE] Selected channel: ${otpChannel.value}");
+                        
+                        authController.resendOTP(type: otpChannel.value).then((result) {
+                          Get.log("📥 [OTP_PAGE] Resend OTP result: $result");
+                          Get.log("💬 [OTP_PAGE] Response message: ${authController.responseMessage.value}");
+                          
                           if (result) {
-                            CustomScaffoldMessanger.showAppSnackBar(
+                            Get.log("✅ [OTP_PAGE] Resend OTP SUCCESS - Showing success dialog");
+                            _showModernResendSuccessDialog(
                               context,
-                              message: authController.responseMessage.value,
-                              type: SnackBarType.success,
+                              otpChannel.value,
+                              authController.otpResendCountdown.value,
                             );
-                            otpTimerController.resetTimer(300);
                           } else {
+                            Get.log("❌ [OTP_PAGE] Resend OTP FAILED - Showing error");
                             CustomScaffoldMessanger.showAppSnackBar(
                               context,
                               message: authController.responseMessage.value,
                               type: SnackBarType.error,
                             );
                           }
+                        }).catchError((error) {
+                          Get.log("💥 [OTP_PAGE] Resend OTP EXCEPTION: $error");
+                          CustomScaffoldMessanger.showAppSnackBar(
+                            context,
+                            message: "Terjadi kesalahan saat mengirim ulang OTP",
+                            type: SnackBarType.error,
+                          );
                         });
                       },
                     )),
@@ -305,6 +317,208 @@ class _OtpPageState extends State<OtpPage> {
         ),
       ),
     );
+  }
+
+  // ===== MODERN RESEND SUCCESS DIALOG =====
+  void _showModernResendSuccessDialog(BuildContext context, String channel, int countdown) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final channelName = channel == 'email' ? 'Email' : 'WhatsApp';
+    final channelIcon = channel == 'email' ? Iconsax.direct_inbox_bold : Bootstrap.whatsapp;
+    
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.elasticOut,
+          builder: (context, value, child) {
+            return Transform.scale(
+              scale: value,
+              child: child,
+            );
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 40,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Success Animation Icon
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 600),
+                    builder: (context, value, child) {
+                      return Transform.scale(
+                        scale: value,
+                        child: Container(
+                          width: 90,
+                          height: 90,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                CustomColor.secondaryColor.withOpacity(0.2),
+                                CustomColor.secondaryColor.withOpacity(0.05),
+                              ],
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.check_circle_rounded,
+                            size: 50,
+                            color: CustomColor.secondaryColor,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Title
+                  Text(
+                    "Berhasil Dikirim! 🎉",
+                    style: GoogleFonts.inter(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: Theme.of(context).textTheme.titleLarge?.color,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Channel Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: CustomColor.secondaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: CustomColor.secondaryColor.withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          channelIcon,
+                          size: 16,
+                          color: CustomColor.secondaryColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          "via $channelName",
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: CustomColor.secondaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Description
+                  Text(
+                    "Kode OTP baru telah dikirim ke $channelName Anda. Silakan periksa dan masukkan kode verifikasi yang baru.",
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: CustomColor.textThemeLightSoftColor,
+                      height: 1.6,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  
+                  // Countdown Info
+                  if (countdown > 0) ...[
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.grey[900] : Colors.grey[100],
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.access_time_rounded,
+                            size: 18,
+                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Berlaku selama ${_formatCountdown(countdown)}",
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).textTheme.bodyMedium?.color,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  
+                  const SizedBox(height: 28),
+
+                  // Close Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: CustomColor.secondaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
+                      onPressed: () => Get.back(),
+                      child: Text(
+                        "Mengerti",
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: true,
+    );
+  }
+
+  // Helper to format countdown
+  String _formatCountdown(int seconds) {
+    int minutes = seconds ~/ 60;
+    int secs = seconds % 60;
+    if (minutes > 0) {
+      return '$minutes menit $secs detik';
+    }
+    return '$secs detik';
   }
 
   // ===== CHANNEL BUTTON WIDGET =====
@@ -388,163 +602,6 @@ class _OtpPageState extends State<OtpPage> {
           ),
         ),
       ),
-    );
-  }
-
-  // ===== WHATSAPP COMING SOON DIALOG =====
-  void _showWhatsAppComingSoonDialog(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    Get.dialog(
-      Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 30,
-                spreadRadius: 5,
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(28.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Icon Container
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: CustomColor.secondaryColor.withOpacity(0.1),
-                  ),
-                  child: Icon(
-                    Bootstrap.whatsapp,
-                    size: 40,
-                    color: CustomColor.secondaryColor,
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Title
-                Text(
-                  "WhatsApp OTP",
-                  style: GoogleFonts.inter(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: Theme.of(context).textTheme.titleLarge?.color,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-
-                // Subtitle - Coming Soon Badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.15),
-                    border: Border.all(
-                      color: Colors.orange.withOpacity(0.3),
-                      width: 1.5,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    "Segera Hadir",
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.orange,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Description
-                Text(
-                  "Fitur pengiriman OTP melalui WhatsApp sedang kami kembangkan. Gunakan Email untuk saat ini, dan kami akan memberitahu Anda ketika fitur ini tersedia.",
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: CustomColor.textThemeLightSoftColor,
-                    height: 1.6,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 28),
-
-                // CTA Buttons
-                Row(
-                  children: [
-                    // Cancel
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: BorderSide(
-                            color: isDark
-                                ? Colors.grey[600]!
-                                : Colors.grey[300]!,
-                            width: 1.5,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        onPressed: () => Get.back(),
-                        child: Text(
-                          "Tutup",
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).textTheme.bodyMedium?.color,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-
-                    // Use Email Instead
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: CustomColor.secondaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        onPressed: () {
-                          // Switch to Email and close dialog
-                          otpChannel.value = "email";
-                          otpTimerController.resetTimer(300);
-                          Get.back();
-                        },
-                        child: Text(
-                          "Gunakan Email",
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      barrierDismissible: true,
     );
   }
 }

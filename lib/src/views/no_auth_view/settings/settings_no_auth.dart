@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:icons_plus/icons_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:rrfx/src/components/colors/default.dart';
 import 'package:rrfx/src/views/no_auth_view/settings/about_company_page.dart';
@@ -8,6 +9,7 @@ import 'package:rrfx/src/views/no_auth_view/settings/faq_page.dart';
 import 'package:rrfx/src/views/no_auth_view/settings/privacy_policy_setting.dart';
 import 'package:rrfx/src/views/no_auth_view/settings/terms_and_conditions.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 class SettingsNoAuth extends StatelessWidget {
   const SettingsNoAuth({super.key});
@@ -188,6 +190,13 @@ class SettingsNoAuth extends StatelessWidget {
             isDark: isDark,
           ),
 
+          _settingsTile(
+            icon: Iconsax.trash_outline,
+            label: "Hapus Akun",
+            onTap: () => Get.to(() => _DeleteAccountWebView()),
+            isDark: isDark,
+          ),
+
           const SizedBox(height: 20),
 
           // =====================================================
@@ -287,6 +296,42 @@ class SettingsNoAuth extends StatelessWidget {
                 color: isDark ? Colors.white38 : Colors.black38,
               ),
       ),
+    );
+  }
+}
+
+
+// ════════════════════════════════════════════════════════════════════════════
+// DELETE ACCOUNT WEBVIEW
+// ════════════════════════════════════════════════════════════════════════════
+class _DeleteAccountWebView extends StatefulWidget {
+  @override
+  State<_DeleteAccountWebView> createState() => _DeleteAccountWebViewState();
+}
+
+class _DeleteAccountWebViewState extends State<_DeleteAccountWebView> {
+  late WebViewController _webViewController;
+
+  @override
+  void initState() {
+    super.initState();
+    _webViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..loadRequest(
+        Uri.parse('https://app.rrfx.co.id/delete-account'),
+      );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Delete Account'),
+        centerTitle: true,
+        elevation: 0,
+        forceMaterialTransparency: true,
+      ),
+      body: WebViewWidget(controller: _webViewController),
     );
   }
 }

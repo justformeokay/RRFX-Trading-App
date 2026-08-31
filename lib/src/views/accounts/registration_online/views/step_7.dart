@@ -516,7 +516,7 @@ class _Step7State extends State<Step7> {
         }
       });
       namaIbuKandung.text = progressController.progressData.value?.response?.motherName ?? "";
-      noHandphone.text = progressController.progressData.value?.response?.phoneNumber ?? "";
+      noHandphone.text = userController.profileModel.value?.phone ?? "";
       noTelpRumah.text = progressController.progressData.value?.response?.phoneHome ?? "";
       noFaksimiliRumah.text = progressController.progressData.value?.response?.faxHome ?? "";
       setState(() {

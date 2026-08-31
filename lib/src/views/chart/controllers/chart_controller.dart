@@ -33,8 +33,12 @@ class ChartControllers extends GetxController {
 
   @override
   void onInit() {
-    initConnection();
     super.onInit();
+    // Defer initConnection to after the first frame to avoid
+    // showing dialogs before the widget tree is ready
+    Future.delayed(const Duration(milliseconds: 500), () {
+      initConnection();
+    });
   }
 
   // // @override
@@ -178,8 +182,13 @@ class ChartControllers extends GetxController {
         );
       } else {
         debugPrint('⚠️ [ChartController] Koneksi gagal untuk akun ${selectedAcc.login}, menampilkan password popup');
+        final ctx = Get.context;
+        if (ctx == null) {
+          debugPrint('❌ [ChartController] Get.context is null, cannot show password popup');
+          return;
+        }
         showMt5PasswordPopup(
-          Get.context!,
+          ctx,
           login: selectedAcc.login ?? "",
           onSubmit: (password) async {
             debugPrint('🔑 [ChartController] Password popup submit - mencoba changePasswordMeta5 untuk login: ${selectedAcc.login}');

@@ -16,7 +16,6 @@ import 'package:rrfx/src/views/authentications/manage_passcode_page.dart';
 import 'package:rrfx/src/views/no_auth_view/mainpage_no_auth.dart';
 import 'package:rrfx/src/views/resources/resources_center.dart';
 import 'package:rrfx/src/views/settings/daftar_bank_saya.dart';
-import 'package:rrfx/src/views/settings/delete_account.dart';
 import 'package:rrfx/src/views/settings/documents/views/document_list_page.dart';
 import 'package:rrfx/src/views/settings/invite_link.dart';
 import 'package:rrfx/src/views/settings/request_ib_page.dart';
@@ -852,7 +851,15 @@ class _SettingsState extends State<Settings> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => Get.to(() => const DeleteAccountPage()),
+          onTap: () {
+            CustomAlert.alertDialogCustomInfo(
+              message: "Fitur ini masih dalam tahap pengembangan. Terima kasih atas kesabaran Anda!",
+              title: "Coming Soon",
+              onTap: () {
+                Navigator.of(context).pop();
+              },
+            );
+          },
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

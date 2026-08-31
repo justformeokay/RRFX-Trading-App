@@ -101,15 +101,13 @@ class UtilitiesWidget {
                       ? Image.network(
                           urlPhoto,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              buildPlaceholder(context, title),
+                          errorBuilder: (context, error, stackTrace) {
+                            debugPrint('❌ [uploadPhotoV2] Network image error: $error');
+                            debugPrint('❌ [uploadPhotoV2] URL: $urlPhoto');
+                            return buildPlaceholder(context, title);
+                          },
                         )
-                      : Image.file(
-                          File(urlPhoto),
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              buildPlaceholder(context, title),
-                        ))
+                      : _buildLocalImage(urlPhoto, context, title))
                   : buildPlaceholder(context, title),
             ),
           ),
@@ -205,6 +203,82 @@ class UtilitiesWidget {
     );
   }
 
+  /// Build local image with comprehensive error handling
+  static Widget _buildLocalImage(String urlPhoto, BuildContext context, String? title) {
+    final file = File(urlPhoto);
+    
+    // Check if file exists synchronously first
+    if (!file.existsSync()) {
+      debugPrint('❌ [uploadPhotoV2] Local file not found: $urlPhoto');
+      return buildErrorPlaceholder(context, title, 'File tidak ditemukan');
+    }
+
+    // Check file size
+    try {
+      final fileSize = file.lengthSync();
+      if (fileSize == 0) {
+        debugPrint('❌ [uploadPhotoV2] File is empty (0 bytes): $urlPhoto');
+        return buildErrorPlaceholder(context, title, 'File kosong');
+      }
+      debugPrint('📸 [uploadPhotoV2] Loading file: $urlPhoto (${(fileSize / 1024).toStringAsFixed(2)} KB)');
+    } catch (e) {
+      debugPrint('❌ [uploadPhotoV2] Cannot read file size: $e');
+    }
+
+    return Image.file(
+      file,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        debugPrint('❌ [uploadPhotoV2] Image.file error: $error');
+        debugPrint('❌ [uploadPhotoV2] File path: $urlPhoto');
+        debugPrint('❌ [uploadPhotoV2] StackTrace: $stackTrace');
+        return buildErrorPlaceholder(context, title, 'Format tidak didukung');
+      },
+    );
+  }
+
+  /// Build error placeholder with specific message
+  static Widget buildErrorPlaceholder(BuildContext context, String? title, String errorMessage) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              color: Colors.red.withValues(alpha: 0.2),
+            ),
+            child: Icon(
+              Icons.error_outline,
+              color: Colors.red,
+              size: 32,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            errorMessage,
+            style: GoogleFonts.inter(
+              color: Colors.red,
+              fontSize: 14.0,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 5),
+          Text(
+            "Tap untuk coba lagi",
+            style: GoogleFonts.inter(
+              color: CustomColor.secondaryColor,
+              fontSize: 12.0,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
   static void _showImageSourceBottomSheet(
     BuildContext context,
     Function(bool useCamera) onImageSourceSelected,
@@ -215,6 +289,7 @@ class UtilitiesWidget {
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
         return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
             borderRadius: const BorderRadius.only(
@@ -237,8 +312,9 @@ class UtilitiesWidget {
               const SizedBox(height: 20),
               Text(
                 "Pilih Sumber ${title ?? "Foto"}",
+                textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
-                  fontSize: 20,
+                  fontSize: 15,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).textTheme.bodyLarge?.color,
                 ),
@@ -247,7 +323,7 @@ class UtilitiesWidget {
               Text(
                 "Pilih metode untuk mengambil gambar",
                 style: GoogleFonts.inter(
-                  fontSize: 14,
+                  fontSize: 12,
                   color: Colors.grey.shade600,
                 ),
               ),

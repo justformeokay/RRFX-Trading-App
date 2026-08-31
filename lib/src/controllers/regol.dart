@@ -30,7 +30,7 @@ class RegolController extends GetxController {
   Future<bool> createDemoAccount() async {
     try {
       isLoading(true);
-      Map<String, dynamic> result = await authService.post("regol_old/createDemo", {});
+      Map<String, dynamic> result = await authService.post("regol/createDemo", {});
       responseMessage(result['message']);
       isLoading(false);
       if(result['status'] == true) {
